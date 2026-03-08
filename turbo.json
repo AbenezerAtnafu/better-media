@@ -6,6 +6,9 @@
       "outputs": ["dist/**"],
       "inputs": ["src/**", "tsconfig.json", "tsup.config.ts"]
     },
+    "better-media-example-nextjs#build": {
+      "outputs": [".next/**"]
+    },
     "dev": {
       "dependsOn": ["^build"],
       "cache": false,
@@ -26,5 +29,5 @@
       "inputs": ["src/**", "jest.config.*"]
     }
   },
-  "globalDependencies": ["tsconfig.base.json"]
+  "globalDependencies": ["tsconfig.base.json", "tsconfig.package.json"]
 }
