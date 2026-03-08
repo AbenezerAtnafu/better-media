@@ -1,7 +1,4 @@
 {
   "files": [],
-  "references": [
-    { "path": "examples/nextjs" },
-    { "path": "examples/express" }
-  ]
+  "references": [{ "path": "examples/nextjs" }, { "path": "examples/express" }]
 }
