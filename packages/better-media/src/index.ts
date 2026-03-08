@@ -1,9 +1,9 @@
-import type { MediaStatus, PipelinePlugin, PipelineContext } from '@better-media/core';
+import type { MediaStatus, PipelinePlugin, PipelineContext } from "@better-media/core";
 
 export class IntakeService {
   async handleUpload(fileKey: string) {
     console.log(`Handling upload for ${fileKey}...`);
-    return 'PENDING_VERIFICATION' satisfies MediaStatus;
+    return "PENDING_VERIFICATION" satisfies MediaStatus;
   }
 }
 
