@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.3/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@better-media/core",
+      "@better-media/sdk",
+      "@better-media/plugin-validation",
+      "@better-media/plugin-virus-scan",
+      "@better-media/plugin-media-processing",
+      "@better-media/adapter-storage",
+      "@better-media/adapter-db"
+    ]
+  ],
+  "linked": [],
+  "access": "restricted",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}

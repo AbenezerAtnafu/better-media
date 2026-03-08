@@ -1,0 +1,30 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "inputs": ["src/**", "tsconfig.json", "tsup.config.ts"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": [],
+      "inputs": ["src/**", "tsconfig.json"]
+    },
+    "lint": {
+      "outputs": [],
+      "inputs": ["src/**", "eslint.config.mjs"]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": [],
+      "inputs": ["src/**", "jest.config.*"]
+    }
+  },
+  "globalDependencies": ["tsconfig.base.json"]
+}
