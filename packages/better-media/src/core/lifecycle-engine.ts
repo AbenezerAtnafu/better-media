@@ -1,5 +1,5 @@
 import type { PipelineContext, HookName, ValidationResult, JobAdapter } from "@better-media/core";
-import type { HookRegistry } from "../registry/plugin-registry";
+import type { HookRegistry } from "../plugins/plugin.interface";
 
 const JOB_QUEUE_NAME = "better-media:background";
 
@@ -27,13 +27,14 @@ export class LifecycleEngine {
     const backgroundHandlers = handlers.filter((h) => h.mode === "background");
 
     for (const { name, fn } of syncHandlers) {
+      console.log(name);
       const result = await fn(context);
       if (result !== undefined && typeof result === "object" && "valid" in result) {
         if (result.valid === false) return result;
       }
     }
 
-    for (const { name, fn } of backgroundHandlers) {
+    for (const { name } of backgroundHandlers) {
       const payload: BackgroundJobPayload = {
         fileKey: context.fileKey,
         metadata: context.metadata,

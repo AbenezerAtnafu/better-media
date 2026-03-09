@@ -148,6 +148,9 @@ importers:
 
   packages/better-media:
     dependencies:
+      '@better-media/adapter-jobs':
+        specifier: workspace:*
+        version: link:../adapters/jobs
       '@better-media/core':
         specifier: workspace:*
         version: link:../core

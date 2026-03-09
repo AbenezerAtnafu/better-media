@@ -1,4 +1,5 @@
 import { DatabaseAdapter } from "../../database/interfaces/adapter.interface";
+import { JobAdapter } from "../../job/interfaces/adapter.interface";
 import { StorageAdapter } from "../../storage/interfaces/adapter.interface";
 
 export interface PipelineContext {
@@ -8,4 +9,8 @@ export interface PipelineContext {
   storage: StorageAdapter;
   /** Database adapter for media metadata/records */
   database: DatabaseAdapter;
+  /** Job adapter for enqueueing background work */
+  jobs: JobAdapter;
+  /** Extensible utilities for plugins */
+  utilities?: Record<string, unknown>;
 }

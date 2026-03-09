@@ -1,15 +1,25 @@
 import type { JobAdapter } from "@better-media/core";
 
+export interface MemoryJobAdapterOptions {
+  /** When provided, jobs are run in-process via setImmediate (default for background plugins) */
+  processor?: (payload: Record<string, unknown>) => Promise<void>;
+}
+
 /**
  * Default in-memory job adapter for development/testing.
- * Jobs are queued and run immediately (structure only; execution TBD).
+ * When processor is provided, jobs run in-process via setImmediate.
+ * When not provided, jobs are stored only (for manual worker polling).
  */
-export function memoryJobAdapter(): JobAdapter {
+export function memoryJobAdapter(options?: MemoryJobAdapterOptions): JobAdapter {
+  const processor = options?.processor;
   return {
     async enqueue(name: string, payload: Record<string, unknown>) {
-      // Structure only - implementation will run jobs in background
+      if (processor) {
+        setImmediate(() => {
+          void processor(payload);
+        });
+      }
       void name;
-      void payload;
     },
   };
 }

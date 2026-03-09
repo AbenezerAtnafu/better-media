@@ -17,4 +17,6 @@ export interface PipelinePlugin {
   execute?(context: PipelineContext): Promise<void>;
   /** Execution mode: sync (default) or background */
   readonly executionMode?: PluginExecutionMode;
+  /** Intensive plugins run in background by default. Non-intensive default to sync. */
+  readonly intensive?: boolean;
 }

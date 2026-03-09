@@ -3,5 +3,6 @@ export type HookName =
   | "upload:init"
   | "validation:run"
   | "scan:run"
+  | "storage:write"
   | "process:run"
-  | "storage:write";
+  | "upload:complete";

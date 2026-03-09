@@ -6,25 +6,16 @@ import type {
   MediaRuntimeHook,
   ValidationResult,
 } from "@better-media/core";
+import type { HookRegistry, TapInfo } from "./plugin.interface";
 
 const HOOK_NAMES: HookName[] = [
   "upload:init",
   "validation:run",
   "scan:run",
-  "process:run",
   "storage:write",
+  "process:run",
+  "upload:complete",
 ];
-
-/** Single tapped handler entry */
-export interface TapInfo {
-  name: string;
-  fn: (ctx: PipelineContext) => Promise<void | ValidationResult>;
-  mode: "sync" | "background";
-  stage?: number;
-}
-
-/** Registry: hook name -> ordered list of handlers */
-export type HookRegistry = Map<HookName, TapInfo[]>;
 
 function createEmptyRegistry(): HookRegistry {
   const reg = new Map<HookName, TapInfo[]>();
@@ -48,6 +39,25 @@ function createHook(registry: HookRegistry, hookName: HookName): MediaRuntimeHoo
   };
 }
 
+/** Runtime with hooks that use plugin's intensive flag for default mode */
+function createPluginRuntime(registry: HookRegistry, plugin: PipelinePlugin): MediaRuntime {
+  const hooks = {} as MediaRuntime["hooks"];
+  for (const name of HOOK_NAMES) {
+    const baseTap = createHook(registry, name).tap;
+    hooks[name] = {
+      tap(
+        handlerName: string,
+        fn: (ctx: PipelineContext) => Promise<void | ValidationResult>,
+        options?: { mode?: "sync" | "background" }
+      ) {
+        const mode = options?.mode ?? (plugin.intensive ? "background" : "sync");
+        baseTap(handlerName, fn, { ...options, mode });
+      },
+    };
+  }
+  return { hooks };
+}
+
 /**
  * Build MediaRuntime with hooks that plugins tap into.
  * Legacy plugins with only execute() are auto-tapped to process:run.
@@ -56,18 +66,18 @@ export function createMediaRuntime(
   plugins: PipelinePlugin[],
   registry: HookRegistry
 ): MediaRuntime {
-  const hooks = {} as MediaRuntime["hooks"];
+  const baseHooks = {} as MediaRuntime["hooks"];
   for (const name of HOOK_NAMES) {
-    hooks[name] = createHook(registry, name);
+    baseHooks[name] = createHook(registry, name);
   }
-
-  const runtime: MediaRuntime = { hooks };
+  const runtime: MediaRuntime = { hooks: baseHooks };
 
   for (const plugin of plugins) {
     if (plugin.apply) {
-      plugin.apply(runtime);
+      const pluginRuntime = createPluginRuntime(registry, plugin);
+      plugin.apply(pluginRuntime);
     } else if (plugin.execute) {
-      const mode = plugin.executionMode ?? "sync";
+      const mode = plugin.executionMode ?? (plugin.intensive ? "background" : "sync");
       runtime.hooks["process:run"].tap(plugin.name, plugin.execute, { mode });
     }
   }
@@ -89,3 +99,11 @@ export function buildPluginRegistry(plugins: PipelinePlugin[]): {
 }
 
 export { HOOK_NAMES };
+
+/** Check if any handler in the registry is background mode */
+export function hasBackgroundHandlers(registry: HookRegistry): boolean {
+  for (const handlers of registry.values()) {
+    if (handlers.some((h) => h.mode === "background")) return true;
+  }
+  return false;
+}

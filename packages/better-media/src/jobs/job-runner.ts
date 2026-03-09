@@ -1,6 +1,11 @@
-import type { PipelineContext, StorageAdapter, DatabaseAdapter } from "@better-media/core";
-import type { HookRegistry } from "../registry/plugin-registry";
-import type { BackgroundJobPayload } from "../engine/lifecycle-engine";
+import type {
+  JobAdapter,
+  PipelineContext,
+  StorageAdapter,
+  DatabaseAdapter,
+} from "@better-media/core";
+import type { HookRegistry } from "../plugins/plugin.interface";
+import type { BackgroundJobPayload } from "../core/lifecycle-engine";
 
 /**
  * Execute a background job: rebuild context, find handler, run it.
@@ -10,7 +15,8 @@ export async function runBackgroundJob(
   payload: BackgroundJobPayload,
   registry: HookRegistry,
   storage: StorageAdapter,
-  database: DatabaseAdapter
+  database: DatabaseAdapter,
+  jobs: JobAdapter
 ): Promise<void> {
   const { fileKey, metadata, hookName, pluginName } = payload;
 
@@ -25,6 +31,8 @@ export async function runBackgroundJob(
     metadata: { ...metadata },
     storage,
     database,
+    jobs,
+    utilities: {},
   };
 
   await handler.fn(context);

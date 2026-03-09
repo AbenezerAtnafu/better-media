@@ -1,11 +1,12 @@
 import type {
+  JobAdapter,
   PipelineContext,
   StorageAdapter,
   DatabaseAdapter,
   ValidationResult,
 } from "@better-media/core";
-import { HOOK_NAMES } from "../registry/plugin-registry";
-import type { LifecycleEngine } from "../engine/lifecycle-engine";
+import { HOOK_NAMES } from "../plugins/plugin-registry";
+import type { LifecycleEngine } from "./lifecycle-engine";
 
 /** Error thrown when validation phase aborts the pipeline */
 export class ValidationError extends Error {
@@ -16,13 +17,14 @@ export class ValidationError extends Error {
 }
 
 /**
- * Pipeline executor: runs phases in order (upload:init → validation → scan → process → storage:write).
+ * Pipeline executor: runs phases in order (upload:init → validation → scan → storage:write → process → upload:complete).
  */
 export class PipelineExecutor {
   constructor(
     private readonly engine: LifecycleEngine,
     private readonly storage: StorageAdapter,
-    private readonly database: DatabaseAdapter
+    private readonly database: DatabaseAdapter,
+    private readonly jobs: JobAdapter
   ) {}
 
   async run(fileKey: string, metadata: Record<string, unknown> = {}): Promise<void> {
@@ -31,6 +33,8 @@ export class PipelineExecutor {
       metadata: { ...metadata },
       storage: this.storage,
       database: this.database,
+      jobs: this.jobs,
+      utilities: {},
     };
 
     for (const phase of HOOK_NAMES) {

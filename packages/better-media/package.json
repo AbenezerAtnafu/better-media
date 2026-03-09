@@ -20,6 +20,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@better-media/adapter-jobs": "workspace:*",
     "@better-media/core": "workspace:*"
   },
   "keywords": [],
