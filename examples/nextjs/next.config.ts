@@ -1,7 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@better-media/core", "better-media", "@better-media/plugin-validation"],
+  transpilePackages: [
+    "better-media",
+    "@better-media/core",
+    "@better-media/adapter-db",
+    "@better-media/adapter-jobs",
+    "@better-media/adapter-storage",
+    "@better-media/plugin-validation",
+    "@better-media/plugin-virus-scan",
+    "@better-media/plugin-media-processing",
+  ],
 };
 
 export default nextConfig;

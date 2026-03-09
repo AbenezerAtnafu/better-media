@@ -13,10 +13,11 @@
     "format:check": "prettier --check .",
     "test": "turbo run test",
     "changeset": "changeset",
-    "version-packages": "changeset version"
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "keywords": [],
-  "author": "",
+  "author": "abenezeratnafu",
   "license": "ISC",
   "packageManager": "pnpm@10.25.0",
   "devDependencies": {

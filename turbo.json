@@ -7,7 +7,9 @@
       "inputs": ["src/**", "tsconfig.json", "tsup.config.ts"]
     },
     "better-media-example-nextjs#build": {
-      "outputs": [".next/**"]
+      "dependsOn": ["^build"],
+      "outputs": [".next/**"],
+      "inputs": ["**/*", "!node_modules/**"]
     },
     "dev": {
       "dependsOn": ["^build"],
