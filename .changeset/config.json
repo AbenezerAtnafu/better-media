@@ -10,7 +10,8 @@
       "@better-media/plugin-virus-scan",
       "@better-media/plugin-media-processing",
       "@better-media/adapter-storage",
-      "@better-media/adapter-db"
+      "@better-media/adapter-db",
+      "@better-media/adapter-jobs"
     ]
   ],
   "linked": [],

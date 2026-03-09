@@ -37,10 +37,12 @@ class LifecycleEngine {
  * const media = createBetterMedia({
  *   storage: s3Storage(...),
  *   database: postgresAdapter(...),
+ *   jobs: redisJobAdapter(),
  *   plugins: [
  *     validationPlugin(),
  *     virusScanPlugin(),
- *     mediaProcessingPlugin()
+ *     thumbnailPlugin({ mode: "background" }),
+ *     videoProcessingPlugin({ mode: "background" })
  *   ]
  * });
  *

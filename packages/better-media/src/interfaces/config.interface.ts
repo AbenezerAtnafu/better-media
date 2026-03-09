@@ -1,4 +1,9 @@
-import type { StorageAdapter, DatabaseAdapter, PipelinePlugin } from "@better-media/core";
+import type {
+  StorageAdapter,
+  DatabaseAdapter,
+  JobAdapter,
+  PipelinePlugin,
+} from "@better-media/core";
 
 import { BetterMediaSettings } from "./settings.interface";
 
@@ -8,6 +13,8 @@ export interface BetterMediaConfig {
   storage: StorageAdapter;
   /** Database adapter for media metadata/records */
   database: DatabaseAdapter;
+  /** Optional job adapter for background execution (default: in-memory) */
+  jobs?: JobAdapter;
   /** Plugins to run in order during the lifecycle */
   plugins: PipelinePlugin[];
   /** Optional settings */

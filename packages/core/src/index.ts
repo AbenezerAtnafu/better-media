@@ -5,6 +5,7 @@ export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export type { PipelinePlugin, PipelineContext } from "./plugin";
+export type { PipelinePlugin, PipelineContext, PluginExecutionMode, PluginHooks } from "./plugin";
 export type { StorageAdapter } from "./storage";
 export type { DatabaseAdapter } from "./database";
+export type { JobAdapter } from "./job";

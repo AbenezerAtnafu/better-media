@@ -6,11 +6,11 @@ Modular media pipeline framework for intake, validation, processing, and storage
 
 **Core defines contracts. Adapters implement infrastructure. Framework orchestrates.**
 
-| Layer         | Package(s)                                                  | Responsibility                                                                                       |
-| ------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Core**      | `@better-media/core`                                        | Interfaces only (StorageAdapter, DatabaseAdapter, PipelinePlugin). No implementations.               |
-| **Adapters**  | `@better-media/adapter-storage`, `@better-media/adapter-db` | Implement core contracts (e.g. memoryStorage, memoryDatabase, future S3/Postgres).                   |
-| **Framework** | `better-media`                                              | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations. |
+| Layer         | Package(s)                                                                                | Responsibility                                                                                           |
+| ------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Core**      | `@better-media/core`                                                                      | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.       |
+| **Adapters**  | `@better-media/adapter-storage`, `@better-media/adapter-db`, `@better-media/adapter-jobs` | Implement core contracts (memoryStorage, memoryDatabase, memoryJobAdapter, future Redis/RabbitMQ/Kafka). |
+| **Framework** | `better-media`                                                                            | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations.     |
 
 ## Monorepo Structure
 
@@ -24,8 +24,29 @@ packages/
 │   └── media-processing-plugin/  # @better-media/plugin-media-processing
 └── adapters/
     ├── storage/       # @better-media/adapter-storage - Storage implementations
-    └── db/            # @better-media/adapter-db - Database implementations
+    ├── db/            # @better-media/adapter-db - Database implementations
+    └── jobs/          # @better-media/adapter-jobs - Job queue (in-memory default, Redis, RabbitMQ, Kafka)
 ```
+
+## Plugin System
+
+Plugins run in either **synchronous** or **background** execution modes.
+
+```
+Plugin
+ ├─ name
+ ├─ hooks (extensible lifecycle hooks)
+ └─ execution mode
+      ├─ sync      – run inline during processUpload
+      └─ background – enqueue via job adapter
+```
+
+## Job Adapter System
+
+Background execution is powered by an optional job adapter. Default: in-memory.
+
+- **sync** – Plugin runs inline during `processUpload`
+- **background** – Plugin work is enqueued via job adapter (Redis, RabbitMQ, Kafka, etc.)
 
 ## Quick Start
 

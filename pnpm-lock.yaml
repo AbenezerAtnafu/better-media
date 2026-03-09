@@ -131,6 +131,12 @@ importers:
         specifier: workspace:*
         version: link:../../core
 
+  packages/adapters/jobs:
+    dependencies:
+      '@better-media/core':
+        specifier: workspace:*
+        version: link:../../core
+
   packages/adapters/storage:
     dependencies:
       '@better-media/core':
