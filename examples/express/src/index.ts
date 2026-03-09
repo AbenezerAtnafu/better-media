@@ -1,13 +1,19 @@
 import express from "express";
-import { IntakeService, PipelineEngine } from "@better-media/sdk";
+import { createBetterMedia } from "better-media";
+import { memoryStorage } from "@better-media/adapter-storage";
+import { memoryDatabase } from "@better-media/adapter-db";
 import { validationPlugin } from "@better-media/plugin-validation";
+import { virusScanPlugin } from "@better-media/plugin-virus-scan";
+import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
+
+const media = createBetterMedia({
+  storage: memoryStorage(),
+  database: memoryDatabase(),
+  plugins: [validationPlugin(), virusScanPlugin(), mediaProcessingPlugin()],
+});
 
 const app = express();
 app.use(express.json());
-
-const intakeService = new IntakeService();
-const pipeline = new PipelineEngine();
-pipeline.registerStep(validationPlugin);
 
 app.get("/", (req, res) => {
   res.json({
@@ -21,9 +27,9 @@ app.get("/", (req, res) => {
 app.post("/upload", async (req, res) => {
   try {
     const fileKey = req.body.fileKey ?? `file-${Date.now()}`;
-    const status = await intakeService.handleUpload(fileKey);
-    await pipeline.run(fileKey, { ...req.body.metadata });
-    res.json({ success: true, fileKey, status });
+    const metadata = req.body.metadata ?? {};
+    await media.processUpload(fileKey, metadata);
+    res.json({ success: true, fileKey });
   } catch (err) {
     res.status(500).json({
       success: false,

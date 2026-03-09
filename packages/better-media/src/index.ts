@@ -1,23 +1,60 @@
-import type { MediaStatus, PipelinePlugin, PipelineContext } from "@better-media/core";
+import type {
+  StorageAdapter,
+  DatabaseAdapter,
+  PipelinePlugin,
+  PipelineContext,
+} from "@better-media/core";
+import { BetterMediaConfig } from "./interfaces/config.interface";
+import { BetterMediaRuntime } from "./interfaces/runtime.interface";
 
-export class IntakeService {
-  async handleUpload(fileKey: string) {
-    console.log(`Handling upload for ${fileKey}...`);
-    return "PENDING_VERIFICATION" satisfies MediaStatus;
+/** Lifecycle engine that runs plugins in sequence */
+class LifecycleEngine {
+  constructor(
+    private readonly plugins: PipelinePlugin[],
+    private readonly storage: StorageAdapter,
+    private readonly database: DatabaseAdapter
+  ) {}
+
+  async run(fileKey: string, metadata: Record<string, unknown> = {}): Promise<void> {
+    const context: PipelineContext = {
+      fileKey,
+      metadata,
+      storage: this.storage,
+      database: this.database,
+    };
+
+    for (const plugin of this.plugins) {
+      await plugin.execute(context);
+    }
   }
 }
 
-export class PipelineEngine {
-  private steps: PipelinePlugin[] = [];
+/**
+ * Create and initialize the Better Media runtime.
+ *
+ * @example
+ * ```ts
+ * const media = createBetterMedia({
+ *   storage: s3Storage(...),
+ *   database: postgresAdapter(...),
+ *   plugins: [
+ *     validationPlugin(),
+ *     virusScanPlugin(),
+ *     mediaProcessingPlugin()
+ *   ]
+ * });
+ *
+ * await media.processUpload("uploads/abc123.jpg", { contentType: "image/jpeg" });
+ * ```
+ */
+export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime {
+  const { storage, database, plugins } = config;
 
-  registerStep(step: PipelinePlugin) {
-    this.steps.push(step);
-  }
+  const engine = new LifecycleEngine(plugins, storage, database);
 
-  async run(fileKey: string, metadata: Record<string, unknown> = {}) {
-    const context: PipelineContext = { fileKey, metadata };
-    for (const step of this.steps) {
-      await step.execute(context);
-    }
-  }
+  return {
+    async processUpload(fileKey: string, metadata: Record<string, unknown> = {}) {
+      await engine.run(fileKey, metadata);
+    },
+  };
 }

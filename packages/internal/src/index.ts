@@ -1,6 +1,6 @@
 /**
  * Internal utilities for Better Media packages.
- * NOT intended for public consumption - use @better-media/core or @better-media/sdk instead.
+ * NOT intended for public consumption - use @better-media/core or better-media instead.
  */
 
 export { createLogger } from "./logger";

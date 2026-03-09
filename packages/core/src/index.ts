@@ -7,3 +7,4 @@ export function sleep(ms: number) {
 
 export type { PipelinePlugin, PipelineContext } from "./plugin";
 export type { StorageAdapter } from "./storage";
+export type { DatabaseAdapter } from "./database";

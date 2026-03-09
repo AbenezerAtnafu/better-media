@@ -1,12 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { IntakeService, PipelineEngine } from "@better-media/sdk";
-import { validationPlugin } from "@better-media/plugin-validation";
-
-const intakeService = new IntakeService();
-const pipeline = new PipelineEngine();
-pipeline.registerStep(validationPlugin);
 
 export default function Home() {
   const [status, setStatus] = useState<string | null>(null);
@@ -16,9 +10,16 @@ export default function Home() {
     setLoading(true);
     setStatus(null);
     try {
-      const result = await intakeService.handleUpload("example-file-123");
-      await pipeline.run("example-file-123", { filename: "demo.mp4" });
-      setStatus(result);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileKey: "example-file-123",
+          metadata: { filename: "demo.mp4" },
+        }),
+      });
+      const data = await res.json();
+      setStatus(data.success ? `Processed: ${data.fileKey}` : `Error: ${data.error}`);
     } catch (err) {
       setStatus(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {

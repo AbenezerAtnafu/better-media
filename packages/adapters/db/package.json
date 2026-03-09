@@ -19,6 +19,9 @@
     "lint": "eslint .",
     "test": "jest"
   },
+  "dependencies": {
+    "@better-media/core": "workspace:*"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

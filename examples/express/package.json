@@ -12,9 +12,12 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@better-media/core": "workspace:*",
+    "@better-media/adapter-db": "workspace:*",
+    "@better-media/adapter-storage": "workspace:*",
+    "@better-media/plugin-media-processing": "workspace:*",
     "@better-media/plugin-validation": "workspace:*",
-    "@better-media/sdk": "workspace:*",
+    "@better-media/plugin-virus-scan": "workspace:*",
+    "better-media": "workspace:*",
     "express": "^4.21.0"
   },
   "devDependencies": {

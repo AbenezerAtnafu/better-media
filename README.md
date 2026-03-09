@@ -2,19 +2,29 @@
 
 Modular media pipeline framework for intake, validation, processing, and storage.
 
+## Architecture
+
+**Core defines contracts. Adapters implement infrastructure. Framework orchestrates.**
+
+| Layer         | Package(s)                                                  | Responsibility                                                                                       |
+| ------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Core**      | `@better-media/core`                                        | Interfaces only (StorageAdapter, DatabaseAdapter, PipelinePlugin). No implementations.               |
+| **Adapters**  | `@better-media/adapter-storage`, `@better-media/adapter-db` | Implement core contracts (e.g. memoryStorage, memoryDatabase, future S3/Postgres).                   |
+| **Framework** | `better-media`                                              | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations. |
+
 ## Monorepo Structure
 
 ```
 packages/
-├── core/              # @better-media/core - Types, interfaces, utilities
-├── better-media/      # @better-media/sdk - Intake service, pipeline engine
+├── core/              # @better-media/core - Contracts (interfaces, types)
+├── better-media/      # better-media - Framework entry, lifecycle engine
 ├── plugins/
 │   ├── validation-plugin/     # @better-media/plugin-validation
 │   ├── virus-scan-plugin/     # @better-media/plugin-virus-scan
 │   └── media-processing-plugin/  # @better-media/plugin-media-processing
 └── adapters/
-    ├── storage/       # @better-media/adapter-storage - Storage interfaces
-    └── db/            # @better-media/adapter-db - DB adapter placeholder
+    ├── storage/       # @better-media/adapter-storage - Storage implementations
+    └── db/            # @better-media/adapter-db - Database implementations
 ```
 
 ## Quick Start
@@ -45,5 +55,6 @@ pnpm build
 ## Adding an Adapter
 
 1. Create `packages/adapters/<name>/` (or add to existing storage/db)
-2. Implement the `StorageAdapter` interface from `@better-media/core`
-3. Add to workspace in `pnpm-workspace.yaml` if using a new top-level adapter package
+2. Implement the contract from `@better-media/core` (e.g. `StorageAdapter`, `DatabaseAdapter`)
+3. Export the implementation; re-export the interface from core for convenience
+4. Add to workspace in `pnpm-workspace.yaml` if using a new top-level adapter package

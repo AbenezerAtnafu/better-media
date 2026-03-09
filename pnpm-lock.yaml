@@ -25,7 +25,7 @@ importers:
         version: 3.8.1
       ts-jest:
         specifier: ^29.4.6
-        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.29.0))(esbuild@0.27.3)(jest-util@30.2.0)(jest@30.2.0(@types/node@22.19.15))(typescript@5.9.3)
+        version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.29.0))(jest-util@30.2.0)(jest@30.2.0(@types/node@22.19.15))(typescript@5.9.3)
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.4.31)(tsx@4.21.0)(typescript@5.9.3)
@@ -41,13 +41,22 @@ importers:
 
   examples/express:
     dependencies:
-      '@better-media/core':
+      '@better-media/adapter-db':
         specifier: workspace:*
-        version: link:../../packages/core
+        version: link:../../packages/adapters/db
+      '@better-media/adapter-storage':
+        specifier: workspace:*
+        version: link:../../packages/adapters/storage
+      '@better-media/plugin-media-processing':
+        specifier: workspace:*
+        version: link:../../packages/plugins/media-processing-plugin
       '@better-media/plugin-validation':
         specifier: workspace:*
         version: link:../../packages/plugins/validation-plugin
-      '@better-media/sdk':
+      '@better-media/plugin-virus-scan':
+        specifier: workspace:*
+        version: link:../../packages/plugins/virus-scan-plugin
+      better-media:
         specifier: workspace:*
         version: link:../../packages/better-media
       express:
@@ -72,13 +81,25 @@ importers:
 
   examples/nextjs:
     dependencies:
+      '@better-media/adapter-db':
+        specifier: workspace:*
+        version: link:../../packages/adapters/db
+      '@better-media/adapter-storage':
+        specifier: workspace:*
+        version: link:../../packages/adapters/storage
       '@better-media/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@better-media/plugin-media-processing':
+        specifier: workspace:*
+        version: link:../../packages/plugins/media-processing-plugin
       '@better-media/plugin-validation':
         specifier: workspace:*
         version: link:../../packages/plugins/validation-plugin
-      '@better-media/sdk':
+      '@better-media/plugin-virus-scan':
+        specifier: workspace:*
+        version: link:../../packages/plugins/virus-scan-plugin
+      better-media:
         specifier: workspace:*
         version: link:../../packages/better-media
       next:
@@ -104,7 +125,11 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/adapters/db: {}
+  packages/adapters/db:
+    dependencies:
+      '@better-media/core':
+        specifier: workspace:*
+        version: link:../../core
 
   packages/adapters/storage:
     dependencies:
@@ -6018,7 +6043,7 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
-  ts-jest@29.4.6(@babel/core@7.29.0)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.29.0))(esbuild@0.27.3)(jest-util@30.2.0)(jest@30.2.0(@types/node@22.19.15))(typescript@5.9.3):
+  ts-jest@29.4.6(@babel/core@7.29.0)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.29.0))(jest-util@30.2.0)(jest@30.2.0(@types/node@22.19.15))(typescript@5.9.3):
     dependencies:
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
@@ -6036,7 +6061,6 @@ snapshots:
       '@jest/transform': 30.2.0
       '@jest/types': 30.2.0
       babel-jest: 30.2.0(@babel/core@7.29.0)
-      esbuild: 0.27.3
       jest-util: 30.2.0
 
   tslib@2.8.1: {}
