@@ -20,7 +20,15 @@
     "test": "jest"
   },
   "dependencies": {
-    "@better-media/core": "workspace:*"
+    "@better-media/core": "workspace:*",
+    "file-type": "^19.6.0",
+    "image-size": "^1.1.1"
+  },
+  "devDependencies": {
+    "@better-media/adapter-db": "workspace:*",
+    "@better-media/adapter-storage": "workspace:*",
+    "@types/jest": "^29.5.14",
+    "better-media": "workspace:*"
   },
   "keywords": [],
   "author": "",

@@ -5,12 +5,17 @@ export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export { HOOK_NAMES } from "./plugin/index";
 export type {
   PipelinePlugin,
   PipelineContext,
   PluginExecutionMode,
   PluginHooks,
   HookName,
+  HookHandler,
+  HookHandlerOptions,
+  MediaPlugin,
+  HookContext,
   MediaRuntime,
   MediaRuntimeHook,
   ValidationResult,

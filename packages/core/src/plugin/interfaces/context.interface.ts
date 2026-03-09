@@ -9,7 +9,7 @@ export interface PipelineContext {
   storage: StorageAdapter;
   /** Database adapter for media metadata/records */
   database: DatabaseAdapter;
-  /** Job adapter for enqueueing background work */
+  /** Job adapter – use jobs.enqueue(name, payload) to dispatch background jobs from hooks */
   jobs: JobAdapter;
   /** Extensible utilities for plugins */
   utilities?: Record<string, unknown>;

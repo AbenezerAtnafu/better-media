@@ -6,13 +6,30 @@ import { virusScanPlugin } from "@better-media/plugin-virus-scan";
 import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
 import { trackingJobAdapter } from "./tracking-job-adapter";
 
+const storage = memoryStorage();
+const database = memoryDatabase();
+
 export const media = createBetterMedia({
-  storage: memoryStorage(),
-  database: memoryDatabase(),
+  storage,
+  database,
   jobs: trackingJobAdapter(),
   plugins: [
-    validationPlugin(), // sync (default)
-    virusScanPlugin(), // sync (default)
-    mediaProcessingPlugin({ mode: "background" }), // runs via job queue
+    validationPlugin({
+      executionMode: "background",
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+      useMagicBytes: true,
+      maxBytes: 10 * 1024 * 1024, // 10MB
+      minWidth: 1,
+      maxWidth: 8000,
+      minHeight: 1,
+      maxHeight: 8000,
+      fileNotFoundBehavior: "fail",
+      onFailure: "abort",
+    }),
+    virusScanPlugin(),
+    mediaProcessingPlugin({ mode: "background" }),
   ],
 });
+
+export { storage };

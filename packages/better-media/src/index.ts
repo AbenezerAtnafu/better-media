@@ -98,5 +98,12 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
 }
 
 export { ValidationError } from "./core/pipeline-executor";
+export {
+  PluginRegistry,
+  buildPluginRegistry,
+  validatePlugin,
+  hasBackgroundHandlers,
+  HOOK_NAMES,
+} from "./plugins/plugin-registry";
 export type { BackgroundJobPayload } from "./core/lifecycle-engine";
 export type { BetterMediaRuntime, FileRecord, UploadSession } from "./runtime/runtime.interface";

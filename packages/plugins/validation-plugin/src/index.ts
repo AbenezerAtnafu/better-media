@@ -1,12 +1,28 @@
 import type { PipelinePlugin, MediaRuntime } from "@better-media/core";
+import type { ValidationPluginOptions } from "./options";
+import { runValidation } from "./runner";
 
-export function validationPlugin(): PipelinePlugin {
+export type { ValidationPluginOptions, ValidationErrorItem } from "./options";
+
+/**
+ * Validation plugin for the Better Media pipeline.
+ * Supports file type, size, dimensions, checksum, and custom validators.
+ * Configurable failure behavior and file-not-found handling (presigned URLs).
+ */
+export function validationPlugin(opts: ValidationPluginOptions = {}): PipelinePlugin {
+  const executionMode = opts.executionMode ?? "background";
+  const isBackground = executionMode === "background";
+
   return {
     name: "validation",
+    executionMode,
+    intensive: isBackground,
     apply(runtime: MediaRuntime) {
-      runtime.hooks["validation:run"].tap("validation", async (context) => {
-        console.log(`Validating file ${context.fileKey}...`);
-      });
+      runtime.hooks["validation:run"].tap(
+        "validation",
+        async (context) => runValidation(context, opts),
+        { mode: executionMode }
+      );
     },
   };
 }

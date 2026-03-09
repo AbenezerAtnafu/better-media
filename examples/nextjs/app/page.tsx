@@ -7,7 +7,7 @@ export default function Home() {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [jobsLoading, setJobsLoading] = useState(false);
 
-  async function handleSimulateUpload() {
+  async function handleSimulateUpload(simulateFail = false) {
     setUploadLoading(true);
     setStatus(null);
     try {
@@ -15,14 +15,15 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fileKey: "example-file-123",
-          metadata: { filename: "demo.mp4" },
+          fileKey: `photo-${Date.now()}.jpg`,
+          metadata: { contentType: "image/jpeg" },
+          simulateValidationFail: simulateFail,
         }),
       });
       const data = await res.json();
       setStatus(
         data.success
-          ? `Upload done. Sync plugins ran. Background jobs queued.`
+          ? `Upload done. Validation passed. Sync plugins ran. Background jobs queued.`
           : `Error: ${data.error}`
       );
     } catch (err) {
@@ -54,12 +55,12 @@ export default function Home() {
     <main style={{ padding: "2rem", maxWidth: 600, margin: "0 auto" }}>
       <h1 style={{ marginBottom: "1rem" }}>Better Media + Next.js</h1>
       <p style={{ marginBottom: "1.5rem", color: "#666" }}>
-        Sync plugins (validation, virus-scan) run during upload. Media processing runs in
-        background.
+        Validation plugin checks file type, size, dimensions. Virus-scan runs sync. Media
+        processing runs in background.
       </p>
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         <button
-          onClick={handleSimulateUpload}
+          onClick={() => handleSimulateUpload(false)}
           disabled={uploadLoading}
           style={{
             padding: "0.5rem 1rem",
@@ -70,7 +71,22 @@ export default function Home() {
             background: "#fff",
           }}
         >
-          {uploadLoading ? "Uploading..." : "1. Simulate Upload"}
+          {uploadLoading ? "Uploading..." : "1. Simulate Upload (valid image)"}
+        </button>
+        <button
+          onClick={() => handleSimulateUpload(true)}
+          disabled={uploadLoading}
+          style={{
+            padding: "0.5rem 1rem",
+            fontSize: "1rem",
+            cursor: uploadLoading ? "not-allowed" : "pointer",
+            borderRadius: 4,
+            border: "1px solid #c00",
+            background: "#fff",
+            color: "#c00",
+          }}
+        >
+          {uploadLoading ? "..." : "Simulate validation failure"}
         </button>
         <button
           onClick={handleProcessJobs}
