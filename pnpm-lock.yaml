@@ -84,6 +84,9 @@ importers:
       '@better-media/adapter-db':
         specifier: workspace:*
         version: link:../../packages/adapters/db
+      '@better-media/adapter-jobs':
+        specifier: workspace:*
+        version: link:../../packages/adapters/jobs
       '@better-media/adapter-storage':
         specifier: workspace:*
         version: link:../../packages/adapters/storage

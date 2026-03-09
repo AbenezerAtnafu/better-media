@@ -48,6 +48,42 @@ Background execution is powered by an optional job adapter. Default: in-memory.
 - **sync** – Plugin runs inline during `processUpload`
 - **background** – Plugin work is enqueued via job adapter (Redis, RabbitMQ, Kafka, etc.)
 
+### Worker Integration
+
+Use `media.runBackgroundJob(payload)` from your worker process. The payload is serializable:
+
+```ts
+interface BackgroundJobPayload {
+  fileKey: string;
+  metadata: Record<string, unknown>;
+  hookName: HookName;
+  pluginName: string;
+}
+```
+
+**Example with Bull/BullMQ:**
+
+```ts
+const media = createBetterMedia({ storage, database, jobs: bullAdapter, plugins });
+const worker = new Worker("better-media:background", async (job) => {
+  await media.runBackgroundJob(job.data);
+});
+```
+
+**Example with Inngest:**
+
+```ts
+inngest.createFunction(
+  { id: "better-media-job" },
+  { event: "better-media/background" },
+  async ({ event }) => {
+    await media.runBackgroundJob(event.data.payload);
+  }
+);
+```
+
+The framework does not implement polling or scheduling—adapters and your worker own that.
+
 ## Quick Start
 
 ```bash

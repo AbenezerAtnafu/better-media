@@ -1,32 +1,22 @@
 import type {
   StorageAdapter,
   DatabaseAdapter,
+  JobAdapter,
   PipelinePlugin,
-  PipelineContext,
 } from "@better-media/core";
 import { BetterMediaConfig } from "./interfaces/config.interface";
 import { BetterMediaRuntime } from "./interfaces/runtime.interface";
+import { buildPluginRegistry } from "./registry/plugin-registry";
+import { LifecycleEngine } from "./engine/lifecycle-engine";
+import { PipelineExecutor } from "./executor/pipeline-executor";
+import { runBackgroundJob } from "./jobs/job-runner";
 
-/** Lifecycle engine that runs plugins in sequence */
-class LifecycleEngine {
-  constructor(
-    private readonly plugins: PipelinePlugin[],
-    private readonly storage: StorageAdapter,
-    private readonly database: DatabaseAdapter
-  ) {}
-
-  async run(fileKey: string, metadata: Record<string, unknown> = {}): Promise<void> {
-    const context: PipelineContext = {
-      fileKey,
-      metadata,
-      storage: this.storage,
-      database: this.database,
-    };
-
-    for (const plugin of this.plugins) {
-      await plugin.execute(context);
-    }
-  }
+function createNoopJobAdapter(): JobAdapter {
+  return {
+    async enqueue(_name: string, _payload: Record<string, unknown>) {
+      // No-op when no job adapter configured
+    },
+  };
 }
 
 /**
@@ -51,12 +41,21 @@ class LifecycleEngine {
  */
 export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime {
   const { storage, database, plugins } = config;
+  const jobAdapter = config.jobs ?? createNoopJobAdapter();
 
-  const engine = new LifecycleEngine(plugins, storage, database);
+  const { registry } = buildPluginRegistry(plugins);
+  const engine = new LifecycleEngine(registry, jobAdapter);
+  const executor = new PipelineExecutor(engine, storage, database);
 
   return {
     async processUpload(fileKey: string, metadata: Record<string, unknown> = {}) {
-      await engine.run(fileKey, metadata);
+      await executor.run(fileKey, metadata);
+    },
+    async runBackgroundJob(payload: import("./engine/lifecycle-engine").BackgroundJobPayload) {
+      await runBackgroundJob(payload, registry, storage, database);
     },
   };
 }
+
+export { ValidationError } from "./executor/pipeline-executor";
+export type { BackgroundJobPayload } from "./engine/lifecycle-engine";

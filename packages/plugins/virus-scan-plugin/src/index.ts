@@ -1,10 +1,12 @@
-import type { PipelinePlugin, PipelineContext } from "@better-media/core";
+import type { PipelinePlugin, MediaRuntime } from "@better-media/core";
 
 export function virusScanPlugin(): PipelinePlugin {
   return {
     name: "virus-scan",
-    async execute(context: PipelineContext) {
-      console.log(`Scanning file ${context.fileKey} for viruses...`);
+    apply(runtime: MediaRuntime) {
+      runtime.hooks["scan:run"].tap("virus-scan", async (context) => {
+        console.log(`Scanning file ${context.fileKey} for viruses...`);
+      });
     },
   };
 }

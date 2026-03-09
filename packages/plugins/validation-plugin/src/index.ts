@@ -1,10 +1,12 @@
-import type { PipelinePlugin, PipelineContext } from "@better-media/core";
+import type { PipelinePlugin, MediaRuntime } from "@better-media/core";
 
 export function validationPlugin(): PipelinePlugin {
   return {
     name: "validation",
-    async execute(context: PipelineContext) {
-      console.log(`Validating file ${context.fileKey}...`);
+    apply(runtime: MediaRuntime) {
+      runtime.hooks["validation:run"].tap("validation", async (context) => {
+        console.log(`Validating file ${context.fileKey}...`);
+      });
     },
   };
 }

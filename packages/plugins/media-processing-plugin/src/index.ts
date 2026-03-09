@@ -1,10 +1,22 @@
-import type { PipelinePlugin, PipelineContext } from "@better-media/core";
+import type { PipelinePlugin, MediaRuntime } from "@better-media/core";
 
-export function mediaProcessingPlugin(): PipelinePlugin {
+export interface MediaProcessingPluginOptions {
+  /** Execution mode: sync (inline) or background (queued) */
+  mode?: "sync" | "background";
+}
+
+export function mediaProcessingPlugin(options: MediaProcessingPluginOptions = {}): PipelinePlugin {
+  const { mode = "sync" } = options;
   return {
     name: "media-processing",
-    async execute(context: PipelineContext) {
-      console.log(`Processing media ${context.fileKey}...`);
+    apply(runtime: MediaRuntime) {
+      runtime.hooks["process:run"].tap(
+        "media-processing",
+        async (context) => {
+          console.log(`Processing media ${context.fileKey}...`);
+        },
+        { mode }
+      );
     },
   };
 }

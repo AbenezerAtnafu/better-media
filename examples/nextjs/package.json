@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@better-media/adapter-db": "workspace:*",
+    "@better-media/adapter-jobs": "workspace:*",
     "@better-media/adapter-storage": "workspace:*",
     "@better-media/core": "workspace:*",
     "@better-media/plugin-media-processing": "workspace:*",

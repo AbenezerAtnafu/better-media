@@ -1,16 +1,5 @@
 import { NextResponse } from "next/server";
-import { createBetterMedia } from "better-media";
-import { memoryStorage } from "@better-media/adapter-storage";
-import { memoryDatabase } from "@better-media/adapter-db";
-import { validationPlugin } from "@better-media/plugin-validation";
-import { virusScanPlugin } from "@better-media/plugin-virus-scan";
-import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
-
-const media = createBetterMedia({
-  storage: memoryStorage(),
-  database: memoryDatabase(),
-  plugins: [validationPlugin(), virusScanPlugin(), mediaProcessingPlugin()],
-});
+import { media } from "@/lib/media";
 
 export async function POST(request: Request) {
   try {
