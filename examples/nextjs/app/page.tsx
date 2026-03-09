@@ -55,8 +55,8 @@ export default function Home() {
     <main style={{ padding: "2rem", maxWidth: 600, margin: "0 auto" }}>
       <h1 style={{ marginBottom: "1rem" }}>Better Media + Next.js</h1>
       <p style={{ marginBottom: "1.5rem", color: "#666" }}>
-        Validation plugin checks file type, size, dimensions. Virus-scan runs sync. Media
-        processing runs in background.
+        Validation plugin checks file type, size, dimensions. Virus-scan runs sync. Media processing
+        runs in background.
       </p>
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         <button
