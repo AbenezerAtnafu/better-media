@@ -17,7 +17,7 @@ export class ValidationError extends Error {
 }
 
 /**
- * Pipeline executor: runs phases in order (upload:init → validation → scan → storage:write → process → upload:complete).
+ * Pipeline executor: runs phases in order (upload:init → validation → scan → process → upload:complete).
  */
 export class PipelineExecutor {
   constructor(

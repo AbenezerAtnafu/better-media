@@ -5,7 +5,7 @@ export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export { HOOK_NAMES } from "./plugin/index";
+export { HOOK_NAMES, HOOK_MODE_CONSTRAINTS, resolveHookMode } from "./plugin/index";
 export type {
   PipelinePlugin,
   PipelineContext,
@@ -14,6 +14,7 @@ export type {
   HookName,
   HookHandler,
   HookHandlerOptions,
+  HookModeConstraint,
   MediaPlugin,
   HookContext,
   MediaRuntime,

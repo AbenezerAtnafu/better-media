@@ -6,6 +6,8 @@ export type { PipelineContext } from "./interfaces/context.interface";
 export type { PluginHooks } from "./interfaces/hooks.interface";
 export { HOOK_NAMES } from "./interfaces/hook-name.interface";
 export type { HookName } from "./interfaces/hook-name.interface";
+export { HOOK_MODE_CONSTRAINTS, resolveHookMode } from "./interfaces/hook-mode.interface";
+export type { HookModeConstraint } from "./interfaces/hook-mode.interface";
 export type { HookHandler, HookHandlerOptions } from "./interfaces/hook.interface";
 export type {
   MediaRuntime,

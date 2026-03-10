@@ -3,7 +3,6 @@ export const HOOK_NAMES = [
   "upload:init",
   "validation:run",
   "scan:run",
-  "storage:write",
   "process:run",
   "upload:complete",
 ] as const;

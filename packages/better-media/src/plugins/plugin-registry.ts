@@ -1,5 +1,6 @@
 import {
   HOOK_NAMES,
+  resolveHookMode,
   type MediaPlugin,
   type PipelinePlugin,
   type PipelineContext,
@@ -34,9 +35,15 @@ function createHook(registry: HookRegistry, hookName: HookName): MediaRuntimeHoo
       fn: (ctx: PipelineContext) => Promise<void | ValidationResult>,
       options?: { mode?: "sync" | "background" }
     ) {
-      const mode = options?.mode ?? "sync";
+      const requested = options?.mode ?? "sync";
+      const { effective, overridden } = resolveHookMode(hookName, requested);
+      if (overridden) {
+        console.warn(
+          `[better-media] Hook '${hookName}' does not support mode '${requested}'. Overriding to '${effective}'. Plugin: ${name}`
+        );
+      }
       const list = registry.get(hookName)!;
-      list.push({ name, fn, mode });
+      list.push({ name, fn, mode: effective });
     },
   };
 }
