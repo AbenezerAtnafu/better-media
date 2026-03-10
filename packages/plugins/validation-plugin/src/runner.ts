@@ -4,7 +4,8 @@ import type {
   StorageAdapter,
   DatabaseAdapter,
 } from "@better-media/core";
-import type { ValidationPluginOptions, ValidationErrorItem } from "./options";
+import type { ValidationPluginOptions } from "./interfaces/options.interface";
+import { ValidationErrorItem } from "./interfaces/error-item.interface";
 import { runValidators } from "./validators";
 
 const VALIDATION_DB_KEY_PREFIX = "better-media:validation:";

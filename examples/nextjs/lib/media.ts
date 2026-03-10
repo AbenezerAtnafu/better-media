@@ -19,7 +19,7 @@ export const media = createBetterMedia({
       allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
       allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
       useMagicBytes: true,
-      maxBytes: 10 * 1024 * 1024, // 10MB
+      maxBytes: 10 * 1024 * 1024,
       minWidth: 1,
       maxWidth: 8000,
       minHeight: 1,

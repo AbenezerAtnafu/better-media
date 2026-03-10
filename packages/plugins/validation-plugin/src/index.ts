@@ -1,8 +1,8 @@
 import type { PipelinePlugin, MediaRuntime } from "@better-media/core";
-import type { ValidationPluginOptions } from "./options";
+import type { ValidationPluginOptions } from "./interfaces/options.interface";
 import { runValidation } from "./runner";
 
-export type { ValidationPluginOptions, ValidationErrorItem } from "./options";
+export type { ValidationPluginOptions } from "./interfaces/options.interface";
 
 /**
  * Validation plugin for the Better Media pipeline.

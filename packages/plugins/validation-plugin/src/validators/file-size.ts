@@ -1,5 +1,5 @@
-import type { ValidationPluginOptions } from "../options";
-import type { ValidationErrorItem } from "../options";
+import type { ValidationPluginOptions } from "../interfaces/options.interface";
+import type { ValidationErrorItem } from "../interfaces/error-item.interface";
 
 export function validateFileSize(
   buffer: Buffer,

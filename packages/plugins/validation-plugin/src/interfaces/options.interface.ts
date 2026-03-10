@@ -1,3 +1,5 @@
+import { ValidationErrorItem } from "./error-item.interface";
+
 /**
  * Validation plugin configuration.
  * All rules are optional; omit to skip that validation.
@@ -86,10 +88,4 @@ export interface ValidationPluginOptions {
       fileKey: string
     ) => ValidationErrorItem[] | Promise<ValidationErrorItem[]>
   >;
-}
-
-export interface ValidationErrorItem {
-  rule: string;
-  message: string;
-  details?: Record<string, unknown>;
 }

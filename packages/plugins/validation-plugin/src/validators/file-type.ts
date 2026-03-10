@@ -1,7 +1,7 @@
 import { fileTypeFromBuffer } from "file-type";
 import path from "node:path";
-import type { ValidationPluginOptions } from "../options";
-import type { ValidationErrorItem } from "../options";
+import type { ValidationPluginOptions } from "../interfaces/options.interface";
+import type { ValidationErrorItem } from "../interfaces/error-item.interface";
 
 export async function validateFileType(
   buffer: Buffer,

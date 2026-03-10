@@ -1,4 +1,5 @@
-import type { ValidationPluginOptions, ValidationErrorItem } from "../options";
+import type { ValidationPluginOptions } from "../interfaces/options.interface";
+import type { ValidationErrorItem } from "../interfaces/error-item.interface";
 import { validateFileType } from "./file-type";
 import { validateFileSize } from "./file-size";
 import { validateDimensions } from "./dimensions";
