@@ -13,7 +13,7 @@ export function mediaProcessingPlugin(options: MediaProcessingPluginOptions = {}
       runtime.hooks["process:run"].tap(
         "media-processing",
         async (context) => {
-          console.log(`Processing media ${context.fileKey}...`);
+          console.log(`Processing media ${context.file.key}...`);
         },
         { mode }
       );

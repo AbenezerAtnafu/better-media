@@ -1,3 +1,4 @@
+import path from "node:path";
 import type {
   JobAdapter,
   PipelineContext,
@@ -18,7 +19,43 @@ export async function runBackgroundJob(
   database: DatabaseAdapter,
   jobs: JobAdapter
 ): Promise<void> {
-  const { fileKey, metadata, hookName, pluginName } = payload;
+  const {
+    metadata = {},
+    file: payloadFile,
+    storageLocation: payloadStorage,
+    processing: payloadProcessing,
+    hookName,
+    pluginName,
+  } = payload;
+
+  const meta = { ...metadata };
+
+  // Backwards compat: legacy payloads may have fileKey instead of file
+  const legacyKey = (payload as { fileKey?: string }).fileKey;
+  if (!payloadFile && !legacyKey) {
+    throw new Error("Background job payload must include file or fileKey");
+  }
+  const file: PipelineContext["file"] =
+    payloadFile ??
+    (legacyKey
+      ? {
+          key: legacyKey,
+          size: typeof meta.size === "number" ? meta.size : undefined,
+          mimeType:
+            typeof (meta.contentType ?? meta.mimeType ?? meta["content-type"]) === "string"
+              ? ((meta.contentType ?? meta.mimeType ?? meta["content-type"]) as string)
+              : undefined,
+          originalName:
+            typeof (meta.originalName ?? meta.originalname) === "string"
+              ? ((meta.originalName ?? meta.originalname) as string)
+              : undefined,
+          extension: path.extname(legacyKey).toLowerCase() || undefined,
+        }
+      : { key: "" });
+
+  const storageLocation: PipelineContext["storageLocation"] = payloadStorage ?? { key: file.key };
+
+  const processing: PipelineContext["processing"] = payloadProcessing ?? {};
 
   const handlers = registry.get(hookName) ?? [];
   const handler = handlers.find((h) => h.name === pluginName);
@@ -27,12 +64,14 @@ export async function runBackgroundJob(
   }
 
   const context: PipelineContext = {
-    fileKey,
-    metadata: { ...metadata },
+    file,
+    storageLocation,
+    processing,
+    metadata: meta,
+    utilities: {},
     storage,
     database,
     jobs,
-    utilities: {},
   };
 
   await handler.fn(context);

@@ -5,8 +5,10 @@ const JOB_QUEUE_NAME = "better-media:background";
 
 /** Background job payload (serializable) */
 export interface BackgroundJobPayload {
-  fileKey: string;
   metadata: Record<string, unknown>;
+  file: PipelineContext["file"];
+  storageLocation: PipelineContext["storageLocation"];
+  processing: PipelineContext["processing"];
   hookName: HookName;
   pluginName: string;
 }
@@ -36,8 +38,10 @@ export class LifecycleEngine {
 
     for (const { name } of backgroundHandlers) {
       const payload: BackgroundJobPayload = {
-        fileKey: context.fileKey,
         metadata: context.metadata,
+        file: context.file,
+        storageLocation: context.storageLocation,
+        processing: context.processing,
         hookName,
         pluginName: name,
       };

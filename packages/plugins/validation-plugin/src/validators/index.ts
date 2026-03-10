@@ -1,3 +1,4 @@
+import type { FileInfo } from "@better-media/core";
 import type { ValidationPluginOptions } from "../interfaces/options.interface";
 import type { ValidationErrorItem } from "../interfaces/error-item.interface";
 import { validateFileType } from "./file-type";
@@ -7,14 +8,14 @@ import { validateChecksum } from "./checksum";
 
 export async function runValidators(
   buffer: Buffer,
-  fileKey: string,
+  file: FileInfo,
   metadata: Record<string, unknown>,
   opts: ValidationPluginOptions
 ): Promise<ValidationErrorItem[]> {
   const allErrors: ValidationErrorItem[] = [];
 
   if (opts.allowedExtensions || opts.allowedMimeTypes || opts.useMagicBytes) {
-    allErrors.push(...(await validateFileType(buffer, fileKey, metadata, opts)));
+    allErrors.push(...(await validateFileType(buffer, file, metadata, opts)));
   }
 
   if (opts.minBytes != null || opts.maxBytes != null) {
@@ -36,7 +37,7 @@ export async function runValidators(
 
   if (opts.customValidators && opts.customValidators.length > 0) {
     for (const fn of opts.customValidators) {
-      const customErrors = await fn(buffer, metadata, fileKey);
+      const customErrors = await fn(buffer, metadata, file.key);
       allErrors.push(...customErrors);
     }
   }

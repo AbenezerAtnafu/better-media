@@ -9,6 +9,12 @@ export { HOOK_NAMES, HOOK_MODE_CONSTRAINTS, resolveHookMode } from "./plugin/ind
 export type {
   PipelinePlugin,
   PipelineContext,
+  FileInfo,
+  StorageLocation,
+  ProcessingResults,
+  ThumbnailResult,
+  VariantResult,
+  MediaDimensions,
   PluginExecutionMode,
   PluginHooks,
   HookName,

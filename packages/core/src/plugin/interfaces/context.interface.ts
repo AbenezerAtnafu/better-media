@@ -1,16 +1,32 @@
-import { DatabaseAdapter } from "../../database/interfaces/adapter.interface";
-import { JobAdapter } from "../../job/interfaces/adapter.interface";
-import { StorageAdapter } from "../../storage/interfaces/adapter.interface";
+import type { DatabaseAdapter } from "../../database/interfaces/adapter.interface";
+import type { JobAdapter } from "../../job/interfaces/adapter.interface";
+import type { StorageAdapter } from "../../storage/interfaces/adapter.interface";
+import type { FileInfo } from "./file-info.interface";
+import type { StorageLocation } from "./storage-location.interface";
+import type { ProcessingResults } from "./processing-results.interface";
 
 export interface PipelineContext {
-  fileKey: string;
+  /** Core file information. Mutable. */
+  file: FileInfo;
+
+  /** Storage location. Mutable but typically set once. */
+  storageLocation: StorageLocation;
+
+  /** Processing outputs (thumbnails, variants, etc). Mutable. */
+  processing: ProcessingResults;
+
+  /** Custom app/plugin metadata. Mutable. */
   metadata: Record<string, unknown>;
-  /** Storage adapter for reading/writing file bytes */
+
+  /** Storage adapter – read-only reference */
   storage: StorageAdapter;
-  /** Database adapter for media metadata/records */
+
+  /** Database adapter – read-only reference */
   database: DatabaseAdapter;
-  /** Job adapter – use jobs.enqueue(name, payload) to dispatch background jobs from hooks */
+
+  /** Job adapter – read-only reference */
   jobs: JobAdapter;
-  /** Extensible utilities for plugins */
+
+  /** Plugin scratchpad. Not persisted. Mutable. */
   utilities?: Record<string, unknown>;
 }

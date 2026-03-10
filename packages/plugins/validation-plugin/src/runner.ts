@@ -58,7 +58,8 @@ export async function runValidation(
   context: PipelineContext,
   opts: ValidationPluginOptions
 ): Promise<void | ValidationResult> {
-  const { fileKey, metadata, storage, database } = context;
+  const { file, metadata, storage, database } = context;
+  const fileKey = file.key;
 
   const buffer = await fetchWithRetry(storage, fileKey, opts);
 
@@ -92,7 +93,7 @@ export async function runValidation(
     };
   }
 
-  const errors = await runValidators(buffer, fileKey, metadata, opts);
+  const errors = await runValidators(buffer, context.file, metadata, opts);
 
   if (errors.length === 0) {
     await recordValidationResult(database, fileKey, true, []);

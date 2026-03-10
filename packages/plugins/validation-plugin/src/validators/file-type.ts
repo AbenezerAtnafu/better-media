@@ -1,16 +1,17 @@
 import { fileTypeFromBuffer } from "file-type";
 import path from "node:path";
+import type { FileInfo } from "@better-media/core";
 import type { ValidationPluginOptions } from "../interfaces/options.interface";
 import type { ValidationErrorItem } from "../interfaces/error-item.interface";
 
 export async function validateFileType(
   buffer: Buffer,
-  fileKey: string,
+  file: FileInfo,
   metadata: Record<string, unknown>,
   opts: ValidationPluginOptions
 ): Promise<ValidationErrorItem[]> {
   const errors: ValidationErrorItem[] = [];
-  const ext = path.extname(fileKey).toLowerCase();
+  const ext = path.extname(file.key).toLowerCase();
 
   if (opts.allowedExtensions && opts.allowedExtensions.length > 0) {
     const allowed = opts.allowedExtensions.map((e) => e.toLowerCase().replace(/^\.?/, "."));
@@ -31,11 +32,13 @@ export async function validateFileType(
       errors.push({
         rule: "magic-bytes",
         message: "Could not detect MIME type from file content (magic bytes)",
-        details: { fileKey },
+        details: { fileKey: file.key },
       });
     }
   } else {
-    const metaMime = metadata.contentType ?? metadata.mimeType ?? metadata["content-type"];
+    // Prefer structured file.mimeType, fallback to legacy metadata keys
+    const metaMime =
+      file.mimeType ?? metadata.contentType ?? metadata.mimeType ?? metadata["content-type"];
     detectedMime = typeof metaMime === "string" ? metaMime : undefined;
   }
 

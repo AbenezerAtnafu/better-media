@@ -5,7 +5,7 @@ export function virusScanPlugin(): PipelinePlugin {
     name: "virus-scan",
     apply(runtime: MediaRuntime) {
       runtime.hooks["scan:run"].tap("virus-scan", async (context) => {
-        console.log(`Scanning file ${context.fileKey} for viruses...`);
+        console.log(`Scanning file ${context.file.key} for viruses...`);
       });
     },
   };

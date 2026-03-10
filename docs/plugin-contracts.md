@@ -18,26 +18,29 @@ Hooks run in a fixed sequence. The pipeline executes phases in order; if a valid
 
 All hooks receive the same `PipelineContext`:
 
-| Field       | Type                      | Description                                         |
-| ----------- | ------------------------- | --------------------------------------------------- |
-| `fileKey`   | `string`                  | Unique identifier for the file in this pipeline run |
-| `metadata`  | `Record<string, unknown>` | File metadata; plugins may read and **mutate**      |
-| `storage`   | `StorageAdapter`          | Read/write file bytes; **read-only reference**      |
-| `database`  | `DatabaseAdapter`         | Media metadata/records; **read-only reference**     |
-| `jobs`      | `JobAdapter`              | Enqueue background jobs; **read-only reference**    |
-| `utilities` | `Record<string, unknown>` | Plugin scratchpad; plugins may read and **mutate**  |
+| Field             | Type                      | Description                                            |
+| ----------------- | ------------------------- | ------------------------------------------------------ |
+| `file`            | `FileInfo`                | Core file info (key, size, mimeType, etc); **mutable** |
+| `storageLocation` | `StorageLocation`         | Where file lives (key, bucket, etc); **mutable**       |
+| `processing`      | `ProcessingResults`       | Thumbnails, variants, dimensions; **mutable**          |
+| `metadata`        | `Record<string, unknown>` | Custom app/plugin data; **mutable**                    |
+| `utilities`       | `Record<string, unknown>` | Plugin scratchpad (not persisted); **mutable**         |
+| `storage`         | `StorageAdapter`          | Read/write file bytes; **read-only reference**         |
+| `database`        | `DatabaseAdapter`         | Media records; **read-only reference**                 |
+| `jobs`            | `JobAdapter`              | Enqueue background jobs; **read-only reference**       |
 
 ### Mutability Rules
 
-| Mutable     | Immutable  |
-| ----------- | ---------- |
-| `metadata`  | `fileKey`  |
-| `utilities` | `storage`  |
-|             | `database` |
-|             | `jobs`     |
+| Mutable           | Immutable  |
+| ----------------- | ---------- |
+| `file`            | `storage`  |
+| `storageLocation` | `database` |
+| `processing`      | `jobs`     |
+| `metadata`        |            |
+| `utilities`       |            |
 
-- **Mutable fields**: Plugins may add, update, or delete keys. Changes are visible to all subsequent hooks in the same pipeline run.
-- **Immutable fields**: Plugins must not reassign or replace these. Use adapters for their intended purpose (e.g., `storage.read()`, `jobs.enqueue()`).
+- **Mutable**: Add/update fields. Use namespaced keys in `processing` (e.g. `processing.thumbnails["my-plugin"]`) to avoid overwrites.
+- **Immutable**: Do not reassign adapter references. Use `storage.read()`, `jobs.enqueue()`.
 
 ## Hook Reference
 
@@ -45,7 +48,7 @@ All hooks receive the same `PipelineContext`:
 
 - **When**: First phase; runs before validation.
 - **Context**: Full `PipelineContext`.
-- **May mutate**: `metadata`, `utilities`.
+- **May mutate**: `file`, `storageLocation`, `processing`, `metadata`, `utilities`.
 - **May abort**: No.
 - **Mode**: sync-only.
 - **Purpose**: Set up initial state, enrich metadata, prepare utilities for downstream plugins.
@@ -56,7 +59,7 @@ All hooks receive the same `PipelineContext`:
 
 - **When**: Second phase; runs after `upload:init`.
 - **Context**: Full `PipelineContext`.
-- **May mutate**: `metadata`, `utilities`.
+- **May mutate**: `file`, `storageLocation`, `processing`, `metadata`, `utilities`.
 - **May abort**: **Yes**. Return `{ valid: false, message?: string }` to abort the pipeline. Later phases are not executed.
 - **Mode**: sync-only.
 - **Purpose**: Validate file type, dimensions, size, or custom rules. Return `ValidationResult` to reject invalid uploads.
@@ -67,7 +70,7 @@ All hooks receive the same `PipelineContext`:
 
 - **When**: Third phase; runs after validation.
 - **Context**: Full `PipelineContext`.
-- **May mutate**: `metadata`, `utilities`.
+- **May mutate**: `file`, `storageLocation`, `processing`, `metadata`, `utilities`.
 - **May abort**: No.
 - **Mode**: sync-only.
 - **Purpose**: Virus/malware scanning, content analysis. Typically runs before file is persisted.
@@ -78,7 +81,7 @@ All hooks receive the same `PipelineContext`:
 
 - **When**: Fourth phase; runs after scan.
 - **Context**: Full `PipelineContext`.
-- **May mutate**: `metadata`, `utilities`.
+- **May mutate**: `file`, `storageLocation`, `processing`, `metadata`, `utilities`.
 - **May abort**: No.
 - **Mode**: sync-or-background.
 - **Purpose**: Transcoding, resizing, thumbnails, format conversion. Can run in sync or background mode.
@@ -89,20 +92,20 @@ All hooks receive the same `PipelineContext`:
 
 - **When**: Fifth phase; last phase; runs after all processing.
 - **Context**: Full `PipelineContext`.
-- **May mutate**: `metadata`, `utilities`.
+- **May mutate**: `file`, `storageLocation`, `processing`, `metadata`, `utilities`.
 - **May abort**: No.
 - **Mode**: sync-or-background.
 - **Purpose**: Finalization, notifications, database updates, cleanup. Runs only when pipeline completes without abort.
 
 ## Summary Table
 
-| Hook              | Order | Context | Mutates                 | Can Abort | Mode               |
-| ----------------- | ----- | ------- | ----------------------- | --------- | ------------------ |
-| `upload:init`     | 1     | Full    | `metadata`, `utilities` | No        | sync-only          |
-| `validation:run`  | 2     | Full    | `metadata`, `utilities` | Yes       | sync-only          |
-| `scan:run`        | 3     | Full    | `metadata`, `utilities` | No        | sync-only          |
-| `process:run`     | 4     | Full    | `metadata`, `utilities` | No        | sync-or-background |
-| `upload:complete` | 5     | Full    | `metadata`, `utilities` | No        | sync-or-background |
+| Hook              | Order | Context | Mutates                                                          | Can Abort | Mode               |
+| ----------------- | ----- | ------- | ---------------------------------------------------------------- | --------- | ------------------ |
+| `upload:init`     | 1     | Full    | `file`, `storageLocation`, `processing`, `metadata`, `utilities` | No        | sync-only          |
+| `validation:run`  | 2     | Full    | `file`, `storageLocation`, `processing`, `metadata`, `utilities` | Yes       | sync-only          |
+| `scan:run`        | 3     | Full    | `file`, `storageLocation`, `processing`, `metadata`, `utilities` | No        | sync-only          |
+| `process:run`     | 4     | Full    | `file`, `storageLocation`, `processing`, `metadata`, `utilities` | No        | sync-or-background |
+| `upload:complete` | 5     | Full    | `file`, `storageLocation`, `processing`, `metadata`, `utilities` | No        | sync-or-background |
 
 ## Execution Mode
 

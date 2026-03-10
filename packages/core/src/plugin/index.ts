@@ -3,6 +3,14 @@ import type { PipelineContext } from "./interfaces/context.interface";
 
 export type { PipelinePlugin, PluginExecutionMode } from "./interfaces/plugin.interface";
 export type { PipelineContext } from "./interfaces/context.interface";
+export type { FileInfo } from "./interfaces/file-info.interface";
+export type { StorageLocation } from "./interfaces/storage-location.interface";
+export type {
+  ProcessingResults,
+  ThumbnailResult,
+  VariantResult,
+  MediaDimensions,
+} from "./interfaces/processing-results.interface";
 export type { PluginHooks } from "./interfaces/hooks.interface";
 export { HOOK_NAMES } from "./interfaces/hook-name.interface";
 export type { HookName } from "./interfaces/hook-name.interface";
