@@ -28,7 +28,7 @@ app.post("/upload", async (req, res) => {
   try {
     const fileKey = req.body.fileKey ?? `file-${Date.now()}`;
     const metadata = req.body.metadata ?? {};
-    await media.processUpload(fileKey, metadata);
+    await media.upload.multer(fileKey, metadata);
     res.json({ success: true, fileKey });
   } catch (err) {
     res.status(500).json({

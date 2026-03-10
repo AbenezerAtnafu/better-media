@@ -20,6 +20,6 @@ export type {
   MediaRuntimeHook,
   ValidationResult,
 } from "./plugin/index";
-export type { StorageAdapter } from "./storage/index";
+export type { StorageAdapter, GetUrlOptions, PresignedPutUrlOptions } from "./storage/index";
 export type { DatabaseAdapter } from "./database/index";
 export type { JobAdapter } from "./job/index";

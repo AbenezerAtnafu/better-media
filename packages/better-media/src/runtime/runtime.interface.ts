@@ -1,40 +1,28 @@
+import type { GetUrlOptions, PresignedPutUrlOptions } from "@better-media/core";
 import type { BackgroundJobPayload } from "../core/lifecycle-engine";
 
-/** Session returned by upload.createSession() */
-export interface UploadSession {
-  id: string;
-  expiresAt: number;
-}
+/** Metadata for uploads (e.g. contentType). Accepted at upload time. */
+export type Metadata = Record<string, unknown>;
 
-/** File record from database */
-export type FileRecord = Record<string, unknown>;
+/** File record in database (one per file). */
+export type FileRecord = Metadata;
 
-/** Runtime instance returned by createBetterMedia */
 export interface BetterMediaRuntime {
+  /** Multer flow: after storage.put, run pipeline */
   upload: {
-    /** Create an upload session (for multipart/chunked flows) */
-    createSession(): Promise<UploadSession>;
-    /** Complete upload and run pipeline. Pass sessionId from createSession, or empty string for direct upload. */
-    complete(sessionId: string, fileKey: string, metadata?: Record<string, unknown>): Promise<void>;
+    multer(fileKey: string, metadata?: Metadata): Promise<void>;
+    presignedPutUrl(fileKey: string, options?: PresignedPutUrlOptions): Promise<string>;
+    complete(fileKey: string, metadata?: Metadata): Promise<void>;
   };
+
+  /** File operations */
   files: {
-    /** Get file record by key */
     get(fileKey: string): Promise<FileRecord | null>;
+    delete(fileKey: string): Promise<void>;
+    getUrl(fileKey: string, options?: GetUrlOptions): Promise<string>;
+    reprocess(fileKey: string, metadata?: Metadata): Promise<void>;
   };
-  metadata: {
-    /** Get metadata by key */
-    get(key: string): Promise<Record<string, unknown> | null>;
-    /** Store metadata by key */
-    put(key: string, data: Record<string, unknown>): Promise<void>;
-  };
-  /**
-   * Execute a background job (call from worker process).
-   * Use with Bull, SQS, Inngest, etc.
-   */
+
+  /** Execute background job (call from worker). */
   runBackgroundJob(payload: BackgroundJobPayload): Promise<void>;
-  /**
-   * @deprecated Use media.upload.complete("", fileKey, metadata) instead
-   * Process an uploaded file through the plugin lifecycle
-   */
-  processUpload(fileKey: string, metadata?: Record<string, unknown>): Promise<void>;
 }

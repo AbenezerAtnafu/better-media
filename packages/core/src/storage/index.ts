@@ -1,1 +1,5 @@
-export type { StorageAdapter } from "./interfaces/adapter.interface";
+export type {
+  StorageAdapter,
+  GetUrlOptions,
+  PresignedPutUrlOptions,
+} from "./interfaces/adapter.interface";

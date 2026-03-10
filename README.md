@@ -37,7 +37,7 @@ Plugin
  ├─ name
  ├─ hooks (extensible lifecycle hooks)
  └─ execution mode
-      ├─ sync      – run inline during processUpload
+      ├─ sync      – run inline during upload
       └─ background – enqueue via job adapter
 ```
 
@@ -45,7 +45,7 @@ Plugin
 
 Background execution is powered by an optional job adapter. Default: in-memory.
 
-- **sync** – Plugin runs inline during `processUpload`
+- **sync** – Plugin runs inline during upload
 - **background** – Plugin work is enqueued via job adapter (Redis, RabbitMQ, Kafka, etc.)
 
 ### Worker Integration

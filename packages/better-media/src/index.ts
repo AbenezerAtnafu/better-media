@@ -33,7 +33,7 @@ function createNoopJobAdapter(): JobAdapter {
  *   ]
  * });
  *
- * await media.processUpload("uploads/abc123.jpg", { contentType: "image/jpeg" });
+ * await media.upload.multer("uploads/abc123.jpg", { contentType: "image/jpeg" });
  * ```
  */
 export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime {
@@ -65,34 +65,47 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
 
   return {
     upload: {
-      async createSession() {
-        return {
-          id: crypto.randomUUID(),
-          expiresAt: Date.now() + 3600000,
-        };
+      multer(fileKey: string, metadata: Record<string, unknown> = {}) {
+        return runPipeline(fileKey, metadata);
       },
-      async complete(_sessionId: string, fileKey: string, metadata: Record<string, unknown> = {}) {
-        await runPipeline(fileKey, metadata);
+      complete(fileKey: string, metadata: Record<string, unknown> = {}) {
+        return runPipeline(fileKey, metadata);
+      },
+      async presignedPutUrl(
+        fileKey: string,
+        options?: { expiresIn?: number; contentType?: string }
+      ) {
+        const fn = storage.createPresignedPutUrl;
+        if (typeof fn !== "function") {
+          throw new Error(
+            "Presigned upload not supported by this storage adapter. Use an S3/GCS adapter."
+          );
+        }
+        return fn.call(storage, fileKey, options);
       },
     },
     files: {
-      async get(fileKey: string) {
+      get(fileKey: string) {
         return database.get(fileKey);
       },
-    },
-    metadata: {
-      async get(key: string) {
-        return database.get(key);
+      async delete(fileKey: string) {
+        await Promise.all([storage.delete(fileKey), database.delete(fileKey)]);
       },
-      async put(key: string, data: Record<string, unknown>) {
-        await database.put(key, data);
+      async getUrl(fileKey: string, options?: { expiresIn?: number }) {
+        const fn = storage.getUrl;
+        if (typeof fn !== "function") {
+          throw new Error(
+            "URL generation not supported by this storage adapter. Use an S3/GCS adapter."
+          );
+        }
+        return fn.call(storage, fileKey, options);
+      },
+      reprocess(fileKey: string, metadata: Record<string, unknown> = {}) {
+        return runPipeline(fileKey, metadata);
       },
     },
     async runBackgroundJob(payload: BackgroundJobPayload) {
       await runBackgroundJob(payload, registry, storage, database, jobAdapter);
-    },
-    async processUpload(fileKey: string, metadata: Record<string, unknown> = {}) {
-      await runPipeline(fileKey, metadata);
     },
   };
 }
@@ -106,4 +119,5 @@ export {
   HOOK_NAMES,
 } from "./plugins/plugin-registry";
 export type { BackgroundJobPayload } from "./core/lifecycle-engine";
-export type { BetterMediaRuntime, FileRecord, UploadSession } from "./runtime/runtime.interface";
+export type { BetterMediaRuntime, FileRecord, Metadata } from "./runtime/runtime.interface";
+export type { GetUrlOptions, PresignedPutUrlOptions } from "@better-media/core";

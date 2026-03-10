@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     // Seed storage with a sample file (in real app, file comes from presigned URL upload)
     await storage.put(fileKey, simulateFail ? Buffer.from("not-an-image") : SAMPLE_JPEG);
 
-    await media.processUpload(fileKey, metadata);
+    await media.upload.multer(fileKey, metadata);
     return NextResponse.json({ success: true, fileKey });
   } catch (err) {
     return NextResponse.json(
