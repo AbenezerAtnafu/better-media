@@ -1,7 +1,7 @@
 import type { PipelineContext } from "@better-media/core";
 import type { MediaProcessingPluginOptions } from "../interfaces/options.interface";
-import { processImageThumbnails } from "./image-thumbnail";
-import { processVideoThumbnails } from "./video-thumbnail";
+import { processImageThumbnails } from "./image/thumbnail";
+import { processVideoThumbnails } from "./video/thumbnail";
 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
 

@@ -1,9 +1,9 @@
 import sharp from "sharp";
-import { thumbnailStorageKey } from "../utils/thumbnail-key";
+import { thumbnailStorageKey } from "../../utils/thumbnail-key";
 import type { PipelineContext, ThumbnailResult, StorageAdapter } from "@better-media/core";
-import type { MediaProcessingPluginOptions } from "../interfaces/options.interface";
-import type { ExtractedMetadata } from "../interfaces/extracted-metadata.interface";
-import type { ThumbnailSize } from "../interfaces/thumbnail-size.interface";
+import type { MediaProcessingPluginOptions } from "../../interfaces/options.interface";
+import type { ExtractedMetadata } from "../../interfaces/extracted-metadata.interface";
+import type { ThumbnailSize } from "../../interfaces/thumbnail-size.interface";
 
 const DEFAULT_IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
 

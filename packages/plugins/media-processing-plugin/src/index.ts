@@ -1,6 +1,6 @@
 import type { PipelinePlugin, MediaRuntime } from "@better-media/core";
 import type { MediaProcessingPluginOptions } from "./interfaces/options.interface";
-import { runMediaProcessing } from "./runner";
+import { runMediaProcessing } from "./runtime/runner";
 
 export type { MediaProcessingPluginOptions } from "./interfaces/options.interface";
 export type { ExtractedMetadata } from "./interfaces/extracted-metadata.interface";

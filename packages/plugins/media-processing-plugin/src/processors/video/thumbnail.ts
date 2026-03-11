@@ -10,9 +10,10 @@ import type {
   MediaDimensions,
   StorageAdapter,
 } from "@better-media/core";
-import type { MediaProcessingPluginOptions } from "../interfaces/options.interface";
-import type { ExtractedMetadata } from "../interfaces/extracted-metadata.interface";
-import type { ThumbnailSize } from "../interfaces/thumbnail-size.interface";
+import type { MediaProcessingPluginOptions } from "../../interfaces/options.interface";
+import type { ExtractedMetadata } from "../../interfaces/extracted-metadata.interface";
+import type { ThumbnailSize } from "../../interfaces/thumbnail-size.interface";
+import { thumbnailStorageKey } from "../../utils/thumbnail-key";
 
 const DEFAULT_VIDEO_MIMES = [
   "video/mp4",
@@ -28,8 +29,6 @@ function getThumbnailSizes(opts: MediaProcessingPluginOptions): ThumbnailSize[] 
   const custom = opts.thumbnailSizes ?? [];
   return [...fromOpts, ...custom];
 }
-
-import { thumbnailStorageKey } from "../utils/thumbnail-key";
 
 function getOutputExt(format: "jpeg" | "png" | "webp"): string {
   return format === "jpeg" ? "jpg" : format;
