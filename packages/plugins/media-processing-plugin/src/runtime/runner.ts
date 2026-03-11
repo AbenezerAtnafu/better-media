@@ -1,6 +1,6 @@
 import type { PipelineContext, StorageAdapter } from "@better-media/core";
-import type { MediaProcessingPluginOptions } from "./interfaces/options.interface";
-import { runProcessors } from "./processors";
+import type { MediaProcessingPluginOptions } from "../interfaces/options.interface";
+import { runProcessors } from "../processors";
 
 export async function runMediaProcessing(
   context: PipelineContext,
