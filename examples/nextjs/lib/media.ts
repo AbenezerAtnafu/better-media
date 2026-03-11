@@ -28,7 +28,7 @@ export const media = createBetterMedia({
       onFailure: "abort",
     }),
     virusScanPlugin(),
-    mediaProcessingPlugin({ mode: "background" }),
+    mediaProcessingPlugin({ executionMode: "background" }),
   ],
 });
 

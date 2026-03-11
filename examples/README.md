@@ -33,4 +33,26 @@ Server runs at [http://localhost:3000](http://localhost:3000).
 
 ## Prerequisites
 
-From the monorepo root, run `pnpm install` and `pnpm build` to build all workspace packages before running examples.
+From the monorepo root:
+
+```bash
+pnpm install
+pnpm build
+```
+
+### Sharp (Next.js + media-processing)
+
+The media-processing plugin uses `sharp`, which requires platform-specific binaries. If you see:
+
+```
+Could not load the "sharp" module using the darwin-arm64 runtime
+```
+
+Run once, then reinstall:
+
+```bash
+pnpm approve-builds sharp
+pnpm install
+```
+
+This allows sharp's postinstall script to download the correct binary for your platform.

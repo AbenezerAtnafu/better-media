@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "sharp": "^0.34.5",
     "@better-media/adapter-db": "workspace:*",
     "@better-media/adapter-jobs": "workspace:*",
     "@better-media/adapter-storage": "workspace:*",

@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["sharp", "fluent-ffmpeg"],
   transpilePackages: [
     "better-media",
     "@better-media/core",

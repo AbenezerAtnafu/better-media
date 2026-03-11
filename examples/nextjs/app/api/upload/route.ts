@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { media, storage } from "@/lib/media";
 
 // Minimal valid JPEG (for demo; validation reads from storage)
 const SAMPLE_JPEG = Buffer.from([
@@ -17,6 +16,7 @@ const SAMPLE_JPEG = Buffer.from([
 
 export async function POST(request: Request) {
   try {
+    const { media, storage } = await import("@/lib/media");
     const body = await request.json();
     const fileKey = body.fileKey ?? `photo-${Date.now()}.jpg`;
     const metadata = body.metadata ?? { contentType: "image/jpeg" };

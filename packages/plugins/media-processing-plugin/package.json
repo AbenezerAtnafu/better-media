@@ -20,7 +20,9 @@
     "test": "jest"
   },
   "dependencies": {
-    "@better-media/core": "workspace:*"
+    "@better-media/core": "workspace:*",
+    "fluent-ffmpeg": "^2.1.3",
+    "sharp": "^0.34.5"
   },
   "keywords": [],
   "author": "",

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { media } from "@/lib/media";
 import { getQueuedJobs, clearQueuedJobs } from "@/lib/tracking-job-adapter";
 import type { BackgroundJobPayload } from "better-media";
 
 /** POST: Process queued background jobs (simulates worker) */
 export async function POST() {
   try {
+    const { media } = await import("@/lib/media");
     const jobs = getQueuedJobs();
     const results: Array<{ payload: unknown; status: "ok" | "error"; error?: string }> = [];
 
