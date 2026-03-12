@@ -6,6 +6,7 @@ import type {
 } from "@better-media/core";
 
 import type { BetterMediaSettings } from "./settings.interface";
+import type { FileHandlingConfig } from "../core/file-loader";
 
 /** Configuration for the Better Media framework */
 export interface BetterMediaConfig {
@@ -19,4 +20,9 @@ export interface BetterMediaConfig {
   jobs?: JobAdapter;
   /** Optional settings */
   settings?: BetterMediaSettings;
+  /**
+   * Optional file handling. When maxBufferBytes is set, files larger than that
+   * are streamed to a temp file instead of loaded into memory.
+   */
+  fileHandling?: FileHandlingConfig;
 }

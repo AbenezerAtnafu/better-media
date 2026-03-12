@@ -34,6 +34,19 @@ export interface ValidationPluginOptions {
   /** Validate MIME via magic bytes (not extension). Requires file bytes. */
   useMagicBytes?: boolean;
 
+  /**
+   * Extract critical metadata from file content and override context.file.
+   * Trust library-extracted values over caller-provided metadata.
+   * Default: true.
+   */
+  extractMetadata?: boolean;
+
+  /**
+   * Checksum algorithms to compute when extractMetadata is true.
+   * Default: ["sha256"].
+   */
+  extractChecksums?: ("sha256" | "md5")[];
+
   /** Min file size in bytes. Omit to skip. */
   minBytes?: number;
 

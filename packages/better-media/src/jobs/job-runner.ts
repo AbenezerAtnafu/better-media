@@ -7,6 +7,21 @@ import type {
 } from "@better-media/core";
 import type { HookRegistry } from "../plugins/plugin.interface";
 import type { BackgroundJobPayload } from "../core/lifecycle-engine";
+import {
+  loadFileIntoContext,
+  loadTrustedFromDb,
+  saveTrustedToDb,
+  cleanupTempFile,
+  type FileHandlingConfig,
+} from "../core/file-loader";
+
+function syncTrustedToFile(context: PipelineContext): void {
+  const { trusted, file } = context;
+  if (trusted.file?.mimeType != null) file.mimeType = trusted.file.mimeType;
+  if (trusted.file?.size != null) file.size = trusted.file.size;
+  if (trusted.file?.originalName != null) file.originalName = trusted.file.originalName;
+  if (trusted.checksums) file.checksums = { ...file.checksums, ...trusted.checksums };
+}
 
 /**
  * Execute a background job: rebuild context, find handler, run it.
@@ -17,7 +32,8 @@ export async function runBackgroundJob(
   registry: HookRegistry,
   storage: StorageAdapter,
   database: DatabaseAdapter,
-  jobs: JobAdapter
+  jobs: JobAdapter,
+  fileHandling: FileHandlingConfig = {}
 ): Promise<void> {
   const {
     metadata = {},
@@ -57,22 +73,39 @@ export async function runBackgroundJob(
 
   const processing: PipelineContext["processing"] = payloadProcessing ?? {};
 
-  const handlers = registry.get(hookName) ?? [];
-  const handler = handlers.find((h) => h.name === pluginName);
-  if (!handler) {
-    throw new Error(`Handler not found: ${hookName}/${pluginName}`);
-  }
+  const trustedFromDb = await loadTrustedFromDb(database, file.key);
 
   const context: PipelineContext = {
     file,
     storageLocation,
     processing,
     metadata: meta,
+    trusted: trustedFromDb ?? {},
     utilities: {},
     storage,
     database,
     jobs,
   };
 
-  await handler.fn(context);
+  if (trustedFromDb) {
+    syncTrustedToFile(context);
+  }
+
+  try {
+    await loadFileIntoContext(context, fileHandling);
+
+    const handlers = registry.get(hookName) ?? [];
+    const handler = handlers.find((h) => h.name === pluginName);
+    if (!handler) {
+      throw new Error(`Handler not found: ${hookName}/${pluginName}`);
+    }
+
+    await handler.fn(context);
+
+    if (context.trusted.file ?? context.trusted.checksums) {
+      await saveTrustedToDb(database, file.key, context.trusted);
+    }
+  } finally {
+    await cleanupTempFile(context);
+  }
 }

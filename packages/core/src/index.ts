@@ -10,6 +10,7 @@ export type {
   PipelinePlugin,
   PipelineContext,
   FileInfo,
+  FileContent,
   StorageLocation,
   ProcessingResults,
   ThumbnailResult,
@@ -26,6 +27,9 @@ export type {
   MediaRuntime,
   MediaRuntimeHook,
   ValidationResult,
+  TrustedMetadata,
+  TrustedFileInfo,
+  TrustedChecksums,
 } from "./plugin/index";
 export type { StorageAdapter, GetUrlOptions, PresignedPutUrlOptions } from "./storage/index";
 export type { DatabaseAdapter } from "./database/index";

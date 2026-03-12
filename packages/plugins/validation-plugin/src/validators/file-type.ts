@@ -24,8 +24,11 @@ export async function validateFileType(
     }
   }
 
+  // Prefer file.mimeType when set (from extraction). Otherwise detect via magic bytes or use metadata.
   let detectedMime: string | undefined;
-  if (opts.useMagicBytes) {
+  if (file.mimeType) {
+    detectedMime = file.mimeType;
+  } else if (opts.useMagicBytes) {
     const ft = await fileTypeFromBuffer(buffer);
     detectedMime = ft?.mime;
     if (!detectedMime && opts.allowedMimeTypes && opts.allowedMimeTypes.length > 0) {
@@ -36,9 +39,7 @@ export async function validateFileType(
       });
     }
   } else {
-    // Prefer structured file.mimeType, fallback to legacy metadata keys
-    const metaMime =
-      file.mimeType ?? metadata.contentType ?? metadata.mimeType ?? metadata["content-type"];
+    const metaMime = metadata.contentType ?? metadata.mimeType ?? metadata["content-type"];
     detectedMime = typeof metaMime === "string" ? metaMime : undefined;
   }
 

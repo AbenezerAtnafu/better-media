@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import type {
   PipelineContext,
   ValidationResult,
@@ -6,6 +7,7 @@ import type {
 } from "@better-media/core";
 import type { ValidationPluginOptions } from "../interfaces/options.interface";
 import { ValidationErrorItem } from "../interfaces/error-item.interface";
+import { extractMetadataFromBuffer } from "../extract-metadata";
 import { runValidators } from "../validators";
 
 const VALIDATION_DB_KEY_PREFIX = "better-media:validation:";
@@ -39,6 +41,21 @@ async function fetchWithRetry(
   return null;
 }
 
+async function getBufferFromContext(context: PipelineContext): Promise<Buffer | null> {
+  const fileContent = context.utilities?.fileContent;
+  if (fileContent?.buffer) return fileContent.buffer;
+  if (fileContent?.tempPath) return fs.readFile(fileContent.tempPath);
+  return null;
+}
+
+function syncTrustedToFile(context: PipelineContext): void {
+  const { trusted, file } = context;
+  if (trusted.file?.mimeType != null) file.mimeType = trusted.file.mimeType;
+  if (trusted.file?.size != null) file.size = trusted.file.size;
+  if (trusted.file?.originalName != null) file.originalName = trusted.file.originalName;
+  if (trusted.checksums) file.checksums = { ...file.checksums, ...trusted.checksums };
+}
+
 function recordValidationResult(
   database: DatabaseAdapter,
   fileKey: string,
@@ -61,7 +78,8 @@ export async function runValidation(
   const { file, metadata, storage, database } = context;
   const fileKey = file.key;
 
-  const buffer = await fetchWithRetry(storage, fileKey, opts);
+  let buffer = await getBufferFromContext(context);
+  if (buffer == null) buffer = await fetchWithRetry(storage, fileKey, opts);
 
   if (buffer == null) {
     const notFoundError: ValidationErrorItem = {
@@ -92,6 +110,10 @@ export async function runValidation(
       message: notFoundError.message,
     };
   }
+
+  // Extract critical metadata: first-writer-wins into context.trusted
+  await extractMetadataFromBuffer(buffer, context, opts);
+  syncTrustedToFile(context);
 
   const errors = await runValidators(buffer, context.file, metadata, opts);
 

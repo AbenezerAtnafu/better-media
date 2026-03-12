@@ -194,6 +194,194 @@ describe("validationPlugin - checksum", () => {
   });
 });
 
+describe("validationPlugin - extract metadata", () => {
+  it("overrides critical fields from file content (trust library over caller)", async () => {
+    const storage = memoryStorage();
+    const database = memoryDatabase();
+    let capturedFile: { mimeType?: string; size?: number; checksums?: Record<string, string> } = {};
+
+    const spyPlugin = {
+      name: "spy",
+      apply(runtime: {
+        hooks: {
+          "upload:complete": {
+            tap: (n: string, fn: (ctx: { file: typeof capturedFile }) => Promise<void>) => void;
+          };
+        };
+      }) {
+        runtime.hooks["upload:complete"].tap("spy", async (ctx) => {
+          capturedFile = { ...ctx.file };
+        });
+      },
+    };
+
+    const media = createBetterMedia({
+      storage,
+      database,
+      plugins: [
+        validationPlugin({
+          executionMode: "sync",
+          allowedExtensions: [".jpg", ".jpeg"],
+          allowedMimeTypes: ["image/jpeg"],
+          useMagicBytes: true,
+          onFailure: "abort",
+        }),
+        spyPlugin,
+      ],
+    });
+
+    await storage.put("photo.jpg", MINIMAL_JPEG);
+
+    await media.upload.multer("photo.jpg", {
+      contentType: "image/gif",
+      size: 99999,
+      originalName: "wrong.png",
+    });
+
+    expect(capturedFile.mimeType).toBe("image/jpeg");
+    expect(capturedFile.size).toBe(MINIMAL_JPEG.length);
+    expect(capturedFile.checksums?.sha256).toBeDefined();
+    expect(typeof capturedFile.checksums?.sha256).toBe("string");
+    expect(capturedFile.checksums!.sha256).toHaveLength(64);
+  });
+
+  it("extracts both sha256 and md5 when configured", async () => {
+    const storage = memoryStorage();
+    const database = memoryDatabase();
+    let capturedFile: { checksums?: Record<string, string> } = {};
+
+    const spyPlugin = {
+      name: "spy",
+      apply(runtime: {
+        hooks: {
+          "upload:complete": {
+            tap: (n: string, fn: (ctx: { file: typeof capturedFile }) => Promise<void>) => void;
+          };
+        };
+      }) {
+        runtime.hooks["upload:complete"].tap("spy", async (ctx) => {
+          capturedFile = { ...ctx.file };
+        });
+      },
+    };
+
+    const content = Buffer.from("hello");
+    const media = createBetterMedia({
+      storage,
+      database,
+      plugins: [
+        validationPlugin({
+          executionMode: "sync",
+          extractMetadata: true,
+          extractChecksums: ["sha256", "md5"],
+          onFailure: "abort",
+        }),
+        spyPlugin,
+      ],
+    });
+
+    await storage.put("file.bin", content);
+
+    await media.upload.multer("file.bin", {});
+
+    expect(capturedFile.checksums?.sha256).toBe(
+      crypto.createHash("sha256").update(content).digest("hex")
+    );
+    expect(capturedFile.checksums?.md5).toBe(
+      crypto.createHash("md5").update(content).digest("hex")
+    );
+  });
+
+  it("uses streaming when file exceeds maxBufferBytes", async () => {
+    const storage = memoryStorage();
+    const database = memoryDatabase();
+    let hadTempPath = false;
+
+    const spyPlugin = {
+      name: "spy",
+      apply(runtime: {
+        hooks: {
+          "upload:complete": {
+            tap: (
+              n: string,
+              fn: (ctx: { utilities?: { fileContent?: { tempPath?: string } } }) => Promise<void>
+            ) => void;
+          };
+        };
+      }) {
+        runtime.hooks["upload:complete"].tap("spy", async (ctx) => {
+          hadTempPath = !!ctx.utilities?.fileContent?.tempPath;
+        });
+      },
+    };
+
+    const largeContent = Buffer.alloc(200, "x");
+    const media = createBetterMedia({
+      storage,
+      database,
+      fileHandling: { maxBufferBytes: 100 },
+      plugins: [
+        validationPlugin({
+          executionMode: "sync",
+          extractMetadata: true,
+          onFailure: "abort",
+        }),
+        spyPlugin,
+      ],
+    });
+
+    await storage.put("large.bin", largeContent);
+    await media.upload.multer("large.bin", {});
+
+    expect(hadTempPath).toBe(true);
+  });
+
+  it("skips extraction when extractMetadata is false", async () => {
+    const storage = memoryStorage();
+    const database = memoryDatabase();
+    let capturedFile: { mimeType?: string; size?: number; checksums?: Record<string, string> } = {};
+
+    const spyPlugin = {
+      name: "spy",
+      apply(runtime: {
+        hooks: {
+          "upload:complete": {
+            tap: (n: string, fn: (ctx: { file: typeof capturedFile }) => Promise<void>) => void;
+          };
+        };
+      }) {
+        runtime.hooks["upload:complete"].tap("spy", async (ctx) => {
+          capturedFile = { ...ctx.file };
+        });
+      },
+    };
+
+    const media = createBetterMedia({
+      storage,
+      database,
+      plugins: [
+        validationPlugin({
+          executionMode: "sync",
+          extractMetadata: false,
+          allowedExtensions: [".jpg"],
+          allowedMimeTypes: ["image/jpeg"],
+          useMagicBytes: true,
+          onFailure: "abort",
+        }),
+        spyPlugin,
+      ],
+    });
+
+    await storage.put("photo.jpg", MINIMAL_JPEG);
+
+    await media.upload.multer("photo.jpg", { contentType: "image/jpeg", size: 12345 });
+
+    expect(capturedFile.mimeType).toBe("image/jpeg");
+    expect(capturedFile.size).toBe(12345);
+    expect(capturedFile.checksums).toBeUndefined();
+  });
+});
+
 describe("validationPlugin - file not found", () => {
   it("fails when file not in storage and fileNotFoundBehavior is fail", async () => {
     const storage = memoryStorage();

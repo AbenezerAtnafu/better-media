@@ -40,6 +40,7 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
   const { storage, database, plugins } = config;
   const { registry } = buildPluginRegistry(plugins);
 
+  const fileHandling = config.fileHandling ?? {};
   const jobAdapter =
     config.jobs ??
     (hasBackgroundHandlers(registry)
@@ -51,14 +52,15 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
                 registry,
                 storage,
                 database,
-                adapter
+                adapter,
+                fileHandling
               ),
           });
           return adapter;
         })()
       : createNoopJobAdapter());
   const engine = new LifecycleEngine(registry, jobAdapter);
-  const executor = new PipelineExecutor(engine, storage, database, jobAdapter);
+  const executor = new PipelineExecutor(engine, storage, database, jobAdapter, fileHandling);
 
   const runPipeline = (fileKey: string, metadata: Record<string, unknown> = {}) =>
     executor.run(fileKey, metadata);
@@ -105,7 +107,7 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
       },
     },
     async runBackgroundJob(payload: BackgroundJobPayload) {
-      await runBackgroundJob(payload, registry, storage, database, jobAdapter);
+      await runBackgroundJob(payload, registry, storage, database, jobAdapter, fileHandling);
     },
   };
 }
@@ -121,3 +123,4 @@ export {
 export type { BackgroundJobPayload } from "./core/lifecycle-engine";
 export type { BetterMediaRuntime, FileRecord, Metadata } from "./runtime/runtime.interface";
 export type { GetUrlOptions, PresignedPutUrlOptions } from "@better-media/core";
+export type { FileHandlingConfig } from "./core/file-loader";

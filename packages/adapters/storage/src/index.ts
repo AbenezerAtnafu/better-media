@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import type { StorageAdapter } from "@better-media/core";
 
 /**
@@ -16,6 +17,15 @@ export function memoryStorage(): StorageAdapter {
     },
     async delete(key: string) {
       store.delete(key);
+    },
+    async getSize(key: string) {
+      const buf = store.get(key);
+      return buf != null ? buf.length : null;
+    },
+    async getStream(key: string) {
+      const buf = store.get(key);
+      if (buf == null) return null;
+      return Readable.toWeb(Readable.from(buf)) as unknown as ReadableStream<Uint8Array>;
     },
   };
 }

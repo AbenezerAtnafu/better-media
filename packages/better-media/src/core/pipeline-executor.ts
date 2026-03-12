@@ -8,6 +8,13 @@ import type {
 } from "@better-media/core";
 import { HOOK_NAMES } from "../plugins/plugin-registry";
 import type { LifecycleEngine } from "./lifecycle-engine";
+import {
+  loadFileIntoContext,
+  loadTrustedFromDb,
+  saveTrustedToDb,
+  cleanupTempFile,
+  type FileHandlingConfig,
+} from "./file-loader";
 
 function buildFileInfo(
   fileKey: string,
@@ -39,6 +46,14 @@ function buildStorageLocation(fileKey: string): PipelineContext["storageLocation
   };
 }
 
+function syncTrustedToFile(context: PipelineContext): void {
+  const { trusted, file } = context;
+  if (trusted.file?.mimeType != null) file.mimeType = trusted.file.mimeType;
+  if (trusted.file?.size != null) file.size = trusted.file.size;
+  if (trusted.file?.originalName != null) file.originalName = trusted.file.originalName;
+  if (trusted.checksums) file.checksums = { ...file.checksums, ...trusted.checksums };
+}
+
 /** Error thrown when validation phase aborts the pipeline */
 export class ValidationError extends Error {
   constructor(public readonly result: ValidationResult) {
@@ -55,27 +70,45 @@ export class PipelineExecutor {
     private readonly engine: LifecycleEngine,
     private readonly storage: StorageAdapter,
     private readonly database: DatabaseAdapter,
-    private readonly jobs: JobAdapter
+    private readonly jobs: JobAdapter,
+    private readonly fileHandling: FileHandlingConfig = {}
   ) {}
 
   async run(fileKey: string, metadata: Record<string, unknown> = {}): Promise<void> {
     const meta = { ...metadata };
+    const trustedFromDb = await loadTrustedFromDb(this.database, fileKey);
+
     const context: PipelineContext = {
       file: buildFileInfo(fileKey, meta),
       storageLocation: buildStorageLocation(fileKey),
       processing: {},
       metadata: meta,
+      trusted: trustedFromDb ?? {},
       utilities: {},
       storage: this.storage,
       database: this.database,
       jobs: this.jobs,
     };
 
-    for (const phase of HOOK_NAMES) {
-      const result = await this.engine.trigger(phase, context);
-      if (result !== undefined && typeof result === "object" && result.valid === false) {
-        throw new ValidationError(result);
+    if (trustedFromDb) {
+      syncTrustedToFile(context);
+    }
+
+    try {
+      await loadFileIntoContext(context, this.fileHandling);
+
+      for (const phase of HOOK_NAMES) {
+        const result = await this.engine.trigger(phase, context);
+        if (result !== undefined && typeof result === "object" && result.valid === false) {
+          throw new ValidationError(result);
+        }
       }
+
+      if (context.trusted.file ?? context.trusted.checksums) {
+        await saveTrustedToDb(this.database, fileKey, context.trusted);
+      }
+    } finally {
+      await cleanupTempFile(context);
     }
   }
 }

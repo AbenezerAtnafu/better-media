@@ -18,6 +18,18 @@ export interface StorageAdapter {
   delete(key: string): Promise<void>;
 
   /**
+   * Optional: get file size in bytes without loading the full buffer.
+   * Used with fileHandling.maxBufferBytes to decide buffer vs stream.
+   */
+  getSize?(key: string): Promise<number | null>;
+
+  /**
+   * Optional: stream file contents. Used when file exceeds maxBufferBytes.
+   * Adapters (S3, GCS) can stream without loading into memory.
+   */
+  getStream?(key: string): Promise<ReadableStream | null>;
+
+  /**
    * Generate a URL to access the file (public or signed).
    * Optional: adapters for S3, GCS, etc. implement this; memory adapter does not.
    */

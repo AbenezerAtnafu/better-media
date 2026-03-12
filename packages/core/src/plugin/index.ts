@@ -2,7 +2,12 @@ import type { PipelinePlugin } from "./interfaces/plugin.interface";
 import type { PipelineContext } from "./interfaces/context.interface";
 
 export type { PipelinePlugin, PluginExecutionMode } from "./interfaces/plugin.interface";
-export type { PipelineContext } from "./interfaces/context.interface";
+export type { PipelineContext, FileContent } from "./interfaces/context.interface";
+export type {
+  TrustedMetadata,
+  TrustedFileInfo,
+  TrustedChecksums,
+} from "./interfaces/trusted-metadata.interface";
 export type { FileInfo } from "./interfaces/file-info.interface";
 export type { StorageLocation } from "./interfaces/storage-location.interface";
 export type {
