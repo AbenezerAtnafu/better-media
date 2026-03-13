@@ -25,7 +25,13 @@ export function memoryStorage(): StorageAdapter {
     async getStream(key: string) {
       const buf = store.get(key);
       if (buf == null) return null;
-      return Readable.toWeb(Readable.from(buf)) as unknown as ReadableStream<Uint8Array>;
+      return Readable.from(buf) as unknown as ReadableStream<Uint8Array>;
+    },
+    async exists(key: string) {
+      return store.has(key);
+    },
+    async clear() {
+      store.clear();
     },
   };
 }

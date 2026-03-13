@@ -6,11 +6,11 @@ Modular media pipeline framework for intake, validation, processing, and storage
 
 **Core defines contracts. Adapters implement infrastructure. Framework orchestrates.**
 
-| Layer         | Package(s)                                                                                | Responsibility                                                                                           |
-| ------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Core**      | `@better-media/core`                                                                      | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.       |
-| **Adapters**  | `@better-media/adapter-storage`, `@better-media/adapter-db`, `@better-media/adapter-jobs` | Implement core contracts (memoryStorage, memoryDatabase, memoryJobAdapter, future Redis/RabbitMQ/Kafka). |
-| **Framework** | `better-media`                                                                            | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations.     |
+| Layer         | Package(s)                                                                                                                                                                | Responsibility                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Core**      | `@better-media/core`                                                                                                                                                      | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.        |
+| **Adapters**  | `@better-media/adapter-storage`, `@better-media/adapter-storage-filesystem`, `@better-media/adapter-storage-s3`, `@better-media/adapter-db`, `@better-media/adapter-jobs` | Implement core contracts (memoryStorage, filesystemStorage, s3Storage, memoryDatabase, memoryJobAdapter). |
+| **Framework** | `better-media`                                                                                                                                                            | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations.      |
 
 ## Monorepo Structure
 
@@ -23,9 +23,11 @@ packages/
 │   ├── virus-scan-plugin/     # @better-media/plugin-virus-scan
 │   └── media-processing-plugin/  # @better-media/plugin-media-processing
 └── adapters/
-    ├── storage/       # @better-media/adapter-storage - Storage implementations
-    ├── db/            # @better-media/adapter-db - Database implementations
-    └── jobs/          # @better-media/adapter-jobs - Job queue (in-memory default, Redis, RabbitMQ, Kafka)
+    ├── storage/            # @better-media/adapter-storage - In-memory (dev/test)
+    ├── storage-filesystem/ # @better-media/adapter-storage-filesystem - Disk storage
+    ├── storage-s3/         # @better-media/adapter-storage-s3 - S3 / MinIO
+    ├── db/                 # @better-media/adapter-db - Database implementations
+    └── jobs/               # @better-media/adapter-jobs - Job queue
 ```
 
 ## Plugin System
@@ -83,6 +85,40 @@ inngest.createFunction(
 ```
 
 The framework does not implement polling or scheduling—adapters and your worker own that.
+
+## Storage Adapters
+
+Choose a storage implementation based on your environment:
+
+| Adapter        | Package                                    | Use case                     |
+| -------------- | ------------------------------------------ | ---------------------------- |
+| **Memory**     | `@better-media/adapter-storage`            | Development, tests           |
+| **Filesystem** | `@better-media/adapter-storage-filesystem` | Single-node, local disk      |
+| **S3**         | `@better-media/adapter-storage-s3`         | AWS S3, MinIO, S3-compatible |
+
+**Filesystem** (works with Multer in Express/NestJS):
+
+```ts
+import { filesystemStorage } from "@better-media/adapter-storage-filesystem";
+
+const storage = filesystemStorage({ baseDir: "/var/uploads" });
+```
+
+**S3** (AWS or MinIO):
+
+```ts
+import { s3Storage } from "@better-media/adapter-storage-s3";
+
+const storage = s3Storage({
+  region: "us-east-1",
+  bucket: "my-media-bucket",
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  // For MinIO:
+  // endpoint: "http://localhost:9000",
+  // forcePathStyle: true,
+});
+```
 
 ## Quick Start
 

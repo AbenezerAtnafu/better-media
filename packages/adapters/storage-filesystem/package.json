@@ -1,0 +1,34 @@
+{
+  "name": "@better-media/adapter-storage-filesystem",
+  "version": "1.0.0",
+  "description": "Filesystem storage adapter for Better Media",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@better-media/core": "workspace:*"
+  },
+  "keywords": [
+    "better-media",
+    "storage",
+    "filesystem",
+    "adapter"
+  ],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.25.0"
+}

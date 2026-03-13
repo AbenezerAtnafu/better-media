@@ -18,6 +18,12 @@ export interface StorageAdapter {
   delete(key: string): Promise<void>;
 
   /**
+   * Check if a key exists without loading the full content.
+   * Useful for quick existence checks before get/put or to avoid unnecessary fetches.
+   */
+  exists(key: string): Promise<boolean>;
+
+  /**
    * Optional: get file size in bytes without loading the full buffer.
    * Used with fileHandling.maxBufferBytes to decide buffer vs stream.
    */
@@ -40,4 +46,10 @@ export interface StorageAdapter {
    * Optional: adapters for S3, GCS, etc. implement this; memory adapter does not.
    */
   createPresignedPutUrl?(key: string, options?: PresignedPutUrlOptions): Promise<string>;
+
+  /**
+   * Remove all stored keys. Optional; mainly for testing/dev (e.g. memory adapter).
+   * Production adapters (S3, GCS) typically omit this to avoid accidental full deletion.
+   */
+  clear?(): Promise<void>;
 }
