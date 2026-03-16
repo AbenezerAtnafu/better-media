@@ -6,11 +6,11 @@ Modular media pipeline framework for intake, validation, processing, and storage
 
 **Core defines contracts. Adapters implement infrastructure. Framework orchestrates.**
 
-| Layer         | Package(s)                                                                                                                                                                | Responsibility                                                                                            |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Core**      | `@better-media/core`                                                                                                                                                      | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.        |
-| **Adapters**  | `@better-media/adapter-storage`, `@better-media/adapter-storage-filesystem`, `@better-media/adapter-storage-s3`, `@better-media/adapter-db`, `@better-media/adapter-jobs` | Implement core contracts (memoryStorage, filesystemStorage, s3Storage, memoryDatabase, memoryJobAdapter). |
-| **Framework** | `better-media`                                                                                                                                                            | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations.      |
+| Layer         | Package(s)                                                                                                                                                                       | Responsibility                                                                                            |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Core**      | `@better-media/core`                                                                                                                                                             | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.        |
+| **Adapters**  | `@better-media/adapter-storage-memory`, `@better-media/adapter-storage-filesystem`, `@better-media/adapter-storage-s3`, `@better-media/adapter-db`, `@better-media/adapter-jobs` | Implement core contracts (memoryStorage, filesystemStorage, s3Storage, memoryDatabase, memoryJobAdapter). |
+| **Framework** | `better-media`                                                                                                                                                                   | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations.      |
 
 ## Monorepo Structure
 
@@ -23,7 +23,7 @@ packages/
 │   ├── virus-scan-plugin/     # @better-media/plugin-virus-scan
 │   └── media-processing-plugin/  # @better-media/plugin-media-processing
 └── adapters/
-    ├── storage/            # @better-media/adapter-storage - In-memory (dev/test)
+    ├── storage-memory/     # @better-media/adapter-storage-memory - In-memory (dev/test)
     ├── storage-filesystem/ # @better-media/adapter-storage-filesystem - Disk storage
     ├── storage-s3/         # @better-media/adapter-storage-s3 - S3 / MinIO
     ├── db/                 # @better-media/adapter-db - Database implementations
@@ -92,7 +92,7 @@ Choose a storage implementation based on your environment:
 
 | Adapter        | Package                                    | Use case                     |
 | -------------- | ------------------------------------------ | ---------------------------- |
-| **Memory**     | `@better-media/adapter-storage`            | Development, tests           |
+| **Memory**     | `@better-media/adapter-storage-memory`     | Development, tests           |
 | **Filesystem** | `@better-media/adapter-storage-filesystem` | Single-node, local disk      |
 | **S3**         | `@better-media/adapter-storage-s3`         | AWS S3, MinIO, S3-compatible |
 

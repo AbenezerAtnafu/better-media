@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@better-media/adapter-db": "workspace:*",
-    "@better-media/adapter-storage": "workspace:*",
+    "@better-media/adapter-storage-memory": "workspace:*",
+    "@better-media/adapter-storage-s3": "workspace:*",
     "@better-media/plugin-media-processing": "workspace:*",
     "@better-media/plugin-validation": "workspace:*",
     "@better-media/plugin-virus-scan": "workspace:*",

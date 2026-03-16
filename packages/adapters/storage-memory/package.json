@@ -1,7 +1,7 @@
 {
-  "name": "@better-media/adapter-storage",
+  "name": "@better-media/adapter-storage-memory",
   "version": "1.0.0",
-  "description": "Storage adapter interfaces and implementations for Better Media",
+  "description": "In-memory storage adapter for Better Media (development/testing)",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

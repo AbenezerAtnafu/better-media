@@ -50,9 +50,12 @@ importers:
       '@better-media/adapter-db':
         specifier: workspace:*
         version: link:../../packages/adapters/db
-      '@better-media/adapter-storage':
+      '@better-media/adapter-storage-memory':
         specifier: workspace:*
-        version: link:../../packages/adapters/storage
+        version: link:../../packages/adapters/storage-memory
+      '@better-media/adapter-storage-s3':
+        specifier: workspace:*
+        version: link:../../packages/adapters/storage-s3
       '@better-media/plugin-media-processing':
         specifier: workspace:*
         version: link:../../packages/plugins/media-processing-plugin
@@ -93,9 +96,9 @@ importers:
       '@better-media/adapter-jobs':
         specifier: workspace:*
         version: link:../../packages/adapters/jobs
-      '@better-media/adapter-storage':
+      '@better-media/adapter-storage-memory':
         specifier: workspace:*
-        version: link:../../packages/adapters/storage
+        version: link:../../packages/adapters/storage-memory
       '@better-media/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -149,13 +152,13 @@ importers:
         specifier: workspace:*
         version: link:../../core
 
-  packages/adapters/storage:
+  packages/adapters/storage-filesystem:
     dependencies:
       '@better-media/core':
         specifier: workspace:*
         version: link:../../core
 
-  packages/adapters/storage-filesystem:
+  packages/adapters/storage-memory:
     dependencies:
       '@better-media/core':
         specifier: workspace:*
@@ -221,9 +224,9 @@ importers:
       '@better-media/adapter-db':
         specifier: workspace:*
         version: link:../../adapters/db
-      '@better-media/adapter-storage':
+      '@better-media/adapter-storage-memory':
         specifier: workspace:*
-        version: link:../../adapters/storage
+        version: link:../../adapters/storage-memory
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14

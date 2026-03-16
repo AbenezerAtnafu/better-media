@@ -16,7 +16,8 @@ const SAMPLE_JPEG = Buffer.from([
 
 export async function POST(request: Request) {
   try {
-    const { media, storage } = await import("@/lib/media");
+    const { getMedia, storage } = await import("@/lib/media");
+    const media = await getMedia();
     const body = await request.json();
     const fileKey = body.fileKey ?? `photo-${Date.now()}.jpg`;
     const metadata = body.metadata ?? { contentType: "image/jpeg" };

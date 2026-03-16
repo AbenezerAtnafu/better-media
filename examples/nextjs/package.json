@@ -14,7 +14,7 @@
     "sharp": "^0.34.5",
     "@better-media/adapter-db": "workspace:*",
     "@better-media/adapter-jobs": "workspace:*",
-    "@better-media/adapter-storage": "workspace:*",
+    "@better-media/adapter-storage-memory": "workspace:*",
     "@better-media/core": "workspace:*",
     "@better-media/plugin-media-processing": "workspace:*",
     "@better-media/plugin-validation": "workspace:*",

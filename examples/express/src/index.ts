@@ -1,13 +1,16 @@
 import express from "express";
 import { createBetterMedia } from "better-media";
-import { memoryStorage } from "@better-media/adapter-storage";
+import { S3StorageConfig, s3Storage } from "@better-media/adapter-storage-s3";
 import { memoryDatabase } from "@better-media/adapter-db";
 import { validationPlugin } from "@better-media/plugin-validation";
 import { virusScanPlugin } from "@better-media/plugin-virus-scan";
 import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
 
 const media = createBetterMedia({
-  storage: memoryStorage(),
+  storage: s3Storage({
+    accessKeyId: "",
+    bucket: "",
+  } as S3StorageConfig),
   database: memoryDatabase(),
   plugins: [validationPlugin(), virusScanPlugin(), mediaProcessingPlugin()],
 });

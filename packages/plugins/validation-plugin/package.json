@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "@better-media/adapter-db": "workspace:*",
-    "@better-media/adapter-storage": "workspace:*",
+    "@better-media/adapter-storage-memory": "workspace:*",
     "@types/jest": "^29.5.14",
     "better-media": "workspace:*"
   },

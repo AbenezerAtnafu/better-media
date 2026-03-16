@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { validationPlugin } from "./index";
-import { memoryStorage } from "@better-media/adapter-storage";
+import { memoryStorage } from "@better-media/adapter-storage-memory";
 import { memoryDatabase } from "@better-media/adapter-db";
 import { createBetterMedia } from "better-media";
 
