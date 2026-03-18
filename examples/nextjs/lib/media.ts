@@ -2,7 +2,7 @@ import { createBetterMedia } from "better-media";
 import { memoryStorage } from "@better-media/adapter-storage-memory";
 import { memoryDatabase } from "@better-media/adapter-db";
 import { validationPlugin } from "@better-media/plugin-validation";
-import { virusScanPlugin } from "@better-media/plugin-virus-scan";
+import { ClamScanner, virusScanPlugin } from "@better-media/plugin-virus-scan";
 import { trackingJobAdapter } from "./tracking-job-adapter";
 import type { BetterMediaRuntime } from "better-media";
 
@@ -37,7 +37,24 @@ export async function getMedia(): Promise<BetterMediaRuntime> {
         fileNotFoundBehavior: "fail",
         onFailure: "abort",
       }),
-      virusScanPlugin(),
+      virusScanPlugin({
+        scanner: new ClamScanner({
+          clamdscan: {
+            host: "localhost",
+            port: 3310,
+            timeout: 10000,
+          },
+          debugMode: true,
+          removeInfected: false,
+        }),
+        executionMode: "background",
+        onFailure: "custom",
+        onFailureCallback: async (fileKey: string, viruses: string[]) => {
+          console.error(`[virus-scan] Threat in "${fileKey}": ${viruses.join(", ")}`);
+          return { valid: false, message: `Upload rejected: malware detected` };
+        },
+        scanTimeoutMs: 30_000,
+      }),
       mediaProcessingPlugin({ executionMode: "background" }),
     ],
   });

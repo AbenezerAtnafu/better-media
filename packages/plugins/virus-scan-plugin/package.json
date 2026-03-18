@@ -22,8 +22,15 @@
   "dependencies": {
     "@better-media/core": "workspace:*"
   },
+  "peerDependencies": {
+    "clamscan": "^2.4.0"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.25.0"
+  "packageManager": "pnpm@10.25.0",
+  "devDependencies": {
+    "@types/clamscan": "^2.4.1",
+    "clamscan": "^2.4.0"
+  }
 }

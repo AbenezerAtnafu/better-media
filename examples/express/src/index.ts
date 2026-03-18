@@ -3,7 +3,7 @@ import { createBetterMedia } from "better-media";
 import { S3StorageConfig, s3Storage } from "@better-media/adapter-storage-s3";
 import { memoryDatabase } from "@better-media/adapter-db";
 import { validationPlugin } from "@better-media/plugin-validation";
-import { virusScanPlugin } from "@better-media/plugin-virus-scan";
+import { virusScanPlugin, ClamScanner } from "@better-media/plugin-virus-scan";
 import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
 
 const media = createBetterMedia({
@@ -12,7 +12,19 @@ const media = createBetterMedia({
     bucket: "",
   } as S3StorageConfig),
   database: memoryDatabase(),
-  plugins: [validationPlugin(), virusScanPlugin(), mediaProcessingPlugin()],
+  plugins: [
+    validationPlugin(),
+    virusScanPlugin({
+      executionMode: "background",
+      onFailure: "abort",
+      scanner: new ClamScanner({
+        clamdscan: { host: "127.0.0.1", port: 3310 },
+      }),
+      scanTimeoutMs: 30_000,
+      retryOptions: { maxAttempts: 3, backoff: "exponential" },
+    }),
+    mediaProcessingPlugin(),
+  ],
 });
 
 const app = express();
