@@ -15,7 +15,7 @@ describe("VirusTotalScanner", () => {
 
     scanner = new VirusTotalScanner({
       apiKey: "test-api-key",
-      pollingIntervalMs: 1, // fast polling for tests
+      pollingIntervalMs: 1,
       pollingTimeoutMs: 1000,
     });
   });
