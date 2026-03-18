@@ -7,11 +7,11 @@ Better Media follows a strict **Core / Adapter / Framework** separation to ensur
 
 ## The Three Layers
 
-| Layer         | Responsibility                                                                                            |
-| ------------- | --------------------------------------------------------------------------------------------------------- |
-| **Core**      | Defines contracts (interfaces). No implementations. This is the source of truth for types.                |
-| **Adapters**  | Implement infrastructure (S3, Postgres, Redis). They map core contracts to specific technologies.          |
-| **Framework** | Orchestrates the pipeline. It wires adapters and plugins together and runs the lifecycle engine.          |
+| Layer         | Responsibility                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| **Core**      | Defines contracts (interfaces). No implementations. This is the source of truth for types.        |
+| **Adapters**  | Implement infrastructure (S3, Postgres, Redis). They map core contracts to specific technologies. |
+| **Framework** | Orchestrates the pipeline. It wires adapters and plugins together and runs the lifecycle engine.  |
 
 ## Monorepo Structure
 

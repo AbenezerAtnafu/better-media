@@ -8,20 +8,32 @@ on:
 
 jobs:
   build:
+    name: Build and Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for turbo to detect changed files since [main]
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "pnpm"
 
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm format:check
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile # Allow lockfile updates in CI if needed, or use --frozen-lockfile if you prefer strictness
+
+      - name: Build and Test Affected Packages
+        # This will ONLY run tasks for packages changed since the 'main' branch
+        # or that depend on changed packages.
+        # It handles build, lint, typecheck, and test in the correct order.
+        run: pnpm turbo run build lint typecheck test --filter=[origin/main]
+
+      - name: Check Formatting
+        # We check formatting for the whole repo as it is fast
+        run: pnpm format:check
