@@ -4,3 +4,4 @@ packages:
   - "packages/adapters/*"
   - "apps/*"
   - "examples/*"
+  - "docs"
