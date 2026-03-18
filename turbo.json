@@ -1,20 +1,28 @@
 {
   "$schema": "https://turborepo.org/schema.json",
+  "globalDependencies": [
+    "package.json",
+    "tsconfig.base.json",
+    "tsconfig.package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"],
-      "inputs": ["src/**", "tsconfig.json", "tsup.config.ts"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "tsconfig.json", "tsup.config.ts"],
+      "outputs": ["dist/**"]
     },
     "better-media-example-nextjs#build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**"],
-      "inputs": ["**/*", "!node_modules/**"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**"]
     },
     "@better-media/docs#build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "out/**"],
-      "inputs": ["**/*", "!node_modules/**"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**", "out/**"],
+      "passThroughEnv": ["GITHUB_TOKEN", "NEXT_PUBLIC_APP_URL", "TYPESENSE_ADMIN_API_KEY"]
     },
     "dev": {
       "dependsOn": ["^build"],
@@ -23,18 +31,40 @@
     },
     "typecheck": {
       "dependsOn": ["^build", "^typecheck"],
-      "outputs": [],
-      "inputs": ["src/**", "tsconfig.json"]
+      "inputs": ["$TURBO_DEFAULT$", "tsconfig.json"]
     },
     "lint": {
-      "outputs": [],
-      "inputs": ["src/**", "eslint.config.mjs"]
+      "inputs": ["$TURBO_DEFAULT$", "eslint.config.mjs"]
     },
     "test": {
       "dependsOn": ["build"],
-      "outputs": [],
-      "inputs": ["src/**", "jest.config.*"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "jest.config.*",
+        "src/**",
+        "test/**",
+        "*.test.*",
+        "*.spec.*",
+        "package.json"
+      ],
+      "outputs": ["coverage/**", "test-results/**"],
+      "cache": true
+    },
+    "test:coverage": {
+      "dependsOn": ["build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "jest.config.*",
+        "src/**",
+        "test/**",
+        "*.test.*",
+        "*.spec.*",
+        "package.json"
+      ],
+      "outputs": ["coverage/**", "coverage-final.json"]
+    },
+    "clean": {
+      "cache": false
     }
-  },
-  "globalDependencies": ["tsconfig.base.json", "tsconfig.package.json"]
+  }
 }
