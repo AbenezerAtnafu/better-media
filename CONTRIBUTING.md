@@ -20,8 +20,15 @@ This project is a monorepo managed with [pnpm](https://pnpm.io/) and [Turborepo]
     ```
 
 3.  **Build all packages**:
+
     ```bash
     pnpm build
+    ```
+
+4.  **Spin up local infrastructure** (Optional but recommended):
+    We provide a `docker-compose.yml` to start Redis, MinIO, ClamAV, and Postgres for local development:
+    ```bash
+    docker compose up -d
     ```
 
 ## Development Workflow
