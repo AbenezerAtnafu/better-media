@@ -1,0 +1,38 @@
+---
+title: Architecture
+description: Understanding the Better Media architecture
+---
+
+Better Media follows a strict **Core / Adapter / Framework** separation to ensure maximum flexibility and maintainability.
+
+## The Three Layers
+
+| Layer         | Responsibility                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------- |
+| **Core**      | Defines contracts (interfaces). No implementations. This is the source of truth for types.                |
+| **Adapters**  | Implement infrastructure (S3, Postgres, Redis). They map core contracts to specific technologies.          |
+| **Framework** | Orchestrates the pipeline. It wires adapters and plugins together and runs the lifecycle engine.          |
+
+## Monorepo Structure
+
+Better Media is organized as a monorepo to make it easy to manage multiple related packages.
+
+```text
+packages/
+├── core/              # @better-media/core - Contracts (interfaces, types)
+├── better-media/      # better-media - Framework entry, lifecycle engine
+├── plugins/           # Official plugins
+└── adapters/          # Official adapters
+```
+
+## Plugin Lifecycle
+
+Plugins are the heart of Better Media. They hook into the media pipeline at various stages.
+
+1. **Intake**: A file is uploaded or identified.
+2. **Validation**: Synchronous checks (size, type, checksums).
+3. **Security**: Intensive checks (virus scanning).
+4. **Processing**: Transformations (resizing, transcoding).
+5. **Storage**: Finalizing the file location and metadata.
+
+Plugins can run in **Sync** mode (inline with the request) or **Background** mode (offloaded to a job queue).

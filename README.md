@@ -2,6 +2,8 @@
 
 Modular media pipeline framework for intake, validation, processing, and storage.
 
+[**View Documentation**](docs/README.md)
+
 ## Architecture
 
 **Core defines contracts. Adapters implement infrastructure. Framework orchestrates.**

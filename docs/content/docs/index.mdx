@@ -1,0 +1,54 @@
+---
+title: Introduction
+description: Welcome to Better Media Documentation
+---
+
+Welcome to the documentation for **Better Media**, a modular media pipeline framework for intake, validation, processing, and storage.
+
+## What is Better Media?
+
+Better Media is designed to handle the complexity of media orchestration. Whether you are building a simple file upload system or a complex media processing engine with virus scanning and automated transformations, Better Media provides the architecture to keep your code clean and scalable.
+
+## Quick Start
+
+To get started with Better Media, follow these steps:
+
+### 1. Install the framework
+
+```bash
+pnpm add better-media @better-media/core
+```
+
+### 2. Choose your adapters
+
+Better Media is modular. You need to choose where to store your files and how to track them.
+
+```bash
+# Storage
+pnpm add @better-media/adapter-storage-s3
+# Database
+pnpm add @better-media/adapter-db
+```
+
+### 3. Initialize the runtime
+
+```ts
+import { createBetterMedia } from "better-media";
+import { s3Storage } from "@better-media/adapter-storage-s3";
+import { memoryDatabase } from "@better-media/adapter-db";
+
+const media = createBetterMedia({
+  storage: s3Storage({ ... }),
+  database: memoryDatabase(),
+  plugins: [
+    // Add your plugins here
+  ]
+});
+```
+
+## Features
+
+- **Modular Core**: Decoupled interfaces for storage, database, and jobs.
+- **Plugin System**: Easily add validation, virus scanning, and processing.
+- **Scalable Uploads**: Native support for S3/GCS presigned URLs.
+- **Background Jobs**: Offload intensive tasks to background workers seamlessly.

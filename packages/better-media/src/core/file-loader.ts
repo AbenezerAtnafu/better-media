@@ -39,12 +39,15 @@ export async function saveTrustedToDb(
 }
 
 async function streamToTempFile(
-  stream: ReadableStream<Uint8Array>,
+  stream: ReadableStream<Uint8Array> | Readable | unknown,
   fileKey: string
 ): Promise<string> {
   const ext = path.extname(fileKey) || ".bin";
   const tmpPath = path.join(os.tmpdir(), `better-media-${randomUUID()}${ext}`);
-  const nodeStream = Readable.fromWeb(stream as Parameters<typeof Readable.fromWeb>[0]);
+  const nodeStream =
+    stream instanceof Readable
+      ? stream
+      : Readable.fromWeb(stream as Parameters<typeof Readable.fromWeb>[0]);
   const writeStream = createWriteStream(tmpPath);
   await new Promise<void>((resolve, reject) => {
     nodeStream.pipe(writeStream);

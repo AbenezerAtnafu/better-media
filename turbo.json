@@ -11,6 +11,11 @@
       "outputs": [".next/**"],
       "inputs": ["**/*", "!node_modules/**"]
     },
+    "@better-media/docs#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "out/**"],
+      "inputs": ["**/*", "!node_modules/**"]
+    },
     "dev": {
       "dependsOn": ["^build"],
       "cache": false,
