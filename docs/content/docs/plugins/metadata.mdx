@@ -43,49 +43,49 @@ export const media = createBetterMedia({
 
 ## Configuration Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `extractFor` | `MediaType[]` | `["image", "video", "audio"]` | File categories to extract metadata for. |
-| `includeExif` | `boolean` | `true` | Include EXIF data for images (camera model, GPS, etc.). |
-| `includeGps` | `boolean` | `false` | Include GPS coordinates if present in EXIF. Privacy consideration. |
-| `mode` | `"sync" \| "background"` | `"sync"` | Run extraction inline or in a background job. |
-| `onError` | `"skip" \| "fail"` | `"skip"` | What to do if metadata extraction fails. |
+| Option        | Type                     | Default                       | Description                                                        |
+| ------------- | ------------------------ | ----------------------------- | ------------------------------------------------------------------ |
+| `extractFor`  | `MediaType[]`            | `["image", "video", "audio"]` | File categories to extract metadata for.                           |
+| `includeExif` | `boolean`                | `true`                        | Include EXIF data for images (camera model, GPS, etc.).            |
+| `includeGps`  | `boolean`                | `false`                       | Include GPS coordinates if present in EXIF. Privacy consideration. |
+| `mode`        | `"sync" \| "background"` | `"sync"`                      | Run extraction inline or in a background job.                      |
+| `onError`     | `"skip" \| "fail"`       | `"skip"`                      | What to do if metadata extraction fails.                           |
 
 ## Extracted Fields
 
 ### Images
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `width` | `number` | Width in pixels. |
-| `height` | `number` | Height in pixels. |
-| `format` | `string` | Image format (e.g. `"jpeg"`, `"png"`, `"webp"`). |
-| `colorSpace` | `string` | Color space (e.g. `"srgb"`, `"p3"`). |
-| `hasAlpha` | `boolean` | Whether the image has an alpha channel. |
-| `exif` | `object` | Raw EXIF data (if `includeExif: true`). |
-| `gps` | `{ lat, lng }` | GPS coordinates (if `includeGps: true`). |
+| Field        | Type           | Description                                      |
+| ------------ | -------------- | ------------------------------------------------ |
+| `width`      | `number`       | Width in pixels.                                 |
+| `height`     | `number`       | Height in pixels.                                |
+| `format`     | `string`       | Image format (e.g. `"jpeg"`, `"png"`, `"webp"`). |
+| `colorSpace` | `string`       | Color space (e.g. `"srgb"`, `"p3"`).             |
+| `hasAlpha`   | `boolean`      | Whether the image has an alpha channel.          |
+| `exif`       | `object`       | Raw EXIF data (if `includeExif: true`).          |
+| `gps`        | `{ lat, lng }` | GPS coordinates (if `includeGps: true`).         |
 
 ### Videos
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `width` | `number` | Video width in pixels. |
-| `height` | `number` | Video height in pixels. |
-| `duration` | `number` | Duration in seconds. |
-| `fps` | `number` | Frames per second. |
-| `codec` | `string` | Video codec (e.g. `"h264"`, `"vp9"`). |
-| `bitrate` | `number` | Bitrate in bits per second. |
+| Field        | Type     | Description                           |
+| ------------ | -------- | ------------------------------------- |
+| `width`      | `number` | Video width in pixels.                |
+| `height`     | `number` | Video height in pixels.               |
+| `duration`   | `number` | Duration in seconds.                  |
+| `fps`        | `number` | Frames per second.                    |
+| `codec`      | `string` | Video codec (e.g. `"h264"`, `"vp9"`). |
+| `bitrate`    | `number` | Bitrate in bits per second.           |
 | `audioCodec` | `string` | Audio codec (e.g. `"aac"`, `"opus"`). |
 
 ### Audio
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `duration` | `number` | Duration in seconds. |
-| `bitrate` | `number` | Bitrate in bits per second. |
-| `sampleRate` | `number` | Sample rate in Hz. |
-| `channels` | `number` | Number of audio channels. |
-| `codec` | `string` | Audio codec. |
+| Field        | Type     | Description                 |
+| ------------ | -------- | --------------------------- |
+| `duration`   | `number` | Duration in seconds.        |
+| `bitrate`    | `number` | Bitrate in bits per second. |
+| `sampleRate` | `number` | Sample rate in Hz.          |
+| `channels`   | `number` | Number of audio channels.   |
+| `codec`      | `string` | Audio codec.                |
 
 ## Accessing Metadata
 

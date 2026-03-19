@@ -52,24 +52,24 @@ export const media = createBetterMedia({
 
 ## Configuration Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `variants` | `Variant[]` | `[]` | Array of output variant definitions. |
-| `mode` | `"sync" \| "background"` | `"background"` | Inline or job-based processing. |
-| `onlyFor` | `string[]` | `["image/*"]` | MIME type patterns to process. |
-| `onError` | `"skip" \| "fail"` | `"skip"` | What to do if processing fails. |
+| Option     | Type                     | Default        | Description                          |
+| ---------- | ------------------------ | -------------- | ------------------------------------ |
+| `variants` | `Variant[]`              | `[]`           | Array of output variant definitions. |
+| `mode`     | `"sync" \| "background"` | `"background"` | Inline or job-based processing.      |
+| `onlyFor`  | `string[]`               | `["image/*"]`  | MIME type patterns to process.       |
+| `onError`  | `"skip" \| "fail"`       | `"skip"`       | What to do if processing fails.      |
 
 ## Variant Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `name` | `string` | — | **Required.** Variant identifier (e.g. `"thumbnail"`). |
-| `width` | `number` | — | Output width in pixels. |
-| `height` | `number` | — | Output height in pixels. |
-| `format` | `"webp" \| "jpeg" \| "png" \| "avif"` | `"webp"` | Output image format. |
-| `quality` | `number` | `80` | Compression quality (1–100). |
-| `fit` | `"cover" \| "contain" \| "inside" \| "outside" \| "fill"` | `"cover"` | Resizing strategy (Sharp `fit` option). |
-| `background` | `string` | `"#ffffff"` | Background color for `contain` fit. |
+| Option       | Type                                                      | Default     | Description                                            |
+| ------------ | --------------------------------------------------------- | ----------- | ------------------------------------------------------ |
+| `name`       | `string`                                                  | —           | **Required.** Variant identifier (e.g. `"thumbnail"`). |
+| `width`      | `number`                                                  | —           | Output width in pixels.                                |
+| `height`     | `number`                                                  | —           | Output height in pixels.                               |
+| `format`     | `"webp" \| "jpeg" \| "png" \| "avif"`                     | `"webp"`    | Output image format.                                   |
+| `quality`    | `number`                                                  | `80`        | Compression quality (1–100).                           |
+| `fit`        | `"cover" \| "contain" \| "inside" \| "outside" \| "fill"` | `"cover"`   | Resizing strategy (Sharp `fit` option).                |
+| `background` | `string`                                                  | `"#ffffff"` | Background color for `contain` fit.                    |
 
 ## Examples
 
@@ -79,11 +79,11 @@ export const media = createBetterMedia({
 mediaProcessingPlugin({
   onlyFor: ["image/jpeg", "image/png", "image/webp"],
   variants: [
-    { name: "avatar-sm",  width: 64,  height: 64,  format: "webp", fit: "cover" },
-    { name: "avatar-md",  width: 128, height: 128, format: "webp", fit: "cover" },
-    { name: "avatar-lg",  width: 256, height: 256, format: "webp", fit: "cover" },
+    { name: "avatar-sm", width: 64, height: 64, format: "webp", fit: "cover" },
+    { name: "avatar-md", width: 128, height: 128, format: "webp", fit: "cover" },
+    { name: "avatar-lg", width: 256, height: 256, format: "webp", fit: "cover" },
   ],
-})
+});
 ```
 
 ### Blog Post Images
@@ -91,11 +91,11 @@ mediaProcessingPlugin({
 ```ts
 mediaProcessingPlugin({
   variants: [
-    { name: "thumbnail", width: 400,  height: 225,  format: "webp", quality: 75, fit: "cover" },
-    { name: "hero",      width: 1920, height: 1080, format: "webp", quality: 85, fit: "inside" },
-    { name: "og",        width: 1200, height: 630,  format: "jpeg", quality: 90, fit: "cover" },
+    { name: "thumbnail", width: 400, height: 225, format: "webp", quality: 75, fit: "cover" },
+    { name: "hero", width: 1920, height: 1080, format: "webp", quality: 85, fit: "inside" },
+    { name: "og", width: 1200, height: 630, format: "jpeg", quality: 90, fit: "cover" },
   ],
-})
+});
 ```
 
 ## Accessing Variants

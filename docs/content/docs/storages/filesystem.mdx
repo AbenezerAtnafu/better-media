@@ -6,7 +6,9 @@ description: Store files on the local filesystem for development and testing.
 The Filesystem Storage Adapter persists files to a directory on the local disk. It is ideal for **local development** and **testing** where you don't want to configure cloud credentials.
 
 <Callout type="warn">
-  The filesystem adapter is **not recommended for production**. Files stored locally are not replicated, not served via CDN, and not scalable across multiple server instances. Use the [S3 adapter](/docs/storages/s3) for production workloads.
+  The filesystem adapter is **not recommended for production**. Files stored locally are not
+  replicated, not served via CDN, and not scalable across multiple server instances. Use the [S3
+  adapter](/docs/storages/s3) for production workloads.
 </Callout>
 
 ## Installation
@@ -54,6 +56,7 @@ The adapter stores files under the `directory` path. To serve them via HTTP, con
       return new Response(file);
     }
     ```
+
   </Tab>
   <Tab value="Express">
     ```ts title="server.ts"
@@ -63,17 +66,18 @@ The adapter stores files under the `directory` path. To serve them via HTTP, con
     const app = express();
     app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
     ```
+
   </Tab>
 </Tabs>
 
 ## Configuration Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `directory` | `string` | — | **Required.** Absolute or relative path to the storage directory. |
-| `publicUrl` | `string` | — | **Required.** Base URL used to generate public file URLs. |
-| `createDirectory` | `boolean` | `true` | Automatically create the directory if it doesn't exist. |
-| `preserveFilenames` | `boolean` | `false` | Use original filenames instead of generated UUIDs. |
+| Option              | Type      | Default | Description                                                       |
+| ------------------- | --------- | ------- | ----------------------------------------------------------------- |
+| `directory`         | `string`  | —       | **Required.** Absolute or relative path to the storage directory. |
+| `publicUrl`         | `string`  | —       | **Required.** Base URL used to generate public file URLs.         |
+| `createDirectory`   | `boolean` | `true`  | Automatically create the directory if it doesn't exist.           |
+| `preserveFilenames` | `boolean` | `false` | Use original filenames instead of generated UUIDs.                |
 
 ## Switching to S3 in Production
 

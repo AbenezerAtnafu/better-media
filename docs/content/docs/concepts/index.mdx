@@ -7,11 +7,11 @@ Better Media is built around a strict **three-layer architecture** that keeps yo
 
 ## The Three Layers
 
-| Layer | Package | Responsibility |
-| --- | --- | --- |
-| **Core** | `@better-media/core` | Defines all contracts (interfaces, types). Contains zero implementations. This is the source of truth for type safety across the entire system. |
-| **Adapters** | e.g. `@better-media/adapter-storage-s3` | Implement the Core interfaces. Map infrastructure (S3, Postgres, Redis) to the standard contract. |
-| **Framework** | `better-media` | Orchestrates the pipeline. Wires adapters and plugins together and runs the lifecycle engine. |
+| Layer         | Package                                 | Responsibility                                                                                                                                  |
+| ------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Core**      | `@better-media/core`                    | Defines all contracts (interfaces, types). Contains zero implementations. This is the source of truth for type safety across the entire system. |
+| **Adapters**  | e.g. `@better-media/adapter-storage-s3` | Implement the Core interfaces. Map infrastructure (S3, Postgres, Redis) to the standard contract.                                               |
+| **Framework** | `better-media`                          | Orchestrates the pipeline. Wires adapters and plugins together and runs the lifecycle engine.                                                   |
 
 ### Why This Separation Matters
 
@@ -92,23 +92,24 @@ If any stage rejects the file (e.g., validation fails or a virus is detected), t
 
 Plugins can run in two modes:
 
-| Mode | Description | Best For |
-| --- | --- | --- |
-| **Sync** | Runs inline with the upload request. Adds latency. | Validation, fast checks |
+| Mode           | Description                                                               | Best For                              |
+| -------------- | ------------------------------------------------------------------------- | ------------------------------------- |
+| **Sync**       | Runs inline with the upload request. Adds latency.                        | Validation, fast checks               |
 | **Background** | Dispatched to a job queue. Returns immediately. File is marked "pending". | Virus scanning, transcoding, metadata |
 
 ```ts title="Plugin mode example"
 import { virusScanPlugin } from "@better-media/plugin-virus-scan";
 
 // Sync mode — scan before responding (adds latency)
-virusScanPlugin({ mode: "sync", scanner: "clamav" })
+virusScanPlugin({ mode: "sync", scanner: "clamav" });
 
 // Background mode — dispatch job, respond immediately
-virusScanPlugin({ mode: "background", scanner: "clamav" })
+virusScanPlugin({ mode: "background", scanner: "clamav" });
 ```
 
 <Callout type="info">
-  Background mode requires an [adapter-jobs](/docs/database) adapter (e.g. RabbitMQ, BullMQ) to be configured in your `createBetterMedia` call.
+  Background mode requires an [adapter-jobs](/docs/database) adapter (e.g. RabbitMQ, BullMQ) to be
+  configured in your `createBetterMedia` call.
 </Callout>
 
 ## The `StorageAdapter` Interface

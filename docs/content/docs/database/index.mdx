@@ -7,12 +7,12 @@ Better Media uses a **Database Adapter** to persist media records, file metadata
 
 ## Supported Adapters
 
-| Adapter | Package | Description |
-| --- | --- | --- |
-| Memory | `@better-media/adapter-db` | In-memory store. Fast, zero-config. **For testing only.** |
-| Drizzle (PostgreSQL) | `@better-media/adapter-db/drizzle` | Production-ready PostgreSQL via Drizzle ORM. |
-| Prisma | `@better-media/adapter-db/prisma` | PostgreSQL, MySQL, or SQLite via Prisma. |
-| MongoDB | `@better-media/adapter-db/mongodb` | MongoDB via the official Node.js driver. |
+| Adapter              | Package                            | Description                                               |
+| -------------------- | ---------------------------------- | --------------------------------------------------------- |
+| Memory               | `@better-media/adapter-db`         | In-memory store. Fast, zero-config. **For testing only.** |
+| Drizzle (PostgreSQL) | `@better-media/adapter-db/drizzle` | Production-ready PostgreSQL via Drizzle ORM.              |
+| Prisma               | `@better-media/adapter-db/prisma`  | PostgreSQL, MySQL, or SQLite via Prisma.                  |
+| MongoDB              | `@better-media/adapter-db/mongodb` | MongoDB via the official Node.js driver.                  |
 
 ```bash
 pnpm add @better-media/adapter-db
@@ -67,11 +67,11 @@ pnpm better-media db:migrate
 
 The following tables are created:
 
-| Table | Description |
-| --- | --- |
-| `bm_media` | Core media records (id, size, mimeType, status, storageKey) |
+| Table         | Description                                                         |
+| ------------- | ------------------------------------------------------------------- |
+| `bm_media`    | Core media records (id, size, mimeType, status, storageKey)         |
 | `bm_metadata` | Extracted metadata per media record (width, height, duration, etc.) |
-| `bm_jobs` | Background job states (pending, running, done, failed) |
+| `bm_jobs`     | Background job states (pending, running, done, failed)              |
 
 ---
 
@@ -157,11 +157,21 @@ import type { DatabaseAdapter, MediaRecord } from "@better-media/core";
 
 export function myCustomAdapter(): DatabaseAdapter {
   return {
-    async createMedia(record) { /* ... */ },
-    async getMedia(id) { /* ... */ },
-    async updateMedia(id, changes) { /* ... */ },
-    async deleteMedia(id) { /* ... */ },
-    async listMedia(query) { /* ... */ },
+    async createMedia(record) {
+      /* ... */
+    },
+    async getMedia(id) {
+      /* ... */
+    },
+    async updateMedia(id, changes) {
+      /* ... */
+    },
+    async deleteMedia(id) {
+      /* ... */
+    },
+    async listMedia(query) {
+      /* ... */
+    },
   };
 }
 ```

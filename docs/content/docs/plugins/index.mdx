@@ -30,16 +30,16 @@ Plugins run in the **order they are declared**. A plugin can throw to halt the p
 
 Every plugin can run in one of two modes:
 
-| Mode | Behavior | Use Case |
-| --- | --- | --- |
-| `"sync"` | Runs inline with the upload request before responding | Validation, lightweight checks |
-| `"background"` | Dispatched to a job queue; responds immediately | Virus scanning, transcoding, heavy processing |
+| Mode           | Behavior                                              | Use Case                                      |
+| -------------- | ----------------------------------------------------- | --------------------------------------------- |
+| `"sync"`       | Runs inline with the upload request before responding | Validation, lightweight checks                |
+| `"background"` | Dispatched to a job queue; responds immediately       | Virus scanning, transcoding, heavy processing |
 
 ```ts
 virusScanPlugin({
   scanner: "clamav",
   mode: "background", // default for virus-scan
-})
+});
 ```
 
 <Callout type="info">
@@ -48,12 +48,12 @@ virusScanPlugin({
 
 ## Official Plugins
 
-| Plugin | Package | Description |
-| --- | --- | --- |
-| [Validation](/docs/plugins/validation) | `@better-media/plugin-validation` | File type, size, MIME, and checksum validation. |
-| [Virus Scan](/docs/plugins/virus-scan) | `@better-media/plugin-virus-scan` | Virus scanning via ClamAV or VirusTotal. |
-| [Metadata](/docs/plugins/metadata) | `@better-media/plugin-metadata` | Extract and persist metadata for images, video, and audio. |
-| [Media Processing](/docs/plugins/media-processing) | `@better-media/plugin-media-processing` | Resize, convert, and generate thumbnails via Sharp. |
+| Plugin                                             | Package                                 | Description                                                |
+| -------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------- |
+| [Validation](/docs/plugins/validation)             | `@better-media/plugin-validation`       | File type, size, MIME, and checksum validation.            |
+| [Virus Scan](/docs/plugins/virus-scan)             | `@better-media/plugin-virus-scan`       | Virus scanning via ClamAV or VirusTotal.                   |
+| [Metadata](/docs/plugins/metadata)                 | `@better-media/plugin-metadata`         | Extract and persist metadata for images, video, and audio. |
+| [Media Processing](/docs/plugins/media-processing) | `@better-media/plugin-media-processing` | Resize, convert, and generate thumbnails via Sharp.        |
 
 ## Writing a Custom Plugin
 
@@ -84,8 +84,5 @@ export function loggingPlugin(): Plugin {
 Register it like any other plugin:
 
 ```ts
-plugins: [
-  loggingPlugin(),
-  validationPlugin({ maxSize: 5 * 1024 * 1024 }),
-]
+plugins: [loggingPlugin(), validationPlugin({ maxSize: 5 * 1024 * 1024 })];
 ```

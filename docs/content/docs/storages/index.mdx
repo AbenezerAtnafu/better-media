@@ -7,11 +7,11 @@ Storage Adapters tell Better Media where to persist uploaded files. Every adapte
 
 ## Supported Adapters
 
-| Adapter | Package | Description |
-| --- | --- | --- |
-| [S3](/docs/storages/s3) | `@better-media/adapter-storage-s3` | AWS S3, Cloudflare R2, MinIO, and any S3-compatible provider. |
-| [Filesystem](/docs/storages/filesystem) | `@better-media/adapter-storage-filesystem` | Local disk storage. Best for development and testing. |
-| Memory | `@better-media/adapter-storage-memory` | In-process memory. For testing only. |
+| Adapter                                 | Package                                    | Description                                                   |
+| --------------------------------------- | ------------------------------------------ | ------------------------------------------------------------- |
+| [S3](/docs/storages/s3)                 | `@better-media/adapter-storage-s3`         | AWS S3, Cloudflare R2, MinIO, and any S3-compatible provider. |
+| [Filesystem](/docs/storages/filesystem) | `@better-media/adapter-storage-filesystem` | Local disk storage. Best for development and testing.         |
+| Memory                                  | `@better-media/adapter-storage-memory`     | In-process memory. For testing only.                          |
 
 ## Quick Start
 
@@ -29,6 +29,7 @@ Storage Adapters tell Better Media where to persist uploaded files. Every adapte
       // ...
     });
     ```
+
   </Tab>
   <Tab value="Filesystem">
     ```ts title="lib/media.ts"
@@ -43,6 +44,7 @@ Storage Adapters tell Better Media where to persist uploaded files. Every adapte
       // ...
     });
     ```
+
   </Tab>
   <Tab value="Memory">
     ```ts title="lib/media.ts"
@@ -54,6 +56,7 @@ Storage Adapters tell Better Media where to persist uploaded files. Every adapte
       // ...
     });
     ```
+
   </Tab>
 </Tabs>
 

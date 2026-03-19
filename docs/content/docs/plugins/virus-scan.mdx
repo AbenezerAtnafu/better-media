@@ -12,13 +12,8 @@ pnpm add @better-media/plugin-virus-scan
 ```
 
 <Callout type="info">
-  ClamAV is a **peer dependency**. If you use the `clamav` scanner, install it separately:
-  ```bash
-  # macOS
-  brew install clamav
-  # Ubuntu / Debian
-  apt-get install clamav clamav-daemon
-  ```
+  ClamAV is a **peer dependency**. If you use the `clamav` scanner, install it separately: ```bash #
+  macOS brew install clamav # Ubuntu / Debian apt-get install clamav clamav-daemon ```
 </Callout>
 
 ## Basic Usage
@@ -45,6 +40,7 @@ pnpm add @better-media/plugin-virus-scan
       ],
     });
     ```
+
   </Tab>
   <Tab value="VirusTotal">
     ```ts title="lib/media.ts"
@@ -66,43 +62,44 @@ pnpm add @better-media/plugin-virus-scan
       ],
     });
     ```
+
   </Tab>
 </Tabs>
 
 ## Configuration Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `scanner` | `VirusScanner` | — | **Required.** The scanner instance to use (`ClamScanner` or `VirusTotalScanner`). |
-| `mode` | `"sync" \| "background"` | `"background"` | Whether to scan inline or in a background job. |
-| `onThreat` | `"reject" \| "quarantine" \| "flag"` | `"reject"` | Action to take when a threat is detected. |
-| `maxFileSize` | `number` | `100MB` | Skip scanning files larger than this limit. |
-| `retries` | `number` | `3` | Number of retry attempts if the scanner fails. |
-| `timeout` | `number` | `30000` | Timeout in milliseconds per scan attempt. |
+| Option        | Type                                 | Default        | Description                                                                       |
+| ------------- | ------------------------------------ | -------------- | --------------------------------------------------------------------------------- |
+| `scanner`     | `VirusScanner`                       | —              | **Required.** The scanner instance to use (`ClamScanner` or `VirusTotalScanner`). |
+| `mode`        | `"sync" \| "background"`             | `"background"` | Whether to scan inline or in a background job.                                    |
+| `onThreat`    | `"reject" \| "quarantine" \| "flag"` | `"reject"`     | Action to take when a threat is detected.                                         |
+| `maxFileSize` | `number`                             | `100MB`        | Skip scanning files larger than this limit.                                       |
+| `retries`     | `number`                             | `3`            | Number of retry attempts if the scanner fails.                                    |
+| `timeout`     | `number`                             | `30000`        | Timeout in milliseconds per scan attempt.                                         |
 
 ## Threat Actions
 
-| Action | Description |
-| --- | --- |
-| `reject` | Reject the upload immediately. File is deleted. |
-| `quarantine` | File is stored but marked as `quarantined` in the database. Not publicly accessible. |
-| `flag` | File is stored and accessible, but its database record is marked with a `threat` flag. |
+| Action       | Description                                                                            |
+| ------------ | -------------------------------------------------------------------------------------- |
+| `reject`     | Reject the upload immediately. File is deleted.                                        |
+| `quarantine` | File is stored but marked as `quarantined` in the database. Not publicly accessible.   |
+| `flag`       | File is stored and accessible, but its database record is marked with a `threat` flag. |
 
 ## ClamScanner Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `host` | `string` | `"localhost"` | ClamAV daemon host. |
-| `port` | `number` | `3310` | ClamAV daemon port. |
-| `timeout` | `number` | `60000` | Socket timeout in milliseconds. |
+| Option    | Type     | Default       | Description                     |
+| --------- | -------- | ------------- | ------------------------------- |
+| `host`    | `string` | `"localhost"` | ClamAV daemon host.             |
+| `port`    | `number` | `3310`        | ClamAV daemon port.             |
+| `timeout` | `number` | `60000`       | Socket timeout in milliseconds. |
 
 ## VirusTotalScanner Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `apiKey` | `string` | — | **Required.** Your VirusTotal API key. |
-| `minEngines` | `number` | `3` | Minimum number of AV engines that must flag a file to consider it a threat. |
-| `pollInterval` | `number` | `5000` | How often (ms) to poll for analysis results. |
+| Option         | Type     | Default | Description                                                                 |
+| -------------- | -------- | ------- | --------------------------------------------------------------------------- |
+| `apiKey`       | `string` | —       | **Required.** Your VirusTotal API key.                                      |
+| `minEngines`   | `number` | `3`     | Minimum number of AV engines that must flag a file to consider it a threat. |
+| `pollInterval` | `number` | `5000`  | How often (ms) to poll for analysis results.                                |
 
 ## Writing a Custom Scanner
 

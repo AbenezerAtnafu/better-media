@@ -31,6 +31,7 @@ pnpm add @better-media/adapter-storage-s3
       // ...
     });
     ```
+
   </Tab>
   <Tab value="Cloudflare R2">
     ```ts title="lib/media.ts"
@@ -50,6 +51,7 @@ pnpm add @better-media/adapter-storage-s3
       // ...
     });
     ```
+
   </Tab>
   <Tab value="MinIO">
     ```ts title="lib/media.ts"
@@ -70,6 +72,7 @@ pnpm add @better-media/adapter-storage-s3
       // ...
     });
     ```
+
   </Tab>
 </Tabs>
 
@@ -86,16 +89,16 @@ AWS_SECRET_ACCESS_KEY=...
 
 ## Configuration Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `bucket` | `string` | — | **Required.** S3 bucket name. |
-| `region` | `string` | — | **Required.** AWS region (e.g. `"us-east-1"`, `"auto"` for R2). |
-| `credentials` | `object` | — | `{ accessKeyId, secretAccessKey }`. Falls back to AWS SDK default credential chain. |
-| `endpoint` | `string` | — | Custom endpoint URL (for R2, MinIO, etc.). |
-| `forcePathStyle` | `boolean` | `false` | Use path-style URLs instead of subdomain-style. Required for MinIO. |
-| `publicUrl` | `string \| Function` | — | Override the public URL returned for files. Useful for CloudFront CDN. |
-| `prefix` | `string` | `""` | Key prefix for all uploaded objects (e.g. `"uploads/"`) |
-| `acl` | `string` | — | S3 ACL for uploaded objects (e.g. `"public-read"`). |
+| Option           | Type                 | Default | Description                                                                         |
+| ---------------- | -------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `bucket`         | `string`             | —       | **Required.** S3 bucket name.                                                       |
+| `region`         | `string`             | —       | **Required.** AWS region (e.g. `"us-east-1"`, `"auto"` for R2).                     |
+| `credentials`    | `object`             | —       | `{ accessKeyId, secretAccessKey }`. Falls back to AWS SDK default credential chain. |
+| `endpoint`       | `string`             | —       | Custom endpoint URL (for R2, MinIO, etc.).                                          |
+| `forcePathStyle` | `boolean`            | `false` | Use path-style URLs instead of subdomain-style. Required for MinIO.                 |
+| `publicUrl`      | `string \| Function` | —       | Override the public URL returned for files. Useful for CloudFront CDN.              |
+| `prefix`         | `string`             | `""`    | Key prefix for all uploaded objects (e.g. `"uploads/"`)                             |
+| `acl`            | `string`             | —       | S3 ACL for uploaded objects (e.g. `"public-read"`).                                 |
 
 ## Using a CDN (CloudFront)
 
@@ -106,7 +109,7 @@ s3Storage({
   bucket: "my-bucket",
   region: "us-east-1",
   publicUrl: (key) => `https://cdn.example.com/${key}`,
-})
+});
 ```
 
 ## Dynamic Bucket Resolution
@@ -120,5 +123,5 @@ s3Storage({
     return `tenant-${ctx.tenantId}-media`;
   },
   region: "us-east-1",
-})
+});
 ```

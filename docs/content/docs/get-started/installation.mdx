@@ -10,26 +10,10 @@ This guide walks you through setting up Better Media from scratch — installing
 Start by installing the core framework:
 
 <Tabs items={["npm", "pnpm", "yarn", "bun"]}>
-  <Tab value="npm">
-    ```bash
-    npm install better-media @better-media/core
-    ```
-  </Tab>
-  <Tab value="pnpm">
-    ```bash
-    pnpm add better-media @better-media/core
-    ```
-  </Tab>
-  <Tab value="yarn">
-    ```bash
-    yarn add better-media @better-media/core
-    ```
-  </Tab>
-  <Tab value="bun">
-    ```bash
-    bun add better-media @better-media/core
-    ```
-  </Tab>
+  <Tab value="npm">```bash npm install better-media @better-media/core ```</Tab>
+  <Tab value="pnpm">```bash pnpm add better-media @better-media/core ```</Tab>
+  <Tab value="yarn">```bash yarn add better-media @better-media/core ```</Tab>
+  <Tab value="bun">```bash bun add better-media @better-media/core ```</Tab>
 </Tabs>
 
 ## 2. Choose a Storage Adapter
@@ -37,16 +21,8 @@ Start by installing the core framework:
 Better Media needs a storage provider to know where to persist your files. Install the adapter for your provider:
 
 <Tabs items={["S3 / R2 / MinIO", "Filesystem (Dev)"]}>
-  <Tab value="S3 / R2 / MinIO">
-    ```bash
-    pnpm add @better-media/adapter-storage-s3
-    ```
-  </Tab>
-  <Tab value="Filesystem (Dev)">
-    ```bash
-    pnpm add @better-media/adapter-storage-filesystem
-    ```
-  </Tab>
+  <Tab value="S3 / R2 / MinIO">```bash pnpm add @better-media/adapter-storage-s3 ```</Tab>
+  <Tab value="Filesystem (Dev)">```bash pnpm add @better-media/adapter-storage-filesystem ```</Tab>
 </Tabs>
 
 ## 3. Choose a Database Adapter
@@ -83,6 +59,7 @@ Create a file at `lib/media.ts` (or `src/lib/media.ts`) and configure Better Med
       database: drizzleAdapter(db, { provider: "pg" }),
     });
     ```
+
   </Tab>
   <Tab value="S3 + Memory (Dev)">
     ```ts title="lib/media.ts"
@@ -98,6 +75,7 @@ Create a file at `lib/media.ts` (or `src/lib/media.ts`) and configure Better Med
       database: memoryDatabase(),
     });
     ```
+
   </Tab>
   <Tab value="Filesystem + Memory (Dev)">
     ```ts title="lib/media.ts"
@@ -113,6 +91,7 @@ Create a file at `lib/media.ts` (or `src/lib/media.ts`) and configure Better Med
       database: memoryDatabase(),
     });
     ```
+
   </Tab>
 </Tabs>
 
@@ -158,6 +137,7 @@ Better Media exposes a request handler that you mount as a route in your framewo
 
     export const { GET, POST, DELETE } = media.handler();
     ```
+
   </Tab>
   <Tab value="Next.js (Pages Router)">
     ```ts title="pages/api/media/[...path].ts"
@@ -166,6 +146,7 @@ Better Media exposes a request handler that you mount as a route in your framewo
     export default media.toNextHandler();
     export const config = { api: { bodyParser: false } };
     ```
+
   </Tab>
   <Tab value="Express">
     ```ts title="server.ts"
@@ -175,6 +156,7 @@ Better Media exposes a request handler that you mount as a route in your framewo
     const app = express();
     app.use("/api/media", media.toExpressHandler());
     ```
+
   </Tab>
   <Tab value="Fastify">
     ```ts title="server.ts"
@@ -184,6 +166,7 @@ Better Media exposes a request handler that you mount as a route in your framewo
     const app = Fastify();
     app.register(media.toFastifyPlugin(), { prefix: "/api/media" });
     ```
+
   </Tab>
 </Tabs>
 
@@ -205,5 +188,7 @@ const result = await response.json();
 ```
 
 <Callout type="info">
-  **That's it!** You now have a fully functional media pipeline. From here, explore the [Concepts](/docs/concepts) to understand the architecture, or dive into the [Plugin](/docs/plugins) and [Storage](/docs/storages) guides.
+  **That's it!** You now have a fully functional media pipeline. From here, explore the
+  [Concepts](/docs/concepts) to understand the architecture, or dive into the
+  [Plugin](/docs/plugins) and [Storage](/docs/storages) guides.
 </Callout>

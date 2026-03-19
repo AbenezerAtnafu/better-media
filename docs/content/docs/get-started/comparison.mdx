@@ -7,18 +7,18 @@ Better Media is a **self-hosted, modular media orchestration framework**. Here's
 
 ## Feature Comparison
 
-| Feature | Better Media | Cloudinary / Mux | `multer` + S3 | `uppy` |
-| --- | :---: | :---: | :---: | :---: |
-| Self-hosted | ✅ | ❌ | ✅ | ✅ |
-| Type-safe API | ✅ | ❌ | ❌ | Partial |
-| Plugin system | ✅ | ❌ | ❌ | ❌ |
-| Virus scanning | ✅ | ❌ | ❌ | ❌ |
-| Background jobs | ✅ | ✅ (managed) | ❌ | ❌ |
-| Multi-destination storage | ✅ | ❌ | Manual | ❌ |
-| Metadata extraction | ✅ | ✅ (limited) | ❌ | ❌ |
-| Data ownership | ✅ | ❌ | ✅ | ✅ |
-| Per-processing cost | None | Per transformation | None | None |
-| Framework agnostic | ✅ | ✅ | ✅ | ✅ |
+| Feature                   | Better Media |  Cloudinary / Mux  | `multer` + S3 | `uppy`  |
+| ------------------------- | :----------: | :----------------: | :-----------: | :-----: |
+| Self-hosted               |      ✅      |         ❌         |      ✅       |   ✅    |
+| Type-safe API             |      ✅      |         ❌         |      ❌       | Partial |
+| Plugin system             |      ✅      |         ❌         |      ❌       |   ❌    |
+| Virus scanning            |      ✅      |         ❌         |      ❌       |   ❌    |
+| Background jobs           |      ✅      |    ✅ (managed)    |      ❌       |   ❌    |
+| Multi-destination storage |      ✅      |         ❌         |    Manual     |   ❌    |
+| Metadata extraction       |      ✅      |    ✅ (limited)    |      ❌       |   ❌    |
+| Data ownership            |      ✅      |         ❌         |      ✅       |   ✅    |
+| Per-processing cost       |     None     | Per transformation |     None      |  None   |
+| Framework agnostic        |      ✅      |         ✅         |      ✅       |   ✅    |
 
 ---
 
@@ -46,12 +46,13 @@ Many teams build media pipelines by combining `multer`, `aws-sdk`, and custom qu
 
 ## vs Generic Uploader Libraries (`uppy`, `filepond`)
 
-Uploader libraries handle the *client-side* file selection and upload UX. Better Media handles the *server-side* pipeline. They are complementary, not competitive:
+Uploader libraries handle the _client-side_ file selection and upload UX. Better Media handles the _server-side_ pipeline. They are complementary, not competitive:
 
 - **Different Layer**: `uppy` manages the browser upload experience. Better Media manages what happens to files after they reach your server.
 - **No Backend Orchestration**: Uploader libraries don't handle virus scanning, format conversion, metadata extraction, or background processing.
 - **Works Together**: You can use `uppy` on the client to upload files directly to the Better Media handler endpoint.
 
 <Callout type="info">
-  Better Media is best suited for teams that want **full control over their media data and pipeline**, without the operational complexity of building everything from scratch.
+  Better Media is best suited for teams that want **full control over their media data and
+  pipeline**, without the operational complexity of building everything from scratch.
 </Callout>

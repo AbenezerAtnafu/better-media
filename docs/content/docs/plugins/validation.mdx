@@ -31,15 +31,15 @@ export const media = createBetterMedia({
 
 ## Configuration Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `maxSize` | `number` | `Infinity` | Maximum file size in bytes. |
-| `minSize` | `number` | `0` | Minimum file size in bytes. |
-| `allowedTypes` | `string[]` | `[]` (any) | Allowed MIME types. Empty array allows all. |
-| `blockedTypes` | `string[]` | `[]` | MIME types that are explicitly rejected. |
-| `allowedExtensions` | `string[]` | `[]` (any) | Allowed file extensions (e.g. `["jpg", "png"]`). |
-| `validateMagicBytes` | `boolean` | `false` | Read the file's magic bytes to verify its true type, ignoring the declared MIME type. |
-| `onReject` | `(ctx) => void` | — | Optional callback fired when a file is rejected. |
+| Option               | Type            | Default    | Description                                                                           |
+| -------------------- | --------------- | ---------- | ------------------------------------------------------------------------------------- |
+| `maxSize`            | `number`        | `Infinity` | Maximum file size in bytes.                                                           |
+| `minSize`            | `number`        | `0`        | Minimum file size in bytes.                                                           |
+| `allowedTypes`       | `string[]`      | `[]` (any) | Allowed MIME types. Empty array allows all.                                           |
+| `blockedTypes`       | `string[]`      | `[]`       | MIME types that are explicitly rejected.                                              |
+| `allowedExtensions`  | `string[]`      | `[]` (any) | Allowed file extensions (e.g. `["jpg", "png"]`).                                      |
+| `validateMagicBytes` | `boolean`       | `false`    | Read the file's magic bytes to verify its true type, ignoring the declared MIME type. |
+| `onReject`           | `(ctx) => void` | —          | Optional callback fired when a file is rejected.                                      |
 
 ## Examples
 
@@ -47,39 +47,29 @@ export const media = createBetterMedia({
 
 ```ts
 validationPlugin({
-  maxSize: 5 * 1024 * 1024,   // 5 MB
-  allowedTypes: [
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-    "image/avif",
-  ],
-  validateMagicBytes: true,   // verify the file is actually what it claims
-})
+  maxSize: 5 * 1024 * 1024, // 5 MB
+  allowedTypes: ["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"],
+  validateMagicBytes: true, // verify the file is actually what it claims
+});
 ```
 
 ### Video Upload with Size Limits
 
 ```ts
 validationPlugin({
-  maxSize: 500 * 1024 * 1024,   // 500 MB
-  minSize: 1024,                 // at least 1 KB
+  maxSize: 500 * 1024 * 1024, // 500 MB
+  minSize: 1024, // at least 1 KB
   allowedTypes: ["video/mp4", "video/webm", "video/quicktime"],
   allowedExtensions: ["mp4", "webm", "mov"],
-})
+});
 ```
 
 ### Block Dangerous Types
 
 ```ts
 validationPlugin({
-  blockedTypes: [
-    "application/x-msdownload",
-    "application/x-executable",
-    "application/x-sh",
-  ],
-})
+  blockedTypes: ["application/x-msdownload", "application/x-executable", "application/x-sh"],
+});
 ```
 
 ## Error Responses
@@ -100,10 +90,10 @@ When validation fails, the handler returns a structured `400 Bad Request` error:
 
 Possible error codes:
 
-| Code | Description |
-| --- | --- |
-| `FILE_TOO_LARGE` | File exceeds `maxSize`. |
-| `FILE_TOO_SMALL` | File is below `minSize`. |
-| `INVALID_MIME_TYPE` | MIME type not in `allowedTypes` or in `blockedTypes`. |
-| `INVALID_EXTENSION` | File extension not in `allowedExtensions`. |
-| `MAGIC_BYTES_MISMATCH` | Magic bytes don't match the declared MIME type. |
+| Code                   | Description                                           |
+| ---------------------- | ----------------------------------------------------- |
+| `FILE_TOO_LARGE`       | File exceeds `maxSize`.                               |
+| `FILE_TOO_SMALL`       | File is below `minSize`.                              |
+| `INVALID_MIME_TYPE`    | MIME type not in `allowedTypes` or in `blockedTypes`. |
+| `INVALID_EXTENSION`    | File extension not in `allowedExtensions`.            |
+| `MAGIC_BYTES_MISMATCH` | Magic bytes don't match the declared MIME type.       |
