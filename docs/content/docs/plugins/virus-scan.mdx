@@ -1,0 +1,121 @@
+---
+title: Virus Scan Plugin
+description: Scan uploaded files for malware using ClamAV or VirusTotal before they are stored.
+---
+
+The Virus Scan Plugin scans incoming files for known malware signatures. It supports two scanning engines: **ClamAV** (self-hosted, free) and **VirusTotal** (cloud-based API). It can run synchronously (blocking the upload) or asynchronously (background job).
+
+## Installation
+
+```bash
+pnpm add @better-media/plugin-virus-scan
+```
+
+<Callout type="info">
+  ClamAV is a **peer dependency**. If you use the `clamav` scanner, install it separately:
+  ```bash
+  # macOS
+  brew install clamav
+  # Ubuntu / Debian
+  apt-get install clamav clamav-daemon
+  ```
+</Callout>
+
+## Basic Usage
+
+<Tabs items={["ClamAV", "VirusTotal"]}>
+  <Tab value="ClamAV">
+    ```ts title="lib/media.ts"
+    import { createBetterMedia } from "better-media";
+    import { virusScanPlugin } from "@better-media/plugin-virus-scan";
+    import { ClamScanner } from "@better-media/plugin-virus-scan/clamav";
+
+    export const media = createBetterMedia({
+      storage: /* ... */,
+      database: /* ... */,
+      plugins: [
+        virusScanPlugin({
+          scanner: new ClamScanner({
+            host: "localhost",
+            port: 3310,
+          }),
+          onThreat: "reject",
+          mode: "sync",
+        }),
+      ],
+    });
+    ```
+  </Tab>
+  <Tab value="VirusTotal">
+    ```ts title="lib/media.ts"
+    import { createBetterMedia } from "better-media";
+    import { virusScanPlugin } from "@better-media/plugin-virus-scan";
+    import { VirusTotalScanner } from "@better-media/plugin-virus-scan/virustotal";
+
+    export const media = createBetterMedia({
+      storage: /* ... */,
+      database: /* ... */,
+      plugins: [
+        virusScanPlugin({
+          scanner: new VirusTotalScanner({
+            apiKey: process.env.VIRUSTOTAL_API_KEY!,
+          }),
+          onThreat: "quarantine",
+          mode: "background",
+        }),
+      ],
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Configuration Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `scanner` | `VirusScanner` | — | **Required.** The scanner instance to use (`ClamScanner` or `VirusTotalScanner`). |
+| `mode` | `"sync" \| "background"` | `"background"` | Whether to scan inline or in a background job. |
+| `onThreat` | `"reject" \| "quarantine" \| "flag"` | `"reject"` | Action to take when a threat is detected. |
+| `maxFileSize` | `number` | `100MB` | Skip scanning files larger than this limit. |
+| `retries` | `number` | `3` | Number of retry attempts if the scanner fails. |
+| `timeout` | `number` | `30000` | Timeout in milliseconds per scan attempt. |
+
+## Threat Actions
+
+| Action | Description |
+| --- | --- |
+| `reject` | Reject the upload immediately. File is deleted. |
+| `quarantine` | File is stored but marked as `quarantined` in the database. Not publicly accessible. |
+| `flag` | File is stored and accessible, but its database record is marked with a `threat` flag. |
+
+## ClamScanner Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `host` | `string` | `"localhost"` | ClamAV daemon host. |
+| `port` | `number` | `3310` | ClamAV daemon port. |
+| `timeout` | `number` | `60000` | Socket timeout in milliseconds. |
+
+## VirusTotalScanner Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `apiKey` | `string` | — | **Required.** Your VirusTotal API key. |
+| `minEngines` | `number` | `3` | Minimum number of AV engines that must flag a file to consider it a threat. |
+| `pollInterval` | `number` | `5000` | How often (ms) to poll for analysis results. |
+
+## Writing a Custom Scanner
+
+You can implement the `VirusScanner` interface to use a different scanning engine:
+
+```ts title="lib/my-scanner.ts"
+import type { VirusScanner, ScanResult } from "@better-media/plugin-virus-scan";
+
+export class MyCustomScanner implements VirusScanner {
+  async scan(file: Buffer): Promise<ScanResult> {
+    // call your scanning API here
+    return { clean: true };
+    // or: { clean: false, threat: "Trojan.Generic.123" }
+  }
+}
+```

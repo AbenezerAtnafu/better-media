@@ -1,0 +1,57 @@
+---
+title: Comparison
+description: How Better Media compares to managed media services, custom implementations, and uploader libraries.
+---
+
+Better Media is a **self-hosted, modular media orchestration framework**. Here's how it compares to the alternatives you might be considering.
+
+## Feature Comparison
+
+| Feature | Better Media | Cloudinary / Mux | `multer` + S3 | `uppy` |
+| --- | :---: | :---: | :---: | :---: |
+| Self-hosted | ✅ | ❌ | ✅ | ✅ |
+| Type-safe API | ✅ | ❌ | ❌ | Partial |
+| Plugin system | ✅ | ❌ | ❌ | ❌ |
+| Virus scanning | ✅ | ❌ | ❌ | ❌ |
+| Background jobs | ✅ | ✅ (managed) | ❌ | ❌ |
+| Multi-destination storage | ✅ | ❌ | Manual | ❌ |
+| Metadata extraction | ✅ | ✅ (limited) | ❌ | ❌ |
+| Data ownership | ✅ | ❌ | ✅ | ✅ |
+| Per-processing cost | None | Per transformation | None | None |
+| Framework agnostic | ✅ | ✅ | ✅ | ✅ |
+
+---
+
+## vs Managed Services (Cloudinary, Mux, Cloudflare Stream)
+
+Managed services are excellent — they handle infrastructure for you and provide powerful global CDNs. But they come with tradeoffs:
+
+- **Data Ownership**: With managed services, your files and metadata live in a third-party system. With Better Media, everything stays in your own infrastructure.
+- **Cost at Scale**: Managed services bill per transformation, per GB transferred, or per user. Better Media only incurs your own infrastructure costs.
+- **Vendor Lock-in**: Migrating away from a managed service means re-uploading all your files and rebuilding integrations. Better Media uses standard storage interfaces so you can change providers without changing application code.
+- **Compliance**: If your application requires GDPR, HIPAA, or SOC 2 compliance, self-hosting is often mandatory.
+
+---
+
+## vs Custom Implementations (`multer` + S3)
+
+Many teams build media pipelines by combining `multer`, `aws-sdk`, and custom queue logic. This works, but grows painful quickly:
+
+- **Reinventing the Wheel**: Every team re-solves the same problems — file validation, virus scanning, background processing, metadata tracking. Better Media solves these once, correctly.
+- **No Type Safety**: Raw `multer` gives you `any`-typed file objects. Better Media provides strictly-typed interfaces from intake to storage.
+- **Plugin Complexity**: Adding virus scanning to a custom implementation means wiring ClamAV or VirusTotal manually, handling failures, retries, and quarantine logic. Better Media handles all of this through a simple plugin option.
+- **Fragile Pipelines**: Custom implementations tend to drift — validation lives here, scanning lives there, storage logic is scattered. Better Media enforces a single, ordered lifecycle.
+
+---
+
+## vs Generic Uploader Libraries (`uppy`, `filepond`)
+
+Uploader libraries handle the *client-side* file selection and upload UX. Better Media handles the *server-side* pipeline. They are complementary, not competitive:
+
+- **Different Layer**: `uppy` manages the browser upload experience. Better Media manages what happens to files after they reach your server.
+- **No Backend Orchestration**: Uploader libraries don't handle virus scanning, format conversion, metadata extraction, or background processing.
+- **Works Together**: You can use `uppy` on the client to upload files directly to the Better Media handler endpoint.
+
+<Callout type="info">
+  Better Media is best suited for teams that want **full control over their media data and pipeline**, without the operational complexity of building everything from scratch.
+</Callout>

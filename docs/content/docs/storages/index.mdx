@@ -1,0 +1,102 @@
+---
+title: Storage Adapters
+description: Configure where Better Media stores your files — S3, Cloudflare R2, MinIO, or local filesystem.
+---
+
+Storage Adapters tell Better Media where to persist uploaded files. Every adapter implements the same `StorageAdapter` interface, so you can swap providers without changing any other code.
+
+## Supported Adapters
+
+| Adapter | Package | Description |
+| --- | --- | --- |
+| [S3](/docs/storages/s3) | `@better-media/adapter-storage-s3` | AWS S3, Cloudflare R2, MinIO, and any S3-compatible provider. |
+| [Filesystem](/docs/storages/filesystem) | `@better-media/adapter-storage-filesystem` | Local disk storage. Best for development and testing. |
+| Memory | `@better-media/adapter-storage-memory` | In-process memory. For testing only. |
+
+## Quick Start
+
+<Tabs items={["S3", "Filesystem", "Memory"]}>
+  <Tab value="S3">
+    ```ts title="lib/media.ts"
+    import { createBetterMedia } from "better-media";
+    import { s3Storage } from "@better-media/adapter-storage-s3";
+
+    export const media = createBetterMedia({
+      storage: s3Storage({
+        bucket: process.env.S3_BUCKET!,
+        region: process.env.AWS_REGION!,
+      }),
+      // ...
+    });
+    ```
+  </Tab>
+  <Tab value="Filesystem">
+    ```ts title="lib/media.ts"
+    import { createBetterMedia } from "better-media";
+    import { filesystemStorage } from "@better-media/adapter-storage-filesystem";
+
+    export const media = createBetterMedia({
+      storage: filesystemStorage({
+        directory: "./uploads",
+        publicUrl: "http://localhost:3000/uploads",
+      }),
+      // ...
+    });
+    ```
+  </Tab>
+  <Tab value="Memory">
+    ```ts title="lib/media.ts"
+    import { createBetterMedia } from "better-media";
+    import { memoryStorage } from "@better-media/adapter-storage-memory";
+
+    export const media = createBetterMedia({
+      storage: memoryStorage(),
+      // ...
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## The `StorageAdapter` Interface
+
+All adapters implement this interface, defined in `@better-media/core`:
+
+```ts
+export interface StorageAdapter {
+  upload(file: MediaFile): Promise<StoredMedia>;
+  download(id: string): Promise<ReadableStream>;
+  delete(id: string): Promise<void>;
+  getUrl(id: string): Promise<string>;
+}
+```
+
+## Custom Adapter
+
+You can build a custom storage adapter for any provider (GCS, Azure Blob, Backblaze B2, etc.):
+
+```ts title="lib/gcs-adapter.ts"
+import type { StorageAdapter, StoredMedia, MediaFile } from "@better-media/core";
+import { Storage } from "@google-cloud/storage";
+
+export function gcsStorage(options: { bucket: string }): StorageAdapter {
+  const client = new Storage();
+  const bucket = client.bucket(options.bucket);
+
+  return {
+    async upload(file) {
+      const blob = bucket.file(file.id);
+      await blob.save(file.buffer, { contentType: file.mimeType });
+      return { id: file.id, url: `https://storage.googleapis.com/${options.bucket}/${file.id}` };
+    },
+    async download(id) {
+      return bucket.file(id).createReadStream();
+    },
+    async delete(id) {
+      await bucket.file(id).delete();
+    },
+    async getUrl(id) {
+      return `https://storage.googleapis.com/${options.bucket}/${id}`;
+    },
+  };
+}
+```

@@ -1,0 +1,149 @@
+---
+title: Architecture
+description: Understanding the Better Media Core / Adapter / Framework architecture and the plugin lifecycle.
+---
+
+Better Media is built around a strict **three-layer architecture** that keeps your code clean, testable, and replaceable at every level.
+
+## The Three Layers
+
+| Layer | Package | Responsibility |
+| --- | --- | --- |
+| **Core** | `@better-media/core` | Defines all contracts (interfaces, types). Contains zero implementations. This is the source of truth for type safety across the entire system. |
+| **Adapters** | e.g. `@better-media/adapter-storage-s3` | Implement the Core interfaces. Map infrastructure (S3, Postgres, Redis) to the standard contract. |
+| **Framework** | `better-media` | Orchestrates the pipeline. Wires adapters and plugins together and runs the lifecycle engine. |
+
+### Why This Separation Matters
+
+This separation means you can swap a Postgres adapter for MongoDB without changing a single line of business logic. Your plugins don't care which storage backend you're using — they depend on the `StorageAdapter` interface, not the concrete implementation.
+
+### Dependency Direction
+
+Dependencies only flow inward — adapters depend on core, and the framework depends on both. Core itself has zero dependencies. This makes every layer independently testable in isolation.
+
+## Monorepo Structure
+
+Better Media is organized as a monorepo:
+
+```text
+packages/
+├── core/                       # @better-media/core
+│   └── src/
+│       ├── types.ts            # Core interfaces: StorageAdapter, DatabaseAdapter, Plugin
+│       └── index.ts
+│
+├── better-media/               # better-media (framework entry point)
+│   └── src/
+│       ├── create.ts           # createBetterMedia() factory
+│       ├── lifecycle.ts        # Pipeline orchestration engine
+│       └── handler.ts          # HTTP handler generator
+│
+├── adapters/
+│   ├── storage-s3/             # @better-media/adapter-storage-s3
+│   ├── storage-filesystem/     # @better-media/adapter-storage-filesystem
+│   ├── storage-memory/         # @better-media/adapter-storage-memory
+│   ├── db/                     # @better-media/adapter-db
+│   └── jobs/                   # @better-media/adapter-jobs
+│
+└── plugins/
+    ├── validation-plugin/      # @better-media/plugin-validation
+    ├── virus-scan-plugin/      # @better-media/plugin-virus-scan
+    ├── metadata-plugin/        # @better-media/plugin-metadata
+    └── media-processing-plugin/ # @better-media/plugin-media-processing
+```
+
+## The Media Lifecycle
+
+Every file that passes through Better Media follows a sequential, ordered lifecycle. Plugins hook into specific stages:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│                      Upload Request                      │
+└────────────────────────────┬────────────────────────────┘
+                             │
+                    ┌────────▼────────┐
+                    │   1. Intake     │  Parse multipart, stream file into memory/tmp
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │  2. Validation  │  Size limits, MIME type checks, checksums (sync)
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │  3. Security    │  Virus scanning, deep inspection (sync or async)
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │  4. Processing  │  Resizing, transcoding, metadata extraction
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │  5. Storage     │  Write to storage adapter, persist metadata to DB
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │   6. Response   │  Return media ID, URL, and metadata
+                    └─────────────────┘
+```
+
+If any stage rejects the file (e.g., validation fails or a virus is detected), the pipeline terminates immediately and returns an error response. No subsequent stages are run.
+
+## Plugin Execution Modes
+
+Plugins can run in two modes:
+
+| Mode | Description | Best For |
+| --- | --- | --- |
+| **Sync** | Runs inline with the upload request. Adds latency. | Validation, fast checks |
+| **Background** | Dispatched to a job queue. Returns immediately. File is marked "pending". | Virus scanning, transcoding, metadata |
+
+```ts title="Plugin mode example"
+import { virusScanPlugin } from "@better-media/plugin-virus-scan";
+
+// Sync mode — scan before responding (adds latency)
+virusScanPlugin({ mode: "sync", scanner: "clamav" })
+
+// Background mode — dispatch job, respond immediately
+virusScanPlugin({ mode: "background", scanner: "clamav" })
+```
+
+<Callout type="info">
+  Background mode requires an [adapter-jobs](/docs/database) adapter (e.g. RabbitMQ, BullMQ) to be configured in your `createBetterMedia` call.
+</Callout>
+
+## The `StorageAdapter` Interface
+
+Every storage adapter implements this interface from `@better-media/core`:
+
+```ts title="@better-media/core: StorageAdapter"
+export interface StorageAdapter {
+  upload(file: MediaFile): Promise<StoredMedia>;
+  download(id: string): Promise<ReadableStream>;
+  delete(id: string): Promise<void>;
+  getUrl(id: string): Promise<string>;
+}
+```
+
+## The `DatabaseAdapter` Interface
+
+```ts title="@better-media/core: DatabaseAdapter"
+export interface DatabaseAdapter {
+  createMedia(record: MediaRecord): Promise<MediaRecord>;
+  getMedia(id: string): Promise<MediaRecord | null>;
+  updateMedia(id: string, changes: Partial<MediaRecord>): Promise<MediaRecord>;
+  deleteMedia(id: string): Promise<void>;
+  listMedia(query?: MediaQuery): Promise<MediaRecord[]>;
+}
+```
+
+## The `Plugin` Interface
+
+```ts title="@better-media/core: Plugin"
+export interface Plugin {
+  name: string;
+  onValidate?(ctx: PluginContext): Promise<void>;
+  onBeforeStorage?(ctx: PluginContext): Promise<void>;
+  onAfterStorage?(ctx: PluginContext): Promise<void>;
+  onError?(ctx: PluginContext, error: Error): Promise<void>;
+}
+```

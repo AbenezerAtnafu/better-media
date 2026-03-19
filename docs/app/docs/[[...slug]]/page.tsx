@@ -13,9 +13,14 @@ export default async function Page({ params }: { params: { slug?: string[] } }) 
   const MDX = page.data.exports.default;
 
   return (
-    <DocsPage toc={page.data.exports.toc}>
+    <DocsPage toc={page.data.exports.toc} full={false}>
       <DocsBody>
         <h1>{page.data.title}</h1>
+        {page.data.description && (
+          <p className="text-fd-muted-foreground mt-2 mb-8 text-lg leading-relaxed">
+            {page.data.description}
+          </p>
+        )}
         <MDX />
       </DocsBody>
     </DocsPage>
@@ -28,7 +33,7 @@ export async function generateStaticParams() {
   }));
 }
 
-export function generateMetadata({ params }: { params: { slug?: string[] } }) {
+export function generateMetadata({ params }: { params: { slug?: string[] } }): Metadata {
   const page = getPage(params.slug);
 
   if (page == null) notFound();
@@ -36,5 +41,9 @@ export function generateMetadata({ params }: { params: { slug?: string[] } }) {
   return {
     title: page.data.title,
     description: page.data.description,
-  } satisfies Metadata;
+    openGraph: {
+      title: page.data.title,
+      description: page.data.description,
+    },
+  };
 }

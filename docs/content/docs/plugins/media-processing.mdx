@@ -1,0 +1,117 @@
+---
+title: Media Processing Plugin
+description: Resize, convert, and generate thumbnails from uploaded images using Sharp.
+---
+
+The Media Processing Plugin transforms uploaded images after they are stored. It can generate multiple output variants (e.g. a `thumbnail`, `medium`, and `original`) and store each variant as a separate media record.
+
+## Installation
+
+```bash
+pnpm add @better-media/plugin-media-processing
+```
+
+This plugin uses [`sharp`](https://sharp.pixelplumbing.com/) as a peer dependency:
+
+```bash
+pnpm add sharp
+```
+
+## Basic Usage
+
+```ts title="lib/media.ts"
+import { createBetterMedia } from "better-media";
+import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
+
+export const media = createBetterMedia({
+  storage: /* ... */,
+  database: /* ... */,
+  plugins: [
+    mediaProcessingPlugin({
+      variants: [
+        {
+          name: "thumbnail",
+          width: 320,
+          height: 240,
+          format: "webp",
+          quality: 80,
+          fit: "cover",
+        },
+        {
+          name: "medium",
+          width: 1280,
+          format: "webp",
+          quality: 85,
+          fit: "inside",
+        },
+      ],
+    }),
+  ],
+});
+```
+
+## Configuration Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `variants` | `Variant[]` | `[]` | Array of output variant definitions. |
+| `mode` | `"sync" \| "background"` | `"background"` | Inline or job-based processing. |
+| `onlyFor` | `string[]` | `["image/*"]` | MIME type patterns to process. |
+| `onError` | `"skip" \| "fail"` | `"skip"` | What to do if processing fails. |
+
+## Variant Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | — | **Required.** Variant identifier (e.g. `"thumbnail"`). |
+| `width` | `number` | — | Output width in pixels. |
+| `height` | `number` | — | Output height in pixels. |
+| `format` | `"webp" \| "jpeg" \| "png" \| "avif"` | `"webp"` | Output image format. |
+| `quality` | `number` | `80` | Compression quality (1–100). |
+| `fit` | `"cover" \| "contain" \| "inside" \| "outside" \| "fill"` | `"cover"` | Resizing strategy (Sharp `fit` option). |
+| `background` | `string` | `"#ffffff"` | Background color for `contain` fit. |
+
+## Examples
+
+### Avatar Processing
+
+```ts
+mediaProcessingPlugin({
+  onlyFor: ["image/jpeg", "image/png", "image/webp"],
+  variants: [
+    { name: "avatar-sm",  width: 64,  height: 64,  format: "webp", fit: "cover" },
+    { name: "avatar-md",  width: 128, height: 128, format: "webp", fit: "cover" },
+    { name: "avatar-lg",  width: 256, height: 256, format: "webp", fit: "cover" },
+  ],
+})
+```
+
+### Blog Post Images
+
+```ts
+mediaProcessingPlugin({
+  variants: [
+    { name: "thumbnail", width: 400,  height: 225,  format: "webp", quality: 75, fit: "cover" },
+    { name: "hero",      width: 1920, height: 1080, format: "webp", quality: 85, fit: "inside" },
+    { name: "og",        width: 1200, height: 630,  format: "jpeg", quality: 90, fit: "cover" },
+  ],
+})
+```
+
+## Accessing Variants
+
+Each generated variant is stored as a separate media record linked to the original:
+
+```ts
+const mediaRecord = await media.getMedia(id);
+
+// Access all generated variants
+console.log(mediaRecord.variants);
+// {
+//   thumbnail: { id: "...", url: "https://...", width: 320, height: 240 },
+//   medium:    { id: "...", url: "https://...", width: 1280, height: 720 },
+// }
+
+// Or access a specific variant URL directly
+console.log(mediaRecord.variants.thumbnail.url);
+```

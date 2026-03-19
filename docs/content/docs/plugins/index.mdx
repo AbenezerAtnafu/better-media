@@ -1,0 +1,91 @@
+---
+title: Plugins
+description: Extend the Better Media pipeline with official and custom plugins for validation, scanning, processing, and more.
+---
+
+Plugins are the core extension mechanism of Better Media. Each plugin hooks into one or more stages of the [media lifecycle](/docs/concepts#the-media-lifecycle) to add capabilities like file validation, virus scanning, image processing, and metadata extraction.
+
+## How Plugins Work
+
+Plugins are plain objects (or factory functions that return objects) conforming to the `Plugin` interface. You register them in the `plugins` array when calling `createBetterMedia`:
+
+```ts title="lib/media.ts"
+import { createBetterMedia } from "better-media";
+import { validationPlugin } from "@better-media/plugin-validation";
+import { virusScanPlugin } from "@better-media/plugin-virus-scan";
+
+export const media = createBetterMedia({
+  storage: /* ... */,
+  database: /* ... */,
+  plugins: [
+    validationPlugin({ maxSize: 10 * 1024 * 1024 }),
+    virusScanPlugin({ scanner: "clamav" }),
+  ],
+});
+```
+
+Plugins run in the **order they are declared**. A plugin can throw to halt the pipeline and return an error to the client.
+
+## Execution Modes
+
+Every plugin can run in one of two modes:
+
+| Mode | Behavior | Use Case |
+| --- | --- | --- |
+| `"sync"` | Runs inline with the upload request before responding | Validation, lightweight checks |
+| `"background"` | Dispatched to a job queue; responds immediately | Virus scanning, transcoding, heavy processing |
+
+```ts
+virusScanPlugin({
+  scanner: "clamav",
+  mode: "background", // default for virus-scan
+})
+```
+
+<Callout type="info">
+  Background mode requires an `adapter-jobs` adapter (e.g. RabbitMQ, BullMQ) to be configured.
+</Callout>
+
+## Official Plugins
+
+| Plugin | Package | Description |
+| --- | --- | --- |
+| [Validation](/docs/plugins/validation) | `@better-media/plugin-validation` | File type, size, MIME, and checksum validation. |
+| [Virus Scan](/docs/plugins/virus-scan) | `@better-media/plugin-virus-scan` | Virus scanning via ClamAV or VirusTotal. |
+| [Metadata](/docs/plugins/metadata) | `@better-media/plugin-metadata` | Extract and persist metadata for images, video, and audio. |
+| [Media Processing](/docs/plugins/media-processing) | `@better-media/plugin-media-processing` | Resize, convert, and generate thumbnails via Sharp. |
+
+## Writing a Custom Plugin
+
+You can write a custom plugin by implementing the `Plugin` interface:
+
+```ts title="lib/my-plugin.ts"
+import type { Plugin } from "@better-media/core";
+
+export function loggingPlugin(): Plugin {
+  return {
+    name: "logging-plugin",
+
+    async onValidate(ctx) {
+      console.log(`[media] validating: ${ctx.file.name} (${ctx.file.size} bytes)`);
+    },
+
+    async onAfterStorage(ctx) {
+      console.log(`[media] stored: ${ctx.media.id} → ${ctx.media.url}`);
+    },
+
+    async onError(ctx, error) {
+      console.error(`[media] error for ${ctx.file.name}:`, error.message);
+    },
+  };
+}
+```
+
+Register it like any other plugin:
+
+```ts
+plugins: [
+  loggingPlugin(),
+  validationPlugin({ maxSize: 5 * 1024 * 1024 }),
+]
+```

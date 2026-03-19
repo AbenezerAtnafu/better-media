@@ -1,0 +1,167 @@
+---
+title: Database Adapters
+description: Configure a database adapter to persist media records, metadata, and job states in Better Media.
+---
+
+Better Media uses a **Database Adapter** to persist media records, file metadata, and background job states. The adapter abstracts your database behind a unified interface so you can swap implementations without touching application code.
+
+## Supported Adapters
+
+| Adapter | Package | Description |
+| --- | --- | --- |
+| Memory | `@better-media/adapter-db` | In-memory store. Fast, zero-config. **For testing only.** |
+| Drizzle (PostgreSQL) | `@better-media/adapter-db/drizzle` | Production-ready PostgreSQL via Drizzle ORM. |
+| Prisma | `@better-media/adapter-db/prisma` | PostgreSQL, MySQL, or SQLite via Prisma. |
+| MongoDB | `@better-media/adapter-db/mongodb` | MongoDB via the official Node.js driver. |
+
+```bash
+pnpm add @better-media/adapter-db
+```
+
+---
+
+## Memory Adapter
+
+The memory adapter stores all records in a JavaScript `Map`. It requires zero configuration and is ideal for unit tests and local development.
+
+<Callout type="warn">
+  Data does not persist between restarts. Do not use this in production.
+</Callout>
+
+```ts title="lib/media.ts"
+import { createBetterMedia } from "better-media";
+import { memoryDatabase } from "@better-media/adapter-db";
+
+export const media = createBetterMedia({
+  database: memoryDatabase(),
+  // ...
+});
+```
+
+---
+
+## Drizzle Adapter (PostgreSQL)
+
+The Drizzle adapter is the recommended choice for production PostgreSQL setups.
+
+```ts title="lib/media.ts"
+import { createBetterMedia } from "better-media";
+import { drizzleAdapter } from "@better-media/adapter-db/drizzle";
+import { db } from "@/db"; // your drizzle instance
+
+export const media = createBetterMedia({
+  database: drizzleAdapter(db, {
+    provider: "pg", // "pg" | "mysql" | "sqlite"
+  }),
+  // ...
+});
+```
+
+### Schema
+
+Better Media automatically manages its own tables. Run the migration after adding the adapter:
+
+```bash
+pnpm better-media db:migrate
+```
+
+The following tables are created:
+
+| Table | Description |
+| --- | --- |
+| `bm_media` | Core media records (id, size, mimeType, status, storageKey) |
+| `bm_metadata` | Extracted metadata per media record (width, height, duration, etc.) |
+| `bm_jobs` | Background job states (pending, running, done, failed) |
+
+---
+
+## Prisma Adapter
+
+```ts title="lib/media.ts"
+import { createBetterMedia } from "better-media";
+import { prismaAdapter } from "@better-media/adapter-db/prisma";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+export const media = createBetterMedia({
+  database: prismaAdapter(prisma, {
+    provider: "postgresql", // "postgresql" | "mysql" | "sqlite"
+  }),
+  // ...
+});
+```
+
+Add the Better Media models to your Prisma schema:
+
+```prisma title="prisma/schema.prisma"
+model BmMedia {
+  id         String   @id @default(cuid())
+  mimeType   String
+  size       Int
+  status     String   @default("pending")
+  storageKey String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  metadata BmMetadata?
+  jobs     BmJob[]
+}
+
+model BmMetadata {
+  id      String  @id @default(cuid())
+  mediaId String  @unique
+  media   BmMedia @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  data    Json
+}
+
+model BmJob {
+  id        String   @id @default(cuid())
+  mediaId   String
+  media     BmMedia  @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  type      String
+  status    String   @default("pending")
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+---
+
+## MongoDB Adapter
+
+```ts title="lib/media.ts"
+import { createBetterMedia } from "better-media";
+import { mongodbAdapter } from "@better-media/adapter-db/mongodb";
+import { MongoClient } from "mongodb";
+
+const client = new MongoClient(process.env.MONGODB_URI!);
+
+export const media = createBetterMedia({
+  database: mongodbAdapter(client, {
+    databaseName: "my-app",
+  }),
+  // ...
+});
+```
+
+---
+
+## Custom Adapter
+
+You can write a custom adapter by implementing the `DatabaseAdapter` interface from `@better-media/core`:
+
+```ts title="lib/my-db-adapter.ts"
+import type { DatabaseAdapter, MediaRecord } from "@better-media/core";
+
+export function myCustomAdapter(): DatabaseAdapter {
+  return {
+    async createMedia(record) { /* ... */ },
+    async getMedia(id) { /* ... */ },
+    async updateMedia(id, changes) { /* ... */ },
+    async deleteMedia(id) { /* ... */ },
+    async listMedia(query) { /* ... */ },
+  };
+}
+```
