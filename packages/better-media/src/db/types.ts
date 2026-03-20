@@ -29,8 +29,14 @@ export interface FieldDefinition {
   };
 }
 
+export interface IndexDefinition {
+  fields: string[];
+  unique?: boolean;
+}
+
 export interface ModelDefinition {
   fields: Record<string, FieldDefinition>;
+  indexes?: IndexDefinition[];
 }
 
 export type BmSchema = Record<string, ModelDefinition>;

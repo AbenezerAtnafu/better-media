@@ -9,60 +9,75 @@ export const schema: BmSchema = {
   media: {
     fields: {
       id: { type: "string", primaryKey: true, required: true },
-      storageKey: { type: "string", required: true },
-      mimeType: { type: "string", required: true },
-      size: { type: "number", required: true },
-      status: { type: "string", required: true, defaultValue: "PENDING_VERIFICATION" },
-      createdAt: { type: "date", required: true },
-      updatedAt: { type: "date", required: true },
+      ownerId: { type: "string" },
+      filename: { type: "string" },
+      mimeType: { type: "string" },
+      size: { type: "number" },
+      storageProvider: { type: "string" },
+      storageKey: { type: "string" },
+      checksum: { type: "string" },
+      width: { type: "number" },
+      height: { type: "number" },
+      duration: { type: "number" },
+      metadata: { type: "json" },
+      status: { type: "string" },
+      visibility: { type: "string" },
+      createdAt: { type: "date" },
+      updatedAt: { type: "date" },
+      deletedAt: { type: "date" },
     },
+    indexes: [{ fields: ["checksum"] }],
   },
 
-  // Extracted metadata per media record
-  media_metadata: {
+  // Different versions of the media (thumbnails, previews, etc.)
+  media_versions: {
     fields: {
       id: { type: "string", primaryKey: true, required: true },
       mediaId: {
         type: "string",
-        required: true,
-        unique: true, // one-to-one relationship
         references: {
           model: "media",
           field: "id",
           onDelete: "cascade",
         },
       },
-      data: { type: "json", required: true },
+      storageKey: { type: "string" },
+      checksum: { type: "string" },
+      isOriginal: { type: "boolean" },
+      type: { type: "string" }, // e.g., 'thumbnail', 'preview', 'compressed'
+      versionNumber: { type: "number" },
+      createdAt: { type: "date" },
     },
+    indexes: [
+      {
+        fields: ["mediaId", "versionNumber"],
+        unique: true,
+      },
+    ],
   },
 
-  // Background job state
+  // Background job state for media processing
   media_jobs: {
     fields: {
       id: { type: "string", primaryKey: true, required: true },
       mediaId: {
         type: "string",
-        required: true,
         references: {
           model: "media",
           field: "id",
           onDelete: "cascade",
         },
       },
-      type: { type: "string", required: true }, // e.g., 'virus-scan', 'thumbnail'
-      status: { type: "string", required: true, defaultValue: "pending" }, // pending, running, completed, failed
+      type: { type: "string" }, // e.g., 'virus-scan', 'thumbnail'
+      status: { type: "string" }, // e.g., 'pending', 'running', 'completed', 'failed'
+      attempts: { type: "number" },
+      maxAttempts: { type: "number" },
+      idempotencyKey: { type: "string", unique: true },
+      scheduledAt: { type: "date" },
+      startedAt: { type: "date" },
+      completedAt: { type: "date" },
       error: { type: "string" },
-      createdAt: { type: "date", required: true },
-      updatedAt: { type: "date", required: true },
-    },
-  },
-
-  // Trusted metadata for files in transition (e.g. tracking checksums pre-verification)
-  trusted_metadata: {
-    fields: {
-      id: { type: "string", primaryKey: true, required: true },
-      file: { type: "json" },
-      checksums: { type: "json" },
+      createdAt: { type: "date" },
     },
   },
 };
