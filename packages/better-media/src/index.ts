@@ -88,10 +88,13 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
     },
     files: {
       get(fileKey: string) {
-        return database.get(fileKey);
+        return database.findOne({ model: "media", where: [{ field: "id", value: fileKey }] });
       },
       async delete(fileKey: string) {
-        await Promise.all([storage.delete(fileKey), database.delete(fileKey)]);
+        await Promise.all([
+          storage.delete(fileKey),
+          database.delete({ model: "media", where: [{ field: "id", value: fileKey }] }),
+        ]);
       },
       async getUrl(fileKey: string, options?: { expiresIn?: number }) {
         const fn = storage.getUrl;
@@ -124,3 +127,6 @@ export type { BackgroundJobPayload } from "./core/lifecycle-engine";
 export type { BetterMediaRuntime, FileRecord, Metadata } from "./runtime/runtime.interface";
 export type { GetUrlOptions, PresignedPutUrlOptions } from "@better-media/core";
 export type { FileHandlingConfig } from "./core/file-loader";
+
+// DB Architecture exports
+export * from "./db";

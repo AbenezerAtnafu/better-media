@@ -10,6 +10,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./kysely": {
+      "types": "./dist/adapters/kysely/index.d.ts",
+      "import": "./dist/adapters/kysely/index.mjs",
+      "require": "./dist/adapters/kysely/index.js"
+    },
+    "./mongodb": {
+      "types": "./dist/adapters/mongodb/index.d.ts",
+      "import": "./dist/adapters/mongodb/index.mjs",
+      "require": "./dist/adapters/mongodb/index.js"
     }
   },
   "scripts": {
@@ -20,7 +30,27 @@
     "test": "jest"
   },
   "dependencies": {
-    "@better-media/core": "workspace:*"
+    "@better-media/core": "workspace:*",
+    "better-media": "workspace:*"
+  },
+  "peerDependencies": {
+    "kysely": "^0.27.4",
+    "mongodb": "^6.8.0"
+  },
+  "peerDependenciesMeta": {
+    "kysely": {
+      "optional": true
+    },
+    "mongodb": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/mongodb": "^4.0.7",
+    "@types/pg": "^8.11.10",
+    "kysely": "^0.27.4",
+    "mongodb": "^6.8.0",
+    "@types/node": "^22.10.0"
   },
   "keywords": [],
   "author": "",

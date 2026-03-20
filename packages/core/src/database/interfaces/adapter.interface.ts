@@ -1,12 +1,149 @@
+// ---------------------------------------------------------------------------
+// Where clause – one or more field conditions
+// ---------------------------------------------------------------------------
+export type WhereClause = {
+  field: string;
+  value: unknown;
+  operator?:
+    | "="
+    | "!="
+    | "<"
+    | "<="
+    | ">"
+    | ">="
+    | "like"
+    | "in"
+    | "not_in"
+    | "contains"
+    | "starts_with"
+    | "ends_with";
+  connector?: "AND" | "OR";
+}[];
+
+// ---------------------------------------------------------------------------
+// Operation option bags
+// ---------------------------------------------------------------------------
+export interface CreateOptions<T = Record<string, unknown>> {
+  /** Table / collection name */
+  model: string;
+  /** Data to insert */
+  data: T;
+}
+
+export interface FindOptions<T = Record<string, unknown>> {
+  /** Table / collection name */
+  model: string;
+  /** Filter conditions – combined with AND by default */
+  where?: WhereClause;
+  /** Fields to return; omit to return all */
+  select?: (keyof T & string)[];
+  /** Sort order */
+  sortBy?: { field: string; direction: "asc" | "desc" };
+  /** Maximum number of records to return */
+  limit?: number;
+  /** Number of records to skip */
+  offset?: number;
+}
+
+export interface UpdateOptions<T = Record<string, unknown>> {
+  /** Table / collection name */
+  model: string;
+  /** Filter conditions that identify the record(s) to update */
+  where: WhereClause;
+  /** Partial data to merge into the matched record(s) */
+  update: Partial<T>;
+}
+
+export interface DeleteOptions {
+  /** Table / collection name */
+  model: string;
+  /** Filter conditions that identify the record(s) to delete */
+  where: WhereClause;
+}
+
+export interface CountOptions {
+  /** Table / collection name */
+  model: string;
+  /** Filter conditions */
+  where?: WhereClause;
+}
+
+// ---------------------------------------------------------------------------
+// DatabaseAdapter
+// ---------------------------------------------------------------------------
+
 /**
- * Minimal database adapter interface for media metadata/records.
- * Implementations (Postgres, MongoDB, etc.) provide storage for pipeline state.
+ * Adapter specifically for transaction contexts, omitting the ability to nest transactions.
+ */
+export type DatabaseTransactionAdapter = Omit<DatabaseAdapter, "transaction">;
+
+/**
+ * Engine-agnostic database adapter interface.
+ *
+ * All operations target a named `model` (table / collection). Implementations
+ * are responsible for translating these calls into the appropriate engine-level
+ * queries (SQL, MQL, in-memory lookups, etc.) and for applying field-level
+ * serialisation / deserialization via the Field Handling layer.
  */
 export interface DatabaseAdapter {
-  /** Get a media record by key */
-  get(key: string): Promise<Record<string, unknown> | null>;
-  /** Create or update a media record */
-  put(key: string, data: Record<string, unknown>): Promise<void>;
-  /** Delete a media record */
-  delete(key: string): Promise<void>;
+  /**
+   * Insert a new record and return the persisted result (including any
+   * server-side defaults such as `id`, `createdAt`, etc.).
+   */
+  create<T extends Record<string, unknown> = Record<string, unknown>>(
+    options: CreateOptions<T>
+  ): Promise<T>;
+
+  /**
+   * Return the first record matching `where`, or `null` if no match.
+   */
+  findOne<T extends Record<string, unknown> = Record<string, unknown>>(
+    options: FindOptions<T>
+  ): Promise<T | null>;
+
+  /**
+   * Return all records matching `where`. Returns an empty array when there
+   * are no matches.
+   */
+  findMany<T extends Record<string, unknown> = Record<string, unknown>>(
+    options: FindOptions<T>
+  ): Promise<T[]>;
+
+  /**
+   * Apply a partial update to all records matching `where` and return the
+   * first updated record, or `null` if no match was found.
+   */
+  update<T extends Record<string, unknown> = Record<string, unknown>>(
+    options: UpdateOptions<T>
+  ): Promise<T | null>;
+
+  /**
+   * Apply a partial update to all records matching `where` and return the
+   * number of updated records.
+   */
+  updateMany<T extends Record<string, unknown> = Record<string, unknown>>(
+    options: UpdateOptions<T>
+  ): Promise<number>;
+
+  /**
+   * Delete all records matching `where`.
+   */
+  delete(options: DeleteOptions): Promise<void>;
+
+  /**
+   * Delete all records matching `where` and return the number of deleted records.
+   */
+  deleteMany(options: DeleteOptions): Promise<number>;
+
+  /**
+   * Return the number of records matching `where`.
+   */
+  count(options: CountOptions): Promise<number>;
+
+  /**
+   * Execute multiple operations within an atomic transaction.
+   * If the adapter fails or does not natively support transactions, it may
+   * execute sequentially.
+   */
+  transaction<R>(callback: (trx: DatabaseTransactionAdapter) => Promise<R>): Promise<R>;
 }

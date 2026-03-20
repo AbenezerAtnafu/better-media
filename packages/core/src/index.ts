@@ -32,5 +32,14 @@ export type {
   TrustedChecksums,
 } from "./plugin/index";
 export type { StorageAdapter, GetUrlOptions, PresignedPutUrlOptions } from "./storage/index";
-export type { DatabaseAdapter } from "./database/index";
+export type {
+  DatabaseAdapter,
+  DatabaseTransactionAdapter,
+  WhereClause,
+  CreateOptions,
+  FindOptions,
+  UpdateOptions,
+  DeleteOptions,
+  CountOptions,
+} from "./database/index";
 export type { JobAdapter } from "./job/index";

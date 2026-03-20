@@ -1,14 +1,12 @@
-// Types and schemas are now exported from "better-media" directly.
-export * from "./adapters/memory/memory-db.adapter";
+export * from "./kysely-db-config.interface";
+export * from "./kysely-db.adapter";
 
-// Backwards compatibility for the old memoryDatabase export
-import { MemoryDbAdapter } from "./adapters/memory/memory-db.adapter";
+import { KyselyDbAdapter, type KyselyDbOptions, type DbSchema } from "./kysely-db.adapter";
 import type { DatabaseAdapter } from "@better-media/core";
+import type { Kysely } from "kysely";
 
-export function memoryDatabase(): DatabaseAdapter {
-  // Return a proxy that supports the new DatabaseAdapter interface + the old get/put methods
-  // for the legacy adapters that haven't been migrated to the new schema-driven architecture yet.
-  const adapter = new MemoryDbAdapter();
+export function kyselyAdapter(db: Kysely<DbSchema>, options: KyselyDbOptions): DatabaseAdapter {
+  const adapter = new KyselyDbAdapter(db, options);
   return new Proxy(adapter, {
     get(target, prop, receiver) {
       if (prop === "get") {
