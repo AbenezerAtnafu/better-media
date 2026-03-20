@@ -2,6 +2,7 @@ packages:
   - "packages/*"
   - "packages/plugins/*"
   - "packages/adapters/*"
+  - "packages/adapters/storages/*"
   - "apps/*"
   - "examples/*"
   - "docs"

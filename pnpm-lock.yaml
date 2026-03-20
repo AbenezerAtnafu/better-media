@@ -95,10 +95,10 @@ importers:
         version: link:../../packages/adapters/db
       '@better-media/adapter-storage-memory':
         specifier: workspace:*
-        version: link:../../packages/adapters/storage-memory
+        version: link:../../packages/adapters/storages/storage-memory
       '@better-media/adapter-storage-s3':
         specifier: workspace:*
-        version: link:../../packages/adapters/storage-s3
+        version: link:../../packages/adapters/storages/storage-s3
       '@better-media/plugin-media-processing':
         specifier: workspace:*
         version: link:../../packages/plugins/media-processing-plugin
@@ -141,7 +141,7 @@ importers:
         version: link:../../packages/adapters/jobs
       '@better-media/adapter-storage-memory':
         specifier: workspace:*
-        version: link:../../packages/adapters/storage-memory
+        version: link:../../packages/adapters/storages/storage-memory
       '@better-media/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -192,19 +192,19 @@ importers:
         specifier: workspace:*
         version: link:../../core
 
-  packages/adapters/storage-filesystem:
+  packages/adapters/storages/storage-filesystem:
     dependencies:
       '@better-media/core':
         specifier: workspace:*
-        version: link:../../core
+        version: link:../../../core
 
-  packages/adapters/storage-memory:
+  packages/adapters/storages/storage-memory:
     dependencies:
       '@better-media/core':
         specifier: workspace:*
-        version: link:../../core
+        version: link:../../../core
 
-  packages/adapters/storage-s3:
+  packages/adapters/storages/storage-s3:
     dependencies:
       '@aws-sdk/client-s3':
         specifier: ^3.700.0
@@ -214,7 +214,7 @@ importers:
         version: 3.1008.0
       '@better-media/core':
         specifier: workspace:*
-        version: link:../../core
+        version: link:../../../core
 
   packages/better-media:
     dependencies:
@@ -269,7 +269,7 @@ importers:
         version: link:../../adapters/db
       '@better-media/adapter-storage-memory':
         specifier: workspace:*
-        version: link:../../adapters/storage-memory
+        version: link:../../adapters/storages/storage-memory
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
