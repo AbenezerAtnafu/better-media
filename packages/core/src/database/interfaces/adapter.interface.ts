@@ -43,6 +43,10 @@ export interface FindOptions<T = Record<string, unknown>> {
   limit?: number;
   /** Number of records to skip */
   offset?: number;
+  /** Include soft-deleted records if true */
+  withDeleted?: boolean;
+  /** Relationships to populate (join/fetch) */
+  populate?: string[];
 }
 
 export interface UpdateOptions<T = Record<string, unknown>> {
@@ -79,11 +83,6 @@ export type DatabaseTransactionAdapter = Omit<DatabaseAdapter, "transaction">;
 
 /**
  * Engine-agnostic database adapter interface.
- *
- * All operations target a named `model` (table / collection). Implementations
- * are responsible for translating these calls into the appropriate engine-level
- * queries (SQL, MQL, in-memory lookups, etc.) and for applying field-level
- * serialisation / deserialization via the Field Handling layer.
  */
 export interface DatabaseAdapter {
   /**
@@ -141,9 +140,13 @@ export interface DatabaseAdapter {
   count(options: CountOptions): Promise<number>;
 
   /**
+   * Execute a raw query. USE WITH CAUTION.
+   * This breaks engine-agnosticism.
+   */
+  raw<T = unknown>(query: string, params?: unknown[]): Promise<T>;
+
+  /**
    * Execute multiple operations within an atomic transaction.
-   * If the adapter fails or does not natively support transactions, it may
-   * execute sequentially.
    */
   transaction<R>(callback: (trx: DatabaseTransactionAdapter) => Promise<R>): Promise<R>;
 }

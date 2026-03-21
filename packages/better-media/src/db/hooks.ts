@@ -1,62 +1,69 @@
-import type { WhereClause } from "./types";
+import type { WhereClause, DbHooks, HookContext } from "./types";
 
 /**
- * Type-safe lifecycle hooks that run before and after database operations.
- * Use these to inject application logic (e.g., audit logging, event emission)
- * without modifying the generic database adapters.
- */
-export interface DbHooks {
-  before?: {
-    create?: (model: string, data: Record<string, unknown>) => Promise<Record<string, unknown>>;
-    update?: (model: string, data: Record<string, unknown>) => Promise<Record<string, unknown>>;
-    delete?: (model: string, where: WhereClause) => Promise<void>;
-  };
-  after?: {
-    create?: (model: string, result: Record<string, unknown>) => Promise<void>;
-    update?: (model: string, result: Record<string, unknown>) => Promise<void>;
-    delete?: (model: string, where: WhereClause) => Promise<void>;
-  };
-}
-
-/**
- * Utility to run hooks sequentially
+ * Utility to run hooks sequentially.
+ * Supports multiple handlers and passes HookContext.
  */
 export const runHooks = {
-  async beforeCreate(hooks: DbHooks | undefined, model: string, data: Record<string, unknown>) {
-    if (hooks?.before?.create) {
-      return hooks.before.create(model, data);
+  async beforeCreate(
+    hooks: DbHooks | undefined,
+    data: Record<string, unknown>,
+    context: HookContext
+  ) {
+    let currentData = data;
+    const handlers = hooks?.before?.create || [];
+    for (const handler of handlers) {
+      currentData = await handler(currentData, context);
     }
-    return data;
+    return currentData;
   },
 
-  async beforeUpdate(hooks: DbHooks | undefined, model: string, data: Record<string, unknown>) {
-    if (hooks?.before?.update) {
-      return hooks.before.update(model, data);
+  async beforeUpdate(
+    hooks: DbHooks | undefined,
+    data: Record<string, unknown>,
+    context: HookContext
+  ) {
+    let currentData = data;
+    const handlers = hooks?.before?.update || [];
+    for (const handler of handlers) {
+      currentData = await handler(currentData, context);
     }
-    return data;
+    return currentData;
   },
 
-  async beforeDelete(hooks: DbHooks | undefined, model: string, where: WhereClause) {
-    if (hooks?.before?.delete) {
-      await hooks.before.delete(model, where);
-    }
-  },
-
-  async afterCreate(hooks: DbHooks | undefined, model: string, result: Record<string, unknown>) {
-    if (hooks?.after?.create) {
-      await hooks.after.create(model, result);
-    }
-  },
-
-  async afterUpdate(hooks: DbHooks | undefined, model: string, result: Record<string, unknown>) {
-    if (hooks?.after?.update) {
-      await hooks.after.update(model, result);
+  async beforeDelete(hooks: DbHooks | undefined, where: WhereClause, context: HookContext) {
+    const handlers = hooks?.before?.delete || [];
+    for (const handler of handlers) {
+      await handler(where, context);
     }
   },
 
-  async afterDelete(hooks: DbHooks | undefined, model: string, where: WhereClause) {
-    if (hooks?.after?.delete) {
-      await hooks.after.delete(model, where);
+  async afterCreate(
+    hooks: DbHooks | undefined,
+    result: Record<string, unknown>,
+    context: HookContext
+  ) {
+    const handlers = hooks?.after?.create || [];
+    for (const handler of handlers) {
+      await handler(result, context);
+    }
+  },
+
+  async afterUpdate(
+    hooks: DbHooks | undefined,
+    result: Record<string, unknown>,
+    context: HookContext
+  ) {
+    const handlers = hooks?.after?.update || [];
+    for (const handler of handlers) {
+      await handler(result, context);
+    }
+  },
+
+  async afterDelete(hooks: DbHooks | undefined, where: WhereClause, context: HookContext) {
+    const handlers = hooks?.after?.delete || [];
+    for (const handler of handlers) {
+      await handler(where, context);
     }
   },
 };

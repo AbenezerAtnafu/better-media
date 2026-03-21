@@ -1,5 +1,6 @@
 import type {
   DatabaseAdapter,
+  DatabaseTransactionAdapter,
   WhereClause,
   CreateOptions,
   FindOptions,
@@ -7,23 +8,24 @@ import type {
   DeleteOptions,
   CountOptions,
 } from "@better-media/core";
-import type { DbHooks } from "better-media";
-import { runHooks } from "better-media";
+import type { DbHooks, BmSchema, FieldType, ModelDefinition, HookContext } from "better-media";
+import { runHooks, serializeData, deserializeData } from "better-media";
 
 export interface MemoryDbOptions {
+  schema?: BmSchema;
   hooks?: DbHooks;
 }
 
 /**
  * In-memory database adapter for development and testing.
- * Implements the full CRUD interface but data is lost when the process exits.
  */
 export class MemoryDbAdapter implements DatabaseAdapter {
-  // Map<ModelName, Map<Id, Record>>
   private readonly store = new Map<string, Map<string, Record<string, unknown>>>();
+  private readonly schema?: BmSchema;
   private readonly hooks?: DbHooks;
 
   constructor(options?: MemoryDbOptions) {
+    this.schema = options?.schema;
     this.hooks = options?.hooks;
   }
 
@@ -34,6 +36,22 @@ export class MemoryDbAdapter implements DatabaseAdapter {
       this.store.set(model, table);
     }
     return table;
+  }
+
+  private getModelFields(model: string): Record<string, { type: FieldType }> {
+    return this.schema?.[model]?.fields ?? {};
+  }
+
+  private getModelDefinition(model: string): ModelDefinition | undefined {
+    return this.schema?.[model];
+  }
+
+  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): HookContext {
+    return {
+      model,
+      adapter: this,
+      transaction: trx,
+    };
   }
 
   private matchCondition(record: Record<string, unknown>, condition: WhereClause[number]): boolean {
@@ -53,33 +71,41 @@ export class MemoryDbAdapter implements DatabaseAdapter {
         return Number(recordValue) >= Number(targetValue);
       case "in":
         return Array.isArray(targetValue) && targetValue.includes(recordValue);
-      case "contains":
-        return typeof recordValue === "string" && recordValue.includes(String(targetValue));
-      case "like":
-        // Simple case-insensitive contains for memory adapter
-        return (
-          typeof recordValue === "string" &&
-          recordValue.toLowerCase().includes(String(targetValue).toLowerCase())
-        );
       case "not_in":
         return Array.isArray(targetValue) && !targetValue.includes(recordValue);
+      case "contains":
+        return typeof recordValue === "string" && recordValue.includes(String(targetValue));
       case "starts_with":
         return String(recordValue).toLowerCase().startsWith(String(targetValue).toLowerCase());
       case "ends_with":
         return String(recordValue).toLowerCase().endsWith(String(targetValue).toLowerCase());
+      case "like":
+        return (
+          typeof recordValue === "string" &&
+          recordValue.toLowerCase().includes(String(targetValue).toLowerCase())
+        );
       case "=":
       default:
         return recordValue === targetValue;
     }
   }
 
-  private matchesWhere(record: Record<string, unknown>, where?: WhereClause): boolean {
+  private matchesWhere(
+    record: Record<string, unknown>,
+    where?: WhereClause,
+    model?: string,
+    options?: { withDeleted?: boolean }
+  ): boolean {
+    const definition = model ? this.getModelDefinition(model) : undefined;
+
+    // Soft delete filtering
+    if (definition?.softDelete && !options?.withDeleted) {
+      if (record.deletedAt !== null && record.deletedAt !== undefined) return false;
+    }
+
     if (!where || where.length === 0) return true;
 
-    // We process sequentially. For a robust implementation we'd build an AST,
-    // but memory adapter is for testing. We assume AND connections by default.
     let isMatch = true;
-
     for (let i = 0; i < where.length; i++) {
       const condition = where[i]!;
       const connector = i > 0 ? (where[i - 1]?.connector ?? "AND") : "AND";
@@ -97,44 +123,83 @@ export class MemoryDbAdapter implements DatabaseAdapter {
 
   async create<T extends Record<string, unknown>>(options: CreateOptions<T>): Promise<T> {
     const table = this.getTable(options.model);
-    let dataToInsert = options.data as Record<string, unknown>;
+    const fields = this.getModelFields(options.model);
+    const context = this.getHookContext(options.model);
 
-    // Type casting here since we know our models use 'id'
+    let dataToInsert = options.data as Record<string, unknown>;
+    dataToInsert = await runHooks.beforeCreate(this.hooks, dataToInsert, context);
+
     if (!dataToInsert.id) {
       throw new Error("MemoryDbAdapter requires 'id' in data for create operations");
     }
 
-    dataToInsert = await runHooks.beforeCreate(this.hooks, options.model, dataToInsert);
-
-    // Deep clone to prevent reference mutations
-    const clonedData = JSON.parse(JSON.stringify(dataToInsert));
+    const serializedData = serializeData(fields, dataToInsert);
+    const clonedData = JSON.parse(JSON.stringify(serializedData));
     table.set(String(clonedData.id), clonedData);
 
-    await runHooks.afterCreate(this.hooks, options.model, clonedData);
+    const resultRecord = deserializeData(fields, clonedData) as T;
+    await runHooks.afterCreate(this.hooks, resultRecord as Record<string, unknown>, context);
+    return resultRecord;
+  }
 
-    return clonedData as T;
+  private populateRecord(
+    record: Record<string, unknown>,
+    model: string,
+    populate: string[]
+  ): Record<string, unknown> {
+    const result = JSON.parse(JSON.stringify(record));
+    const sortedPopulate = [...populate].sort((a, b) => a.split(".").length - b.split(".").length);
+
+    for (const path of sortedPopulate) {
+      const parts = path.split(".");
+      let currentObj = result;
+      let currentModel = model;
+
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i]!;
+        const fieldDef = this.schema?.[currentModel]?.fields[part];
+
+        if (fieldDef?.references) {
+          const relatedTable = this.getTable(fieldDef.references.model);
+          const localValue = currentObj[part];
+          if (localValue === undefined || localValue === null) break;
+
+          // If already populated (e.g. by a previous path segment), use that
+          const relatedId = typeof localValue === "object" ? localValue.id : localValue;
+          const relatedRecord = relatedTable.get(String(relatedId));
+
+          if (relatedRecord) {
+            currentObj[part] = JSON.parse(JSON.stringify(relatedRecord));
+            currentModel = fieldDef.references.model;
+            currentObj = currentObj[part];
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+    }
+    return result;
   }
 
   async findOne<T extends Record<string, unknown>>(options: FindOptions<T>): Promise<T | null> {
     const table = this.getTable(options.model);
+    const fields = this.getModelFields(options.model);
 
-    // Fast path: if 'where' is just finding by ID
-    if (
-      options.where?.length === 1 &&
-      options.where[0]?.field === "id" &&
-      options.where[0]?.operator !== "!="
-    ) {
-      const record = table.get(String(options.where[0]?.value));
-      return record ? (JSON.parse(JSON.stringify(record)) as T) : null;
-    }
-
-    // Slow path: scan
     for (const record of table.values()) {
-      if (this.matchesWhere(record, options.where)) {
-        return JSON.parse(JSON.stringify(record)) as T;
+      if (
+        this.matchesWhere(record, options.where, options.model, {
+          withDeleted: options.withDeleted,
+        })
+      ) {
+        let result = record;
+        if (options.populate) {
+          result = this.populateRecord(record, options.model, options.populate);
+        }
+        return deserializeData(fields, JSON.parse(JSON.stringify(result))) as T;
       }
     }
-
     return null;
   }
 
@@ -143,7 +208,11 @@ export class MemoryDbAdapter implements DatabaseAdapter {
     let results: T[] = [];
 
     for (const record of table.values()) {
-      if (this.matchesWhere(record, options.where)) {
+      if (
+        this.matchesWhere(record, options.where, options.model, {
+          withDeleted: options.withDeleted,
+        })
+      ) {
         results.push(JSON.parse(JSON.stringify(record)) as T);
       }
     }
@@ -159,130 +228,104 @@ export class MemoryDbAdapter implements DatabaseAdapter {
       });
     }
 
-    if (options.offset) {
-      results = results.slice(options.offset);
-    }
-    if (options.limit) {
-      results = results.slice(0, options.limit);
-    }
+    if (options.offset) results = results.slice(options.offset);
+    if (options.limit) results = results.slice(0, options.limit);
 
     return results;
   }
 
   async update<T extends Record<string, unknown>>(options: UpdateOptions<T>): Promise<T | null> {
     const table = this.getTable(options.model);
-    let targetId: string | undefined;
-    let targetRecord: Record<string, unknown> | undefined;
+    const fields = this.getModelFields(options.model);
+    const context = this.getHookContext(options.model);
 
-    // Fast path ID lookup
-    if (
-      options.where?.length === 1 &&
-      options.where[0]?.field === "id" &&
-      options.where[0]?.operator !== "!="
-    ) {
-      targetId = String(options.where[0]?.value);
-      targetRecord = table.get(targetId);
-    } else {
-      for (const record of table.values()) {
-        if (this.matchesWhere(record, options.where)) {
-          targetRecord = record;
-          targetId = String(record.id);
-          break; // Update only first match (per findOne semantics for update)
-        }
-      }
-    }
+    const target = await this.findOne({ model: options.model, where: options.where });
+    if (!target) return null;
 
-    if (!targetRecord || !targetId) return null;
+    let updatedData = { ...target, ...(options.update as Record<string, unknown>) };
+    updatedData = await runHooks.beforeUpdate(this.hooks, updatedData, context);
 
-    let updatedData = { ...targetRecord, ...(options.update as Record<string, unknown>) };
-    updatedData = await runHooks.beforeUpdate(this.hooks, options.model, updatedData);
+    const serializedUpdate = serializeData(fields, updatedData);
+    const mergedData = { ...target, ...serializedUpdate };
 
-    const clonedData = JSON.parse(JSON.stringify(updatedData));
-    // The original code had `const resultRecord = deserializeData(fields, serializeData(fields, updatedData)) as T;`
-    // but `fields` is not defined here. Assuming the intent was to return the cloned data.
-    // If `fields` were available, this would be the correct way to handle serialization.
-    table.set(targetId, clonedData);
+    const clonedData = JSON.parse(JSON.stringify(mergedData));
+    table.set(String(target.id), clonedData);
 
-    await runHooks.afterUpdate(this.hooks, options.model, clonedData);
-
-    return clonedData as T;
+    const resultRecord = deserializeData(fields, clonedData) as T;
+    await runHooks.afterUpdate(this.hooks, resultRecord as Record<string, unknown>, context);
+    return resultRecord;
   }
 
   async updateMany<T extends Record<string, unknown>>(options: UpdateOptions<T>): Promise<number> {
     const targets = await this.findMany({ model: options.model, where: options.where });
-    let count = 0;
     for (const target of targets) {
       await this.update({
         model: options.model,
         where: [{ field: "id", value: target.id }],
         update: options.update,
       });
-      count++;
     }
-    return count;
+    return targets.length;
   }
 
   async delete(options: DeleteOptions): Promise<void> {
-    const table = this.getTable(options.model);
+    const context = this.getHookContext(options.model);
+    const definition = this.getModelDefinition(options.model);
 
-    await runHooks.beforeDelete(this.hooks, options.model, options.where);
+    await runHooks.beforeDelete(this.hooks, options.where, context);
 
-    if (
-      options.where?.length === 1 &&
-      options.where[0]?.field === "id" &&
-      options.where[0]?.operator !== "!="
-    ) {
-      table.delete(String(options.where[0]?.value));
+    if (definition?.softDelete) {
+      await this.updateMany({
+        model: options.model,
+        where: options.where,
+        update: { deletedAt: new Date() } as unknown as Record<string, unknown>,
+      });
     } else {
-      const idsToDelete: string[] = [];
-      for (const record of table.values()) {
-        if (this.matchesWhere(record, options.where)) {
-          idsToDelete.push(String(record.id));
-        }
-      }
-      for (const id of idsToDelete) {
-        table.delete(id);
+      const table = this.getTable(options.model);
+      const targets = await this.findMany({ model: options.model, where: options.where });
+      for (const target of targets) {
+        table.delete(String(target.id));
       }
     }
 
-    await runHooks.afterDelete(this.hooks, options.model, options.where);
+    await runHooks.afterDelete(this.hooks, options.where, context);
   }
 
   async deleteMany(options: DeleteOptions): Promise<number> {
     const targets = await this.findMany({ model: options.model, where: options.where });
-    let count = 0;
-    for (const target of targets) {
-      await this.delete({
-        model: options.model,
-        where: [{ field: "id", value: target.id }],
-      });
-      count++;
-    }
-    return count;
+    await this.delete(options);
+    return targets.length;
   }
 
   async count(options: CountOptions): Promise<number> {
-    const table = this.getTable(options.model);
-
-    if (!options.where || options.where.length === 0) {
-      return table.size;
-    }
-
-    let count = 0;
-    for (const record of table.values()) {
-      if (this.matchesWhere(record, options.where)) {
-        count++;
-      }
-    }
-    return count;
+    const results = await this.findMany({ ...options, limit: undefined, offset: undefined });
+    return results.length;
   }
 
-  async transaction<R>(callback: (trx: DatabaseAdapter) => Promise<R>): Promise<R> {
-    return await callback(this);
-  }
-
-  /** Clears all data - useful for resetting state between tests */
-  clear() {
+  clear(): void {
     this.store.clear();
+  }
+
+  async raw<T = unknown>(query: string): Promise<T> {
+    if (query === "clear") {
+      this.clear();
+      return true as unknown as T;
+    }
+    throw new Error("MemoryDbAdapter only supports 'clear' as raw query.");
+  }
+
+  async transaction<R>(callback: (trx: DatabaseTransactionAdapter) => Promise<R>): Promise<R> {
+    return await callback(this as unknown as DatabaseTransactionAdapter);
+  }
+
+  async __initTable(
+    model: string,
+    definition: ModelDefinition,
+    options: { mode: "safe" | "diff" | "force" }
+  ): Promise<void> {
+    if (options.mode === "force") {
+      this.store.delete(model);
+    }
+    this.getTable(model);
   }
 }

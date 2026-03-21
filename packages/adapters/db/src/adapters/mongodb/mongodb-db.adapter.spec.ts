@@ -90,9 +90,33 @@ describe("MongoDbAdapter", () => {
       where: [{ field: "name", value: "User 1" }],
     });
 
-    expect(result[0].id).toBe("1");
+    expect(result[0]!.id).toBe("1");
     expect(mockCollection.find as jest.Mock).toHaveBeenCalledWith(
       { name: "User 1" },
+      expect.any(Object)
+    );
+  });
+
+  it("should handle OR conditions", async () => {
+    const mockCursor = {
+      project: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      toArray: jest.fn().mockResolvedValue([]),
+    };
+    (mockCollection.find as jest.Mock).mockReturnValue(mockCursor);
+
+    await adapter.findMany({
+      model: "users",
+      where: [
+        { field: "name", value: "A", connector: "OR" },
+        { field: "name", value: "B" },
+      ],
+    });
+
+    expect(mockCollection.find as jest.Mock).toHaveBeenCalledWith(
+      { $or: [{ name: "A" }, { name: "B" }] },
       expect.any(Object)
     );
   });

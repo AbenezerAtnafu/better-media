@@ -163,4 +163,21 @@ describe("MemoryDbAdapter", () => {
 
     expect(countFree).toBe(2);
   });
+
+  it("should handle OR conditions", async () => {
+    await adapter.create({ model: "users", data: { id: "1", role: "admin" } });
+    await adapter.create({ model: "users", data: { id: "2", role: "user" } });
+    await adapter.create({ model: "users", data: { id: "3", role: "guest" } });
+
+    const results = await adapter.findMany({
+      model: "users",
+      where: [
+        { field: "role", value: "admin", connector: "OR" },
+        { field: "role", value: "user" },
+      ],
+    });
+
+    expect(results).toHaveLength(2);
+    expect(results.map((r) => r.role)).toEqual(expect.arrayContaining(["admin", "user"]));
+  });
 });

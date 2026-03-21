@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { Kysely, sql } from "kysely";
 import type {
   DatabaseAdapter,
   DatabaseTransactionAdapter,
@@ -9,7 +9,7 @@ import type {
   DeleteOptions,
   CountOptions,
 } from "@better-media/core";
-import type { FieldType, BmSchema, DbHooks } from "better-media";
+import type { FieldType, BmSchema, DbHooks, HookContext, ModelDefinition } from "better-media";
 import { serializeData, deserializeData, runHooks } from "better-media";
 import type { KyselyDbConfig } from "./kysely-db-config.interface";
 
@@ -21,43 +21,26 @@ export interface KyselyDbOptions {
 
 export type DbSchema = Record<string, Record<string, unknown>>;
 
-interface SelectBuilder {
-  select(s: string[]): SelectBuilder;
-  selectAll(): SelectBuilder;
-  where(f: string, o: string, v: unknown): SelectBuilder;
-  orWhere(f: string, o: string, v: unknown): SelectBuilder;
-  orderBy(f: string, d: string): SelectBuilder;
-  limit(l: number): SelectBuilder;
-  offset(o: number): SelectBuilder;
-  execute(): Promise<Record<string, unknown>[]>;
-  executeTakeFirst(): Promise<Record<string, unknown> | undefined>;
-}
+type AnyFunction = (...args: unknown[]) => unknown;
 
-interface UpdateBuilder {
-  set(d: Record<string, unknown>): UpdateBuilder;
-  where(f: string, o: string, v: unknown): UpdateBuilder;
-  orWhere(f: string, o: string, v: unknown): UpdateBuilder;
-  execute(): Promise<{ numUpdatedRows: bigint }[]>;
-}
-
-interface DeleteBuilder {
-  where(f: string, o: string, v: unknown): DeleteBuilder;
-  orWhere(f: string, o: string, v: unknown): DeleteBuilder;
-  execute(): Promise<{ numDeletedRows: bigint }[]>;
-}
-
-interface InsertValuesBuilder {
-  returningAll(): { executeTakeFirst(): Promise<Record<string, unknown> | undefined> };
-  execute(): Promise<void>;
-}
-
-interface InsertBuilder {
-  values(d: Record<string, unknown>): InsertValuesBuilder;
-}
+type KyselyBuilder = {
+  where: (field: string, op: string, value: unknown) => KyselyBuilder;
+  orWhere: (field: string, op: string, value: unknown) => KyselyBuilder;
+  select: (fields: unknown) => KyselyBuilder;
+  selectAll: () => KyselyBuilder;
+  leftJoin: (table: string, left: string, right: string) => KyselyBuilder;
+  orderBy: (field: string, direction: string) => KyselyBuilder;
+  limit: (n: number) => KyselyBuilder;
+  offset: (n: number) => KyselyBuilder;
+  set: (data: Record<string, unknown>) => KyselyBuilder;
+  values: (data: Record<string, unknown>) => KyselyBuilder;
+  returningAll: () => KyselyBuilder;
+  execute: () => Promise<unknown[] & { numUpdatedRows?: number; numDeletedRows?: number }>;
+  executeTakeFirst: () => Promise<unknown>;
+};
 
 /**
  * SQL database adapter using Kysely.
- * Supports PostgreSQL, MySQL, and SQLite.
  */
 export class KyselyDbAdapter implements DatabaseAdapter {
   private readonly db: Kysely<DbSchema>;
@@ -76,16 +59,33 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     return this.schema[model]?.fields ?? {};
   }
 
-  private applyWhere<
-    T extends {
-      where(f: string, o: string, v: unknown): T;
-      orWhere(f: string, o: string, v: unknown): T;
-    },
-  >(qb: T, where?: WhereClause): T {
-    if (!where || where.length === 0) return qb;
+  private getModelDefinition(model: string): ModelDefinition | undefined {
+    return this.schema[model];
+  }
 
-    // Kysely uses .where() and .orWhere()
+  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): HookContext {
+    return {
+      model,
+      adapter: this,
+      transaction: trx,
+    };
+  }
+
+  private applyWhere(
+    qb: KyselyBuilder,
+    where?: WhereClause,
+    model?: string,
+    options?: { withDeleted?: boolean }
+  ): KyselyBuilder {
     let currentQb = qb;
+    const definition = model ? this.getModelDefinition(model) : undefined;
+
+    // Soft delete filtering
+    if (definition?.softDelete && !options?.withDeleted) {
+      currentQb = currentQb.where("deletedAt", "is", null);
+    }
+
+    if (!where || where.length === 0) return currentQb;
 
     for (let i = 0; i < where.length; i++) {
       const condition = where[i];
@@ -96,7 +96,6 @@ export class KyselyDbAdapter implements DatabaseAdapter {
       let operator = condition.operator ?? "=";
       let value = condition.value;
 
-      // Map our abstract operators to SQL
       if (operator === "contains") {
         operator = "like";
         value = `%${value}%`;
@@ -107,11 +106,11 @@ export class KyselyDbAdapter implements DatabaseAdapter {
         operator = "like";
         value = `%${value}`;
       } else if (operator === "not_in") {
-        operator = "not in" as "=";
+        operator = "not in" as "in";
       }
 
-      const method = connector === "OR" ? "orWhere" : "where";
-      currentQb = currentQb[method](field, operator, value);
+      const method = (connector === "OR" ? "orWhere" : "where") as keyof KyselyBuilder;
+      currentQb = (currentQb[method] as AnyFunction)(field, operator, value) as KyselyBuilder;
     }
 
     return currentQb;
@@ -119,50 +118,45 @@ export class KyselyDbAdapter implements DatabaseAdapter {
 
   async create<T extends Record<string, unknown>>(options: CreateOptions<T>): Promise<T> {
     const fields = this.getModelFields(options.model);
+    const context = this.getHookContext(options.model);
 
     let dataToInsert = options.data as Record<string, unknown>;
-    dataToInsert = await runHooks.beforeCreate(this.hooks, options.model, dataToInsert);
+    dataToInsert = await runHooks.beforeCreate(this.hooks, dataToInsert, context);
 
     const serializedData = serializeData(fields, dataToInsert);
-
-    // Some Kysely dialects (like SQLite) don't support returning() on insert natively in all versions,
-    // but Kysely handles `.returningAll()` polyfills where possible. For safety, if it's sqlite,
-    // we might need to fetch it back if returning doesn't work, but let's assume Kysely handles it
-    // or we just reconstruct the result from the input data if it contains the ID.
     let resultRecord: T;
 
     if (this.config.provider === "sqlite") {
-      // SQLite returning is supported in recent versions, but taking a safe approach
-      await (this.db.insertInto(options.model as keyof DbSchema) as unknown as InsertBuilder)
+      await (this.db.insertInto(options.model) as unknown as KyselyBuilder)
         .values(serializedData)
         .execute();
 
-      const refetched = await (
-        this.db.selectFrom(options.model as keyof DbSchema) as unknown as SelectBuilder
-      )
+      const refetched = await (this.db.selectFrom(options.model) as unknown as KyselyBuilder)
         .selectAll()
         .where("id", "=", serializedData.id)
         .executeTakeFirst();
 
-      resultRecord = deserializeData(fields, refetched || serializedData) as T;
+      resultRecord = deserializeData(
+        fields,
+        (refetched as Record<string, unknown>) || serializedData
+      ) as T;
     } else {
       const result =
-        (await (this.db.insertInto(options.model as keyof DbSchema) as unknown as InsertBuilder)
+        (await (this.db.insertInto(options.model) as unknown as KyselyBuilder)
           .values(serializedData)
           .returningAll()
           .executeTakeFirst()) || serializedData;
 
-      resultRecord = deserializeData(fields, result) as T;
+      resultRecord = deserializeData(fields, result as Record<string, unknown>) as T;
     }
 
-    await runHooks.afterCreate(this.hooks, options.model, resultRecord as Record<string, unknown>);
+    await runHooks.afterCreate(this.hooks, resultRecord as Record<string, unknown>, context);
     return resultRecord;
   }
 
   async findOne<T extends Record<string, unknown>>(options: FindOptions<T>): Promise<T | null> {
     const fields = this.getModelFields(options.model);
-
-    let qb = this.db.selectFrom(options.model as keyof DbSchema) as unknown as SelectBuilder;
+    let qb = this.db.selectFrom(options.model) as unknown as KyselyBuilder;
 
     if (options.select) {
       qb = qb.select(options.select);
@@ -170,18 +164,31 @@ export class KyselyDbAdapter implements DatabaseAdapter {
       qb = qb.selectAll();
     }
 
-    qb = this.applyWhere(qb, options.where);
+    qb = this.applyWhere(qb, options.where, options.model, { withDeleted: options.withDeleted });
+
+    if (options.populate) {
+      // Basic population via left joins if references exist
+      for (const relation of options.populate) {
+        const fieldDef = this.schema[options.model]?.fields[relation];
+        if (fieldDef?.references) {
+          qb = qb.leftJoin(
+            fieldDef.references.model,
+            `${options.model}.${relation}`,
+            `${fieldDef.references.model}.${fieldDef.references.field}`
+          );
+        }
+      }
+    }
 
     const result = await qb.executeTakeFirst();
     if (!result) return null;
 
-    return deserializeData(fields, result) as T;
+    return deserializeData(fields, result as Record<string, unknown>) as T;
   }
 
   async findMany<T extends Record<string, unknown>>(options: FindOptions<T>): Promise<T[]> {
     const fields = this.getModelFields(options.model);
-
-    let qb = this.db.selectFrom(options.model as keyof DbSchema) as unknown as SelectBuilder;
+    let qb = this.db.selectFrom(options.model) as unknown as KyselyBuilder;
 
     if (options.select) {
       qb = qb.select(options.select);
@@ -189,49 +196,48 @@ export class KyselyDbAdapter implements DatabaseAdapter {
       qb = qb.selectAll();
     }
 
-    qb = this.applyWhere(qb, options.where);
+    qb = this.applyWhere(qb, options.where, options.model, { withDeleted: options.withDeleted });
 
     if (options.sortBy) {
       qb = qb.orderBy(options.sortBy.field, options.sortBy.direction);
     }
 
-    if (options.limit !== undefined) {
-      qb = qb.limit(options.limit);
-    }
+    if (options.limit !== undefined) qb = qb.limit(options.limit);
+    if (options.offset !== undefined) qb = qb.offset(options.offset);
 
-    if (options.offset !== undefined) {
-      qb = qb.offset(options.offset);
-    }
-
-    const results = await qb.execute();
-    return results.map((row) => deserializeData(fields, row)) as T[];
+    const results = await (qb as { execute: AnyFunction }).execute();
+    return (results as Record<string, unknown>[]).map((row) => deserializeData(fields, row)) as T[];
   }
 
   async update<T extends Record<string, unknown>>(options: UpdateOptions<T>): Promise<T | null> {
     const fields = this.getModelFields(options.model);
+    const context = this.getHookContext(options.model);
 
-    // 1. Fetch the target first to run hooks properly
+    // We still need the current record for hooks (merging data)
     const target = await this.findOne({ model: options.model, where: options.where });
     if (!target) return null;
 
-    // 2. Run hooks
     let updatedData = { ...target, ...(options.update as Record<string, unknown>) };
-    updatedData = await runHooks.beforeUpdate(this.hooks, options.model, updatedData);
+    updatedData = await runHooks.beforeUpdate(this.hooks, updatedData, context);
 
-    // 3. Serialize only the updated fields for Kysely
     const updatePayload = serializeData(fields, options.update as Record<string, unknown>);
 
-    // 4. Update
-    let qb = (this.db.updateTable(options.model as keyof DbSchema) as unknown as UpdateBuilder).set(
-      updatePayload
-    );
-    qb = this.applyWhere(qb, options.where);
-    await qb.execute();
+    let qb = (this.db.updateTable(options.model) as unknown as KyselyBuilder).set(updatePayload);
+    qb = this.applyWhere(qb, options.where, options.model);
 
-    // 5. Build the final result
-    const resultRecord = deserializeData(fields, serializeData(fields, updatedData)) as T;
+    let resultRecord: T;
+    if (this.config.provider === "sqlite") {
+      await qb.execute();
+      resultRecord = deserializeData(fields, serializeData(fields, updatedData)) as T;
+    } else {
+      const result = await (qb as unknown as KyselyBuilder).returningAll().executeTakeFirst();
+      resultRecord = deserializeData(
+        fields,
+        (result as Record<string, unknown>) || serializeData(fields, updatedData)
+      ) as T;
+    }
 
-    await runHooks.afterUpdate(this.hooks, options.model, resultRecord as Record<string, unknown>);
+    await runHooks.afterUpdate(this.hooks, resultRecord as Record<string, unknown>, context);
     return resultRecord;
   }
 
@@ -239,52 +245,86 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     const fields = this.getModelFields(options.model);
     const updatePayload = serializeData(fields, options.update as Record<string, unknown>);
 
-    let qb = (this.db.updateTable(options.model as keyof DbSchema) as unknown as UpdateBuilder).set(
-      updatePayload
-    );
-    qb = this.applyWhere(qb, options.where);
+    let qb = (this.db.updateTable(options.model) as unknown as KyselyBuilder).set(updatePayload);
+    qb = this.applyWhere(
+      qb as unknown as KyselyBuilder,
+      options.where,
+      options.model
+    ) as KyselyBuilder;
 
-    const results = await qb.execute();
+    const results = (await qb.execute()) as unknown as { numUpdatedRows: bigint | number }[];
     return Number(results[0]?.numUpdatedRows || 0);
   }
 
   async delete(options: DeleteOptions): Promise<void> {
-    await runHooks.beforeDelete(this.hooks, options.model, options.where);
+    const context = this.getHookContext(options.model);
+    const definition = this.getModelDefinition(options.model);
 
-    let qb = this.db.deleteFrom(options.model as keyof DbSchema) as unknown as DeleteBuilder;
-    qb = this.applyWhere(qb, options.where);
-    await qb.execute();
+    await runHooks.beforeDelete(this.hooks, options.where, context);
 
-    await runHooks.afterDelete(this.hooks, options.model, options.where);
+    if (definition?.softDelete) {
+      await this.updateMany({
+        model: options.model,
+        where: options.where,
+        update: { deletedAt: new Date() } as unknown as Record<string, unknown>,
+      });
+    } else {
+      let qb = this.db.deleteFrom(options.model) as unknown as KyselyBuilder;
+      qb = this.applyWhere(qb, options.where, options.model);
+      await qb.execute();
+    }
+
+    await runHooks.afterDelete(this.hooks, options.where, context);
   }
 
   async deleteMany(options: DeleteOptions): Promise<number> {
-    let qb = this.db.deleteFrom(options.model as keyof DbSchema) as unknown as DeleteBuilder;
-    qb = this.applyWhere(qb, options.where);
+    const definition = this.getModelDefinition(options.model);
 
-    const results = await qb.execute();
+    if (definition?.softDelete) {
+      return await this.updateMany({
+        model: options.model,
+        where: options.where,
+        update: { deletedAt: new Date() } as unknown as Record<string, unknown>,
+      });
+    }
+
+    let qb = this.db.deleteFrom(options.model) as unknown as KyselyBuilder;
+    qb = this.applyWhere(qb, options.where, options.model);
+
+    const results = (await qb.execute()) as unknown as { numDeletedRows: bigint | number }[];
     return Number(results[0]?.numDeletedRows || 0);
   }
 
   async count(options: CountOptions): Promise<number> {
-    let qb = this.db.selectFrom(options.model as keyof DbSchema) as unknown as SelectBuilder;
-    qb = this.applyWhere(qb, options.where);
+    let qb = this.db.selectFrom(options.model) as unknown as KyselyBuilder;
+    qb = this.applyWhere(qb, options.where, options.model);
 
-    // Use Kysely's count helper
-    const { count } = this.db.fn;
-    qb = (qb as unknown as { select(s: unknown): SelectBuilder }).select(count("id").as("c"));
+    const { count } = this.db.fn as unknown as {
+      count: (f: string) => { as: (a: string) => unknown };
+    };
+    qb = qb.select(count("id").as("c"));
 
-    const result = await qb.executeTakeFirst();
-    return Number((result as unknown as { c: number })?.c || 0);
+    const result = (await qb.executeTakeFirst()) as { c: string | number } | undefined;
+    return Number(result?.c || 0);
+  }
+
+  async raw<T = unknown>(query: string, params?: unknown[]): Promise<T> {
+    const result = await (
+      sql as unknown as {
+        raw: (q: string, p: unknown) => { execute: (db: unknown) => Promise<{ rows: T }> };
+      }
+    )
+      .raw(query, params)
+      .execute(this.db);
+    return result.rows;
   }
 
   async transaction<R>(callback: (trx: DatabaseTransactionAdapter) => Promise<R>): Promise<R> {
     return (await (
       this.db.transaction() as unknown as {
-        execute(cb: (trx: Kysely<DbSchema>) => Promise<R>): Promise<R>;
+        execute: (cb: (trx: Kysely<DbSchema>) => Promise<R>) => Promise<R>;
       }
     ).execute(async (trx) => {
-      // Create a transient adapter instance that delegates to the un-nested transaction
       const trxAdapter = new KyselyDbAdapter(trx, {
         config: this.config,
         schema: this.schema,
@@ -294,60 +334,185 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     })) as R;
   }
 
-  /**
-   * Internal migration method. Generates generic tables based on the BmSchema.
-   */
-  async __createTable(model: string, definition: BmSchema[string]): Promise<void> {
-    let schemaQb = this.db.schema.createTable(model).ifNotExists();
+  async __createTable(
+    model: string,
+    definition: ModelDefinition,
+    options: { mode: "safe" | "diff" | "force" }
+  ): Promise<void> {
+    const db = this.db as unknown as {
+      schema: {
+        dropTable: (m: string) => {
+          ifExists: () => { execute: () => Promise<void> };
+          execute: () => Promise<void>;
+        };
+        alterTable: (m: string) => {
+          addColumn: (
+            n: string,
+            t: string,
+            cb: (c: unknown) => unknown
+          ) => { execute: () => Promise<void> };
+        };
+        createTable: (m: string) => {
+          ifNotExists: () => {
+            addColumn: (n: string, t: string, cb: (c: unknown) => unknown) => unknown;
+            execute: () => Promise<void>;
+          };
+        };
+        createIndex: (n: string) => {
+          on: (m: string) => {
+            columns: (f: string[]) => {
+              unique: () => { execute: () => Promise<void> };
+              execute: () => Promise<void>;
+            };
+          };
+        };
+      };
+      introspection: {
+        getTables: () => Promise<{ name: string; columns: { name: string }[] }[]>;
+      };
+    };
 
-    for (const [fieldName, fieldDef] of Object.entries(definition.fields)) {
-      let colType: string;
-
-      switch (fieldDef.type) {
-        case "string":
-          colType = "varchar(255)"; // Simplify, use text/varchar
-          break;
-        case "number":
-          // If primary key, usually integer autoincrement, but in better-media we use cuid/uuid strings
-          colType = "integer";
-          break;
-        case "boolean":
-          colType = this.config.provider === "sqlite" ? "integer" : "boolean";
-          break;
-        case "date":
-          colType = "timestamp";
-          break;
-        case "json":
-          colType = this.config.provider === "pg" ? "jsonb" : "text"; // JSON fallback
-          break;
-        default:
-          colType = "text";
-      }
-
-      schemaQb = schemaQb.addColumn(
-        fieldName,
-        colType as "text",
-        (col: {
-          primaryKey(): typeof col;
-          notNull(): typeof col;
-          unique(): typeof col;
-          references(r: string): typeof col;
-          onDelete(o: string): typeof col;
-        }) => {
-          if (fieldDef.primaryKey) col = col.primaryKey();
-          if (fieldDef.required) col = col.notNull();
-          if (fieldDef.unique) col = col.unique();
-          if (fieldDef.references) {
-            col = col.references(`${fieldDef.references.model}.${fieldDef.references.field}`);
-            if (fieldDef.references.onDelete) {
-              col = col.onDelete(fieldDef.references.onDelete);
-            }
-          }
-          return col;
-        }
-      );
+    if (options.mode === "force") {
+      await db.schema.dropTable(model).ifExists().execute();
     }
 
-    await schemaQb.execute();
+    if (options.mode === "diff") {
+      const tables = await db.introspection.getTables();
+      const tableMetadata = tables.find((t) => t.name === model);
+
+      if (tableMetadata) {
+        const existingColumns = new Set(tableMetadata.columns.map((c) => c.name));
+
+        for (const [fieldName, fieldDef] of Object.entries(definition.fields)) {
+          if (!existingColumns.has(fieldName)) {
+            let colType: string;
+            switch (fieldDef.type) {
+              case "string":
+                colType = "varchar(255)";
+                break;
+              case "number":
+                colType = "integer";
+                break;
+              case "boolean":
+                colType = this.config.provider === "sqlite" ? "integer" : "boolean";
+                break;
+              case "date":
+                colType = "timestamp";
+                break;
+              case "json":
+                colType = this.config.provider === "pg" ? "jsonb" : "text";
+                break;
+              default:
+                colType = "text";
+            }
+
+            await db.schema
+              .alterTable(model)
+              .addColumn(fieldName, colType, (col: unknown) => {
+                let column = col as {
+                  notNull: () => unknown;
+                  unique: () => unknown;
+                  references: (r: string) => { onDelete: (o: string) => unknown };
+                };
+                if (fieldDef.required) column = column.notNull() as typeof column;
+                if (fieldDef.unique) column = column.unique() as typeof column;
+                if (fieldDef.references) {
+                  let ref = column.references(
+                    `${fieldDef.references.model}.${fieldDef.references.field}`
+                  );
+                  if (fieldDef.references.onDelete) {
+                    const r = ref as { onDelete: AnyFunction };
+                    ref = r.onDelete(fieldDef.references.onDelete) as typeof ref;
+                  }
+                  column = ref as unknown as typeof column;
+                }
+                return column;
+              })
+              .execute();
+          }
+        }
+      } else {
+        // Table doesn't exist, fallback to create
+        options.mode = "safe";
+      }
+    }
+
+    if (options.mode !== "diff") {
+      let schemaQb = db.schema.createTable(model).ifNotExists();
+
+      for (const [fieldName, fieldDef] of Object.entries(definition.fields)) {
+        let colType: string;
+        switch (fieldDef.type) {
+          case "string":
+            colType = "varchar(255)";
+            break;
+          case "number":
+            colType = "integer";
+            break;
+          case "boolean":
+            colType = this.config.provider === "sqlite" ? "integer" : "boolean";
+            break;
+          case "date":
+            colType = "timestamp";
+            break;
+          case "json":
+            colType = this.config.provider === "pg" ? "jsonb" : "text";
+            break;
+          default:
+            colType = "text";
+        }
+
+        schemaQb = schemaQb.addColumn(fieldName, colType, (col: unknown) => {
+          let column = col as {
+            primaryKey: () => unknown;
+            notNull: () => unknown;
+            unique: () => unknown;
+            references: (r: string) => { onDelete: (o: string) => unknown };
+          };
+          if (fieldDef.primaryKey) column = column.primaryKey() as typeof column;
+          if (fieldDef.required) column = column.notNull() as typeof column;
+          if (fieldDef.unique) column = column.unique() as typeof column;
+          if (fieldDef.references) {
+            let ref = column.references(
+              `${fieldDef.references.model}.${fieldDef.references.field}`
+            );
+            if (fieldDef.references.onDelete) {
+              ref = (ref as unknown as { onDelete: (o: string) => unknown }).onDelete(
+                fieldDef.references.onDelete
+              ) as {
+                onDelete: (o: string) => unknown;
+              };
+            }
+            column = ref as unknown as typeof column;
+          }
+          return column;
+        }) as typeof schemaQb;
+      }
+
+      await schemaQb.execute();
+    }
+
+    // Create indexes
+    if (definition.indexes) {
+      for (const index of definition.indexes) {
+        const indexName = `idx_${model}_${index.fields.join("_")}`;
+
+        let indexQb = db.schema.createIndex(indexName).on(model).columns(index.fields);
+        if (index.unique) {
+          indexQb = indexQb.unique() as typeof indexQb;
+        }
+
+        try {
+          await (indexQb as unknown as { execute: () => Promise<void> }).execute();
+        } catch (e) {
+          // Ignore if exists, or throw if other error
+          if (options.mode === "safe" || options.mode === "diff") {
+            // Basic check: we assume error means it might exist
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
   }
 }

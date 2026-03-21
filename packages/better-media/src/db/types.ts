@@ -5,9 +5,20 @@ import type {
   UpdateOptions,
   DeleteOptions,
   CountOptions,
+  DatabaseAdapter,
+  DatabaseTransactionAdapter,
 } from "@better-media/core";
 
-export type { WhereClause, CreateOptions, FindOptions, UpdateOptions, DeleteOptions, CountOptions };
+export type {
+  WhereClause,
+  CreateOptions,
+  FindOptions,
+  UpdateOptions,
+  DeleteOptions,
+  CountOptions,
+  DatabaseAdapter,
+  DatabaseTransactionAdapter,
+};
 
 export type FieldType = "string" | "number" | "boolean" | "date" | "json";
 
@@ -37,6 +48,32 @@ export interface IndexDefinition {
 export interface ModelDefinition {
   fields: Record<string, FieldDefinition>;
   indexes?: IndexDefinition[];
+  /** Whether to enable soft delete for this model */
+  softDelete?: boolean;
 }
 
 export type BmSchema = Record<string, ModelDefinition>;
+
+/**
+ * Context passed to database hooks.
+ */
+export interface HookContext {
+  model: string;
+  adapter: DatabaseAdapter;
+  transaction?: DatabaseTransactionAdapter;
+}
+
+export type HookHandler<T = unknown, R = unknown> = (data: T, context: HookContext) => Promise<R>;
+
+export interface DbHooks {
+  before?: {
+    create?: HookHandler<Record<string, unknown>, Record<string, unknown>>[];
+    update?: HookHandler<Record<string, unknown>, Record<string, unknown>>[];
+    delete?: HookHandler<WhereClause, void>[];
+  };
+  after?: {
+    create?: HookHandler<Record<string, unknown>, void>[];
+    update?: HookHandler<Record<string, unknown>, void>[];
+    delete?: HookHandler<WhereClause, void>[];
+  };
+}

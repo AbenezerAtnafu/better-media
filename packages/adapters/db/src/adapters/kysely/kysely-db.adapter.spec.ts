@@ -66,26 +66,80 @@ describe("KyselyDbAdapter", () => {
     expect(result).toEqual(data);
   });
 
-  it("should update a record", async () => {
-    (mockQueryBuilder.execute as jest.Mock).mockResolvedValue([]);
+  it("should find multiple records with options", async () => {
+    const data = [
+      { id: "1", name: "Test 1" },
+      { id: "2", name: "Test 2" },
+    ];
+    (mockQueryBuilder.execute as jest.Mock).mockResolvedValue(data);
 
-    await adapter.update({
+    const result = await adapter.findMany({
       model: "users",
-      where: [{ field: "id", value: "1" }],
-      update: { name: "New Name" },
+      where: [{ field: "name", value: "Test", operator: "contains" }],
+      sortBy: { field: "id", direction: "desc" },
+      limit: 10,
+      offset: 5,
+    });
+
+    expect(mockDb.selectFrom).toHaveBeenCalledWith("users");
+    expect(mockQueryBuilder.where as jest.Mock).toHaveBeenCalledWith("name", "like", "%Test%");
+    expect(mockQueryBuilder.orderBy as jest.Mock).toHaveBeenCalledWith("id", "desc");
+    expect(mockQueryBuilder.limit as jest.Mock).toHaveBeenCalledWith(10);
+    expect(mockQueryBuilder.offset as jest.Mock).toHaveBeenCalledWith(5);
+    expect(result).toEqual(data);
+  });
+
+  it("should handle OR conditions", async () => {
+    await adapter.findMany({
+      model: "users",
+      where: [
+        { field: "name", value: "A", connector: "OR" },
+        { field: "name", value: "B" },
+      ],
+    });
+
+    expect(mockQueryBuilder.where as jest.Mock).toHaveBeenCalledWith("name", "=", "A");
+    expect(mockQueryBuilder.orWhere as jest.Mock).toHaveBeenCalledWith("name", "=", "B");
+  });
+
+  it("should update multiple records", async () => {
+    (mockQueryBuilder.execute as jest.Mock).mockResolvedValue([{ numUpdatedRows: 5n }]);
+
+    const result = await adapter.updateMany({
+      model: "users",
+      where: [{ field: "active", value: false }],
+      update: { active: true },
     });
 
     expect(mockDb.updateTable).toHaveBeenCalledWith("users");
-    expect(mockQueryBuilder.set as jest.Mock).toHaveBeenCalledWith({ name: "New Name" });
-    expect(mockQueryBuilder.where as jest.Mock).toHaveBeenCalledWith("id", "=", "1");
+    expect(mockQueryBuilder.set as jest.Mock).toHaveBeenCalledWith({ active: true });
+    expect(result).toBe(5);
   });
 
-  it("should count records", async () => {
-    (mockQueryBuilder.executeTakeFirst as jest.Mock).mockResolvedValue({ c: 10 });
+  it("should delete multiple records", async () => {
+    (mockQueryBuilder.execute as jest.Mock).mockResolvedValue([{ numDeletedRows: 3n }]);
 
-    const result = await adapter.count({ model: "users" });
+    const result = await adapter.deleteMany({
+      model: "users",
+      where: [{ field: "id", value: ["1", "2"], operator: "in" }],
+    });
 
-    expect(mockDb.selectFrom).toHaveBeenCalledWith("users");
-    expect(result).toBe(10);
+    expect(mockDb.deleteFrom).toHaveBeenCalledWith("users");
+    expect(mockQueryBuilder.where as jest.Mock).toHaveBeenCalledWith("id", "in", ["1", "2"]);
+    expect(result).toBe(3);
+  });
+
+  it("should handle transactions", async () => {
+    const mockTrx = { ...mockDb };
+    mockDb.transaction = jest.fn().mockReturnThis();
+    mockDb.execute = jest.fn().mockImplementation((cb) => cb(mockTrx));
+
+    const result = await adapter.transaction(async (trx) => {
+      await trx.create({ model: "users", data: { id: "1" } });
+      return "done";
+    });
+
+    expect(mockDb.transaction).toHaveBeenCalled();
+    expect(result).toBe("done");
   });
 });

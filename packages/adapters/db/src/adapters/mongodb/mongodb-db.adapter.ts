@@ -1,4 +1,4 @@
-import type { MongoClient, Db, Collection, Document, Filter, ClientSession } from "mongodb";
+import { MongoClient, Db, Collection, Document, Filter, ClientSession } from "mongodb";
 import type {
   DatabaseAdapter,
   DatabaseTransactionAdapter,
@@ -9,7 +9,7 @@ import type {
   DeleteOptions,
   CountOptions,
 } from "@better-media/core";
-import type { FieldType, BmSchema, DbHooks } from "better-media";
+import type { FieldType, BmSchema, DbHooks, HookContext, ModelDefinition } from "better-media";
 import { serializeData, deserializeData, runHooks } from "better-media";
 import type { MongoDbConfig } from "./mongodb-db-config.interface";
 
@@ -22,7 +22,6 @@ export interface MongoDbOptions {
 
 /**
  * MongoDB database adapter.
- * Uses a collection-per-table structure.
  */
 export class MongoDbAdapter implements DatabaseAdapter {
   private readonly client: MongoClient;
@@ -47,72 +46,113 @@ export class MongoDbAdapter implements DatabaseAdapter {
     return this.schema[model]?.fields ?? {};
   }
 
-  /**
-   * Translates our generic WhereClause to a MongoDB filter.
-   */
-  private buildFilter(where?: WhereClause): Filter<Document> {
-    if (!where || where.length === 0) return {};
+  private getModelDefinition(model: string): ModelDefinition | undefined {
+    return this.schema[model];
+  }
 
-    const filter: Record<string, unknown> = {};
+  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): HookContext {
+    return {
+      model,
+      adapter: this,
+      transaction: trx,
+    };
+  }
 
-    for (const condition of where) {
-      // In MongoDB, we usually map 'id' to '_id'
+  private buildFilter(
+    where?: WhereClause,
+    model?: string,
+    options?: { withDeleted?: boolean }
+  ): Filter<Document> {
+    let filter: Filter<Document> = {};
+    const definition = model ? this.getModelDefinition(model) : undefined;
+
+    // Soft delete filtering
+    if (definition?.softDelete && !options?.withDeleted) {
+      filter = { deletedAt: null };
+    }
+
+    if (!where || where.length === 0) return filter;
+
+    let whereFilter: Filter<Document> = {};
+
+    for (let i = 0; i < where.length; i++) {
+      const condition = where[i]!;
+      const connector = i > 0 ? (where[i - 1]?.connector ?? "AND") : "AND";
       const field = condition.field === "id" ? "_id" : condition.field;
       const value = condition.value;
+      const conditionFilter: Record<string, unknown> = {};
 
       switch (condition.operator) {
         case "!=":
-          filter[field] = { $ne: value };
+          conditionFilter[field] = { $ne: value };
           break;
         case "<":
-          filter[field] = { $lt: value };
+          conditionFilter[field] = { $lt: value };
           break;
         case "<=":
-          filter[field] = { $lte: value };
+          conditionFilter[field] = { $lte: value };
           break;
         case ">":
-          filter[field] = { $gt: value };
+          conditionFilter[field] = { $gt: value };
           break;
         case ">=":
-          filter[field] = { $gte: value };
+          conditionFilter[field] = { $gte: value };
           break;
         case "in":
-          filter[field] = { $in: value as unknown[] };
+          conditionFilter[field] = { $in: value as unknown[] };
           break;
         case "not_in":
-          filter[field] = { $nin: value as unknown[] };
+          conditionFilter[field] = { $nin: value as unknown[] };
           break;
         case "starts_with":
-          filter[field] = { $regex: new RegExp(`^${String(value)}`, "i") };
+          conditionFilter[field] = {
+            $regex: new RegExp(`^${this.escapeRegex(String(value))}`, "i"),
+          };
           break;
         case "ends_with":
-          filter[field] = { $regex: new RegExp(`${String(value)}$`, "i") };
+          conditionFilter[field] = {
+            $regex: new RegExp(`${this.escapeRegex(String(value))}$`, "i"),
+          };
           break;
         case "contains":
         case "like":
-          // Case-insensitive regex search
-          filter[field] = { $regex: new RegExp(String(value), "i") };
+          conditionFilter[field] = { $regex: new RegExp(this.escapeRegex(String(value)), "i") };
           break;
         case "=":
         default:
-          filter[field] = value;
+          conditionFilter[field] = value;
           break;
+      }
+
+      if (i === 0) {
+        whereFilter = conditionFilter;
+      } else if (connector === "OR") {
+        whereFilter = {
+          $or: [whereFilter as Record<string, unknown>, conditionFilter],
+        } as Filter<Document>;
+      } else {
+        whereFilter = {
+          $and: [whereFilter as Record<string, unknown>, conditionFilter],
+        } as Filter<Document>;
       }
     }
 
-    return filter as Filter<Document>;
+    // Combine with soft delete filter
+    if (Object.keys(filter).length > 0 && Object.keys(whereFilter).length > 0) {
+      return { $and: [filter, whereFilter] } as Filter<Document>;
+    }
+    return Object.keys(whereFilter).length > 0 ? whereFilter : filter;
   }
 
-  /** Converts incoming data 'id' -> '_id' for mongo */
+  private escapeRegex(string: string): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
   private mapToMongo(data: Record<string, unknown>): Document {
     const { id, ...rest } = data;
-    if (id !== undefined) {
-      return { _id: id, ...rest } as Document;
-    }
-    return rest as Document;
+    return id !== undefined ? { _id: id, ...rest } : (rest as Document);
   }
 
-  /** Converts outgoing data '_id' -> 'id' from mongo */
   private mapFromMongo(doc: Document | null): Record<string, unknown> | null {
     if (!doc) return null;
     const { _id, ...rest } = doc as { _id: unknown } & Record<string, unknown>;
@@ -122,33 +162,87 @@ export class MongoDbAdapter implements DatabaseAdapter {
   async create<T extends Record<string, unknown>>(options: CreateOptions<T>): Promise<T> {
     const fields = this.getModelFields(options.model);
     const collection = this.getCollection(options.model);
+    const context = this.getHookContext(options.model);
 
     let dataToInsert = options.data as Record<string, unknown>;
-    dataToInsert = await runHooks.beforeCreate(this.hooks, options.model, dataToInsert);
+    dataToInsert = await runHooks.beforeCreate(this.hooks, dataToInsert, context);
 
     const serializedData = serializeData(fields, dataToInsert);
     const mongoDoc = this.mapToMongo(serializedData);
 
     await collection.insertOne(mongoDoc, { session: this.session });
-
     const resultRecord = deserializeData(fields, this.mapFromMongo(mongoDoc)!) as T;
 
-    await runHooks.afterCreate(this.hooks, options.model, resultRecord as Record<string, unknown>);
+    await runHooks.afterCreate(this.hooks, resultRecord as Record<string, unknown>, context);
     return resultRecord;
+  }
+
+  private async applyPopulate(
+    model: string,
+    pipeline: Record<string, unknown>[],
+    populate: string[]
+  ): Promise<void> {
+    const sortedPopulate = [...populate].sort((a, b) => a.split(".").length - b.split(".").length);
+
+    for (const path of sortedPopulate) {
+      const parts = path.split(".");
+      let currentModel = model;
+      let currentPath = "";
+
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i]!;
+        const fieldDef = this.schema[currentModel]?.fields[part];
+
+        if (fieldDef?.references) {
+          const localField = currentPath ? `${currentPath}.${part}` : part;
+          const asField = localField;
+
+          pipeline.push({
+            $lookup: {
+              from: fieldDef.references.model,
+              localField: localField,
+              foreignField: fieldDef.references.field === "id" ? "_id" : fieldDef.references.field,
+              as: asField,
+            },
+          });
+          pipeline.push({ $unwind: { path: `$${asField}`, preserveNullAndEmptyArrays: true } });
+
+          currentModel = fieldDef.references.model;
+          currentPath = asField;
+        } else {
+          // If a part doesn't have references, we can't populate further deep from here
+          break;
+        }
+      }
+    }
   }
 
   async findOne<T extends Record<string, unknown>>(options: FindOptions<T>): Promise<T | null> {
     const fields = this.getModelFields(options.model);
     const collection = this.getCollection(options.model);
+    const filter = this.buildFilter(options.where, options.model, {
+      withDeleted: options.withDeleted,
+    });
 
-    const filter = this.buildFilter(options.where);
+    if (options.populate && options.populate.length > 0) {
+      const pipeline: Record<string, unknown>[] = [{ $match: filter }];
+      await this.applyPopulate(options.model, pipeline, options.populate);
 
-    // Convert to avoid bringing everything back if select is specified
+      const results = await (
+        collection as unknown as {
+          aggregate: (p: unknown[], o: unknown) => { toArray: () => Promise<Document[]> };
+        }
+      )
+        .aggregate(pipeline, { session: this.session })
+        .toArray();
+      const doc = results[0];
+      if (!doc) return null;
+      return deserializeData(fields, this.mapFromMongo(doc)!) as T;
+    }
+
     const projection: Record<string, 1> = {};
     if (options.select) {
-      for (const field of options.select) {
-        projection[field === "id" ? "_id" : field] = 1;
-      }
+      for (const field of options.select) projection[field === "id" ? "_id" : field] = 1;
     }
 
     const doc = await collection.findOne(filter, {
@@ -157,78 +251,83 @@ export class MongoDbAdapter implements DatabaseAdapter {
     });
 
     if (!doc) return null;
-
-    const record = this.mapFromMongo(doc);
-    return deserializeData(fields, record!) as T;
+    return deserializeData(fields, this.mapFromMongo(doc)!) as T;
   }
 
   async findMany<T extends Record<string, unknown>>(options: FindOptions<T>): Promise<T[]> {
     const fields = this.getModelFields(options.model);
     const collection = this.getCollection(options.model);
+    const filter = this.buildFilter(options.where, options.model, {
+      withDeleted: options.withDeleted,
+    });
 
-    const filter = this.buildFilter(options.where);
+    if (options.populate && options.populate.length > 0) {
+      // Aggregate population
+      const pipeline: Record<string, unknown>[] = [{ $match: filter }];
+      await this.applyPopulate(options.model, pipeline, options.populate);
 
-    let cursor = collection.find(filter, { session: this.session });
-
-    if (options.select) {
-      const projection: Record<string, 1> = {};
-      for (const field of options.select) {
-        projection[field === "id" ? "_id" : field] = 1;
+      if (options.sortBy) {
+        const field = options.sortBy.field === "id" ? "_id" : options.sortBy.field;
+        pipeline.push({ $sort: { [field]: options.sortBy.direction === "asc" ? 1 : -1 } });
       }
-      cursor = cursor.project(projection);
+      if (options.offset) pipeline.push({ $skip: options.offset });
+      if (options.limit) pipeline.push({ $limit: options.limit });
+
+      const docs = await (
+        collection as unknown as {
+          aggregate: (p: unknown[], o: unknown) => { toArray: () => Promise<Document[]> };
+        }
+      )
+        .aggregate(pipeline, { session: this.session })
+        .toArray();
+      return docs.map((doc: Document) => deserializeData(fields, this.mapFromMongo(doc)!)) as T[];
     }
 
+    let cursor = collection.find(filter, { session: this.session });
+    if (options.select) {
+      const projection: Record<string, 1> = {};
+      for (const field of options.select) projection[field === "id" ? "_id" : field] = 1;
+      cursor = cursor.project(projection);
+    }
     if (options.sortBy) {
       const field = options.sortBy.field === "id" ? "_id" : options.sortBy.field;
       cursor = cursor.sort({ [field]: options.sortBy.direction === "asc" ? 1 : -1 });
     }
-
-    if (options.offset) {
-      cursor = cursor.skip(options.offset);
-    }
-
-    if (options.limit) {
-      cursor = cursor.limit(options.limit);
-    }
+    if (options.offset) cursor = cursor.skip(options.offset);
+    if (options.limit) cursor = cursor.limit(options.limit);
 
     const docs = await cursor.toArray();
-
     return docs.map((doc: Document) => deserializeData(fields, this.mapFromMongo(doc)!)) as T[];
   }
 
   async update<T extends Record<string, unknown>>(options: UpdateOptions<T>): Promise<T | null> {
     const fields = this.getModelFields(options.model);
     const collection = this.getCollection(options.model);
+    const context = this.getHookContext(options.model);
 
-    // 1. Fetch current target
-    const filter = this.buildFilter(options.where);
+    const filter = this.buildFilter(options.where, options.model);
     const doc = await collection.findOne(filter, { session: this.session });
     if (!doc) return null;
 
     const currentRecord = deserializeData(fields, this.mapFromMongo(doc)!);
-
-    // 2. Run hooks
     let updatedData = { ...currentRecord, ...(options.update as Record<string, unknown>) };
-    updatedData = await runHooks.beforeUpdate(this.hooks, options.model, updatedData);
+    updatedData = await runHooks.beforeUpdate(this.hooks, updatedData, context);
 
-    // 3. Serialize and persist
     const serializedUpdate = serializeData(fields, options.update as Record<string, unknown>);
     const mongoUpdate = this.mapToMongo(serializedUpdate);
-    // Remove _id from $set to avoid Mongo error
     delete mongoUpdate._id;
 
     await collection.updateOne(filter, { $set: mongoUpdate }, { session: this.session });
-
     const resultRecord = deserializeData(fields, serializeData(fields, updatedData)) as T;
 
-    await runHooks.afterUpdate(this.hooks, options.model, resultRecord as Record<string, unknown>);
+    await runHooks.afterUpdate(this.hooks, resultRecord as Record<string, unknown>, context);
     return resultRecord;
   }
 
   async updateMany<T extends Record<string, unknown>>(options: UpdateOptions<T>): Promise<number> {
     const fields = this.getModelFields(options.model);
     const collection = this.getCollection(options.model);
-    const filter = this.buildFilter(options.where);
+    const filter = this.buildFilter(options.where, options.model);
 
     const serializedUpdate = serializeData(fields, options.update as Record<string, unknown>);
     const mongoUpdate = this.mapToMongo(serializedUpdate);
@@ -244,36 +343,65 @@ export class MongoDbAdapter implements DatabaseAdapter {
 
   async delete(options: DeleteOptions): Promise<void> {
     const collection = this.getCollection(options.model);
+    const context = this.getHookContext(options.model);
+    const definition = this.getModelDefinition(options.model);
 
-    await runHooks.beforeDelete(this.hooks, options.model, options.where);
+    await runHooks.beforeDelete(this.hooks, options.where, context);
 
-    const filter = this.buildFilter(options.where);
+    const filter = this.buildFilter(options.where, options.model);
 
-    // If deleting by id, usually singular. Otherwise could be many.
-    if (
-      options.where?.length === 1 &&
-      options.where[0]?.field === "id" &&
-      options.where[0]?.operator !== "!="
-    ) {
-      await collection.deleteOne(filter, { session: this.session });
+    if (definition?.softDelete) {
+      await this.updateMany({
+        model: options.model,
+        where: options.where,
+        update: { deletedAt: new Date() } as unknown as Record<string, unknown>,
+      });
     } else {
-      await collection.deleteMany(filter, { session: this.session });
+      if (
+        options.where?.length === 1 &&
+        options.where[0]?.field === "id" &&
+        options.where[0]?.operator !== "!="
+      ) {
+        await collection.deleteOne(filter, { session: this.session });
+      } else {
+        await collection.deleteMany(filter, { session: this.session });
+      }
     }
 
-    await runHooks.afterDelete(this.hooks, options.model, options.where);
+    await runHooks.afterDelete(this.hooks, options.where, context);
   }
 
   async deleteMany(options: DeleteOptions): Promise<number> {
     const collection = this.getCollection(options.model);
-    const filter = this.buildFilter(options.where);
+    const filter = this.buildFilter(options.where, options.model);
+    const definition = this.getModelDefinition(options.model);
+
+    if (definition?.softDelete) {
+      return await this.updateMany({
+        model: options.model,
+        where: options.where,
+        update: { deletedAt: new Date() } as unknown as Record<string, unknown>,
+      });
+    }
+
     const result = await collection.deleteMany(filter, { session: this.session });
     return result.deletedCount;
   }
 
   async count(options: CountOptions): Promise<number> {
     const collection = this.getCollection(options.model);
-    const filter = this.buildFilter(options.where);
+    const filter = this.buildFilter(options.where, options.model);
     return collection.countDocuments(filter, { session: this.session });
+  }
+
+  async raw<T = unknown>(query: string, _params?: unknown[]): Promise<T> {
+    // For Mongo, 'raw' can mean a direct command or aggregate
+    if (query.startsWith("{")) {
+      return (await (this.db as unknown as { command: (c: unknown) => Promise<unknown> }).command(
+        JSON.parse(query)
+      )) as unknown as T;
+    }
+    throw new Error("MongoDB 'raw' requires a JSON command string.");
   }
 
   async transaction<R>(callback: (trx: DatabaseTransactionAdapter) => Promise<R>): Promise<R> {
@@ -293,29 +421,71 @@ export class MongoDbAdapter implements DatabaseAdapter {
     }
   }
 
-  /**
-   * Internal migration method. Ensures collections exist.
-   */
-  async __initCollection(model: string, definition: BmSchema[string]): Promise<void> {
-    // MongoDB auto-creates collections, but we can explicitly create it
-    // and set up unique indexes based on schema
+  async __initCollection(
+    model: string,
+    definition: ModelDefinition,
+    options: { mode: "safe" | "diff" | "force" }
+  ): Promise<void> {
+    if (options.mode === "force") {
+      await (
+        this.getCollection(model) as unknown as {
+          drop: () => Promise<void>;
+        }
+      )
+        .drop()
+        .catch(() => {});
+    }
 
-    const existingCollections = await this.db.listCollections({ name: model }).toArray();
-    if (existingCollections.length === 0) {
+    const collections = await this.db.listCollections({ name: model }).toArray();
+    if (collections.length === 0) {
       await this.db.createCollection(model);
     }
 
     const collection = this.getCollection(model);
+    const existingIndexes = await (
+      collection as unknown as {
+        listIndexes: () => { toArray: () => Promise<{ name: string }[]> };
+      }
+    )
+      .listIndexes()
+      .toArray();
+    const existingIndexNames = new Set(existingIndexes.map((idx) => idx.name));
 
+    // Fields-based indexes (implicitly unique/foreign key)
     for (const [fieldName, fieldDef] of Object.entries(definition.fields)) {
       if (fieldDef?.unique && !fieldDef?.primaryKey) {
-        // primaryKey 'id' -> '_id' which is already unique in Mongo
-        await collection.createIndex({ [fieldName]: 1 }, { unique: true });
+        const indexName = `${fieldName}_1`;
+        if (!existingIndexNames.has(indexName)) {
+          await collection.createIndex({ [fieldName]: 1 }, { unique: true });
+        }
       }
-
       if (fieldDef?.references) {
-        // Index foreign keys for faster joins/lookups
-        await collection.createIndex({ [fieldName]: 1 });
+        const indexName = `${fieldName}_1`;
+        if (!existingIndexNames.has(indexName)) {
+          await collection.createIndex({ [fieldName]: 1 });
+        }
+      }
+    }
+
+    // Explicit indexes from definition.indexes
+    if (definition.indexes) {
+      for (const index of definition.indexes) {
+        const indexSpec: Record<string, 1> = {};
+        for (const field of index.fields) {
+          indexSpec[field === "id" ? "_id" : field] = 1;
+        }
+
+        const indexName = `idx_${index.fields.join("_")}`;
+        if (!existingIndexNames.has(indexName)) {
+          await (
+            collection as unknown as {
+              createIndex: (s: unknown, o: unknown) => Promise<void>;
+            }
+          ).createIndex(indexSpec, {
+            name: indexName,
+            unique: !!index.unique,
+          });
+        }
       }
     }
   }
