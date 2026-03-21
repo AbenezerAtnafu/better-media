@@ -9,8 +9,18 @@ import type {
   DeleteOptions,
   CountOptions,
 } from "@better-media/core";
-import type { FieldType, BmSchema, DbHooks, HookContext, ModelDefinition } from "better-media";
-import { serializeData, deserializeData, runHooks } from "better-media";
+import type {
+  FieldType,
+  FieldDefinition,
+  BmSchema,
+  DbHooks,
+  HookContext,
+  ModelDefinition,
+  MigrationOperation,
+  SqlDialect,
+  TableMetadata,
+} from "better-media";
+import { serializeData, deserializeData, runHooks, getColumnType } from "better-media";
 import type { KyselyDbConfig } from "./kysely-db-config.interface";
 
 export interface KyselyDbOptions {
@@ -334,185 +344,122 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     })) as R;
   }
 
+  async getMetadata(): Promise<TableMetadata[]> {
+    const tables = await this.db.introspection.getTables();
+    return tables.map((table) => ({
+      name: table.name,
+      columns: table.columns.map((col) => ({
+        name: col.name,
+        dataType: col.dataType,
+        isNullable: col.isNullable ?? true,
+      })),
+    }));
+  }
+
+  private getDialect(): SqlDialect {
+    switch (this.config.provider) {
+      case "pg":
+        return "postgres";
+      case "mysql":
+        return "mysql";
+      case "sqlite":
+        return "sqlite";
+      default:
+        return "postgres";
+    }
+  }
+
+  async executeMigration(operation: MigrationOperation): Promise<void> {
+    const dialect = this.getDialect();
+
+    if (operation.type === "createTable") {
+      let builder = this.db.schema.createTable(operation.table).ifNotExists();
+
+      for (const [name, field] of Object.entries(operation.definition.fields) as [
+        string,
+        FieldDefinition,
+      ][]) {
+        const type = getColumnType(field, dialect);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        builder = builder.addColumn(name, type as any, (col: any) => {
+          if (field.primaryKey) col = col.primaryKey();
+          if (field.required) col = col.notNull();
+          if (field.unique) col = col.unique();
+          if (field.references) {
+            col = col
+              .references(`${field.references.model}.${field.references.field}`)
+              .onDelete(field.references.onDelete || "cascade");
+          }
+          return col;
+        });
+      }
+      await builder.execute();
+
+      // Create indexes
+      if (operation.definition.indexes) {
+        for (const index of operation.definition.indexes) {
+          const indexName = `idx_${operation.table}_${index.fields.join("_")}`;
+          let indexBuilder = this.db.schema
+            .createIndex(indexName)
+            .on(operation.table)
+            .columns(index.fields);
+          if (index.unique) {
+            indexBuilder = indexBuilder.unique();
+          }
+          await indexBuilder.execute();
+        }
+      }
+    } else if (operation.type === "addColumn") {
+      const type = getColumnType(operation.definition, dialect);
+      await this.db.schema
+        .alterTable(operation.table)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .addColumn(operation.field, type as any, (col: any) => {
+          if (operation.definition.required) col = col.notNull();
+          if (operation.definition.unique) col = col.unique();
+          if (operation.definition.references) {
+            col = col
+              .references(
+                `${operation.definition.references.model}.${operation.definition.references.field}`
+              )
+              .onDelete(operation.definition.references.onDelete || "cascade");
+          }
+          return col;
+        })
+        .execute();
+    } else if (operation.type === "createIndex") {
+      let builder = this.db.schema
+        .createIndex(operation.name)
+        .on(operation.table)
+        .columns(operation.fields);
+      if (operation.unique) {
+        builder = builder.unique();
+      }
+      await builder.execute();
+    }
+  }
+
+  /**
+   * @deprecated Use MigrationPlanner and executeMigration instead.
+   */
   async __createTable(
     model: string,
     definition: ModelDefinition,
     options: { mode: "safe" | "diff" | "force" }
   ): Promise<void> {
-    const db = this.db as unknown as {
-      schema: {
-        dropTable: (m: string) => {
-          ifExists: () => { execute: () => Promise<void> };
-          execute: () => Promise<void>;
-        };
-        alterTable: (m: string) => {
-          addColumn: (
-            n: string,
-            t: string,
-            cb: (c: unknown) => unknown
-          ) => { execute: () => Promise<void> };
-        };
-        createTable: (m: string) => {
-          ifNotExists: () => {
-            addColumn: (n: string, t: string, cb: (c: unknown) => unknown) => unknown;
-            execute: () => Promise<void>;
-          };
-        };
-        createIndex: (n: string) => {
-          on: (m: string) => {
-            columns: (f: string[]) => {
-              unique: () => { execute: () => Promise<void> };
-              execute: () => Promise<void>;
-            };
-          };
-        };
-      };
-      introspection: {
-        getTables: () => Promise<{ name: string; columns: { name: string }[] }[]>;
-      };
-    };
-
     if (options.mode === "force") {
-      await db.schema.dropTable(model).ifExists().execute();
+      await this.db.schema.dropTable(model).ifExists().execute();
     }
 
     if (options.mode === "diff") {
-      const tables = await db.introspection.getTables();
-      const tableMetadata = tables.find((t) => t.name === model);
-
-      if (tableMetadata) {
-        const existingColumns = new Set(tableMetadata.columns.map((c) => c.name));
-
-        for (const [fieldName, fieldDef] of Object.entries(definition.fields)) {
-          if (!existingColumns.has(fieldName)) {
-            let colType: string;
-            switch (fieldDef.type) {
-              case "string":
-                colType = "varchar(255)";
-                break;
-              case "number":
-                colType = "integer";
-                break;
-              case "boolean":
-                colType = this.config.provider === "sqlite" ? "integer" : "boolean";
-                break;
-              case "date":
-                colType = "timestamp";
-                break;
-              case "json":
-                colType = this.config.provider === "pg" ? "jsonb" : "text";
-                break;
-              default:
-                colType = "text";
-            }
-
-            await db.schema
-              .alterTable(model)
-              .addColumn(fieldName, colType, (col: unknown) => {
-                let column = col as {
-                  notNull: () => unknown;
-                  unique: () => unknown;
-                  references: (r: string) => { onDelete: (o: string) => unknown };
-                };
-                if (fieldDef.required) column = column.notNull() as typeof column;
-                if (fieldDef.unique) column = column.unique() as typeof column;
-                if (fieldDef.references) {
-                  let ref = column.references(
-                    `${fieldDef.references.model}.${fieldDef.references.field}`
-                  );
-                  if (fieldDef.references.onDelete) {
-                    const r = ref as { onDelete: AnyFunction };
-                    ref = r.onDelete(fieldDef.references.onDelete) as typeof ref;
-                  }
-                  column = ref as unknown as typeof column;
-                }
-                return column;
-              })
-              .execute();
-          }
-        }
-      } else {
-        // Table doesn't exist, fallback to create
-        options.mode = "safe";
+      const metadata = await this.getMetadata();
+      const planner = new (await import("better-media")).MigrationPlanner(this.getDialect());
+      const operations = planner.plan({ [model]: definition }, metadata);
+      for (const op of operations) {
+        await this.executeMigration(op);
       }
-    }
-
-    if (options.mode !== "diff") {
-      let schemaQb = db.schema.createTable(model).ifNotExists();
-
-      for (const [fieldName, fieldDef] of Object.entries(definition.fields)) {
-        let colType: string;
-        switch (fieldDef.type) {
-          case "string":
-            colType = "varchar(255)";
-            break;
-          case "number":
-            colType = "integer";
-            break;
-          case "boolean":
-            colType = this.config.provider === "sqlite" ? "integer" : "boolean";
-            break;
-          case "date":
-            colType = "timestamp";
-            break;
-          case "json":
-            colType = this.config.provider === "pg" ? "jsonb" : "text";
-            break;
-          default:
-            colType = "text";
-        }
-
-        schemaQb = schemaQb.addColumn(fieldName, colType, (col: unknown) => {
-          let column = col as {
-            primaryKey: () => unknown;
-            notNull: () => unknown;
-            unique: () => unknown;
-            references: (r: string) => { onDelete: (o: string) => unknown };
-          };
-          if (fieldDef.primaryKey) column = column.primaryKey() as typeof column;
-          if (fieldDef.required) column = column.notNull() as typeof column;
-          if (fieldDef.unique) column = column.unique() as typeof column;
-          if (fieldDef.references) {
-            let ref = column.references(
-              `${fieldDef.references.model}.${fieldDef.references.field}`
-            );
-            if (fieldDef.references.onDelete) {
-              ref = (ref as unknown as { onDelete: (o: string) => unknown }).onDelete(
-                fieldDef.references.onDelete
-              ) as {
-                onDelete: (o: string) => unknown;
-              };
-            }
-            column = ref as unknown as typeof column;
-          }
-          return column;
-        }) as typeof schemaQb;
-      }
-
-      await schemaQb.execute();
-    }
-
-    // Create indexes
-    if (definition.indexes) {
-      for (const index of definition.indexes) {
-        const indexName = `idx_${model}_${index.fields.join("_")}`;
-
-        let indexQb = db.schema.createIndex(indexName).on(model).columns(index.fields);
-        if (index.unique) {
-          indexQb = indexQb.unique() as typeof indexQb;
-        }
-
-        try {
-          await (indexQb as unknown as { execute: () => Promise<void> }).execute();
-        } catch (e) {
-          // Ignore if exists, or throw if other error
-          if (options.mode === "safe" || options.mode === "diff") {
-            // Basic check: we assume error means it might exist
-          } else {
-            throw e;
-          }
-        }
-      }
+    } else {
+      await this.executeMigration({ type: "createTable", table: model, definition });
     }
   }
 }

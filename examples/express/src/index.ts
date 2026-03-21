@@ -1,17 +1,19 @@
 import express from "express";
-import { createBetterMedia } from "better-media";
+import { createBetterMedia, runMigrations } from "better-media";
 import { S3StorageConfig, S3StorageAdapter } from "@better-media/adapter-storage-s3";
 import { memoryDatabase } from "@better-media/adapter-db";
 import { validationPlugin } from "@better-media/plugin-validation";
 import { virusScanPlugin, ClamScanner } from "@better-media/plugin-virus-scan";
 import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
 
+const database = memoryDatabase();
+
 const media = createBetterMedia({
   storage: new S3StorageAdapter({
-    accessKeyId: "",
-    bucket: "",
+    accessKeyId: "test",
+    bucket: "test",
   } as S3StorageConfig),
-  database: memoryDatabase(),
+  database,
   plugins: [
     validationPlugin(),
     virusScanPlugin({
@@ -26,6 +28,17 @@ const media = createBetterMedia({
     mediaProcessingPlugin(),
   ],
 });
+
+// Run migrations before starting the server
+async function init() {
+  console.log("--- Initial Migration ---");
+  await runMigrations(database, { mode: "diff" });
+
+  console.log("\n--- Second Migration (should be no-op) ---");
+  await runMigrations(database, { mode: "diff" });
+}
+
+init().catch(console.error);
 
 const app = express();
 app.use(express.json());

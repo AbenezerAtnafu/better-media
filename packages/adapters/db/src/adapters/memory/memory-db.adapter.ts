@@ -318,6 +318,39 @@ export class MemoryDbAdapter implements DatabaseAdapter {
     return await callback(this as unknown as DatabaseTransactionAdapter);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async getMetadata(): Promise<any[]> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const metadata: any[] = [];
+    for (const [tableName, table] of this.store.entries()) {
+      const columns = new Set<string>();
+      // Infer columns from existing data
+      for (const record of table.values()) {
+        Object.keys(record).forEach((k) => columns.add(k));
+      }
+      metadata.push({
+        name: tableName,
+        columns: Array.from(columns).map((name) => ({
+          name,
+          dataType: "text", // Memory storage is type-agnostic
+          isNullable: true,
+        })),
+      });
+    }
+    return metadata;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async executeMigration(operation: any): Promise<void> {
+    if (operation.type === "createTable") {
+      this.getTable(operation.table);
+    }
+    // Other operations are implicitly handled by the schemaless nature of MemoryDbAdapter
+  }
+
+  /**
+   * @deprecated Use executeMigration instead.
+   */
   async __initTable(
     model: string,
     definition: ModelDefinition,

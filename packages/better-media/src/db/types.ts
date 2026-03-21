@@ -77,3 +77,22 @@ export interface DbHooks {
     delete?: HookHandler<WhereClause, void>[];
   };
 }
+
+export type SqlDialect = "postgres" | "mysql" | "sqlite" | "mssql";
+
+export interface ColumnMetadata {
+  name: string;
+  dataType: string;
+  isNullable: boolean;
+  isUnique?: boolean;
+}
+
+export interface TableMetadata {
+  name: string;
+  columns: ColumnMetadata[];
+}
+
+export type MigrationOperation =
+  | { type: "createTable"; table: string; definition: ModelDefinition }
+  | { type: "addColumn"; table: string; field: string; definition: FieldDefinition }
+  | { type: "createIndex"; table: string; name: string; fields: string[]; unique?: boolean };
