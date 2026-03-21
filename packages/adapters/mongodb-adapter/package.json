@@ -1,0 +1,47 @@
+{
+  "name": "@better-media/mongodb-adapter",
+  "version": "1.0.0",
+  "description": "MongoDB database adapter for Better Media",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@better-media/core": "workspace:*",
+    "better-media": "workspace:*"
+  },
+  "peerDependencies": {
+    "mongodb": "^6.8.0"
+  },
+  "devDependencies": {
+    "@types/mongodb": "^4.0.7",
+    "mongodb": "^6.8.0",
+    "@types/node": "^22.10.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "jest": "^30.2.0",
+    "@types/jest": "^29.5.11"
+  },
+  "keywords": [
+    "better-media",
+    "mongodb",
+    "adapter",
+    "database"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.25.0"
+}
