@@ -6,6 +6,7 @@ export interface TrustedFileInfo {
   mimeType?: string;
   size?: number;
   originalName?: string;
+  extension?: string;
 }
 
 export interface TrustedChecksums {
