@@ -1,8 +1,8 @@
 import path from "node:path";
 
 /**
- * Option 1: Same directory, suffixed filename.
- * uploads/abcd/original.jpg → uploads/abcd/original-150x150.jpg
+ * Nests variants in a dedicated folder named after the original filename (without extension).
+ * uploads/abcd/original.jpg → uploads/abcd/original/150x150.jpg
  */
 export function thumbnailStorageKey(
   fileKey: string,
@@ -13,6 +13,7 @@ export function thumbnailStorageKey(
   const dir = path.dirname(fileKey);
   const basename = path.basename(fileKey, path.extname(fileKey));
   const sizeSuffix = height != null ? `${width}x${height}` : `${width}`;
-  const name = `${basename}-${sizeSuffix}.${ext}`;
-  return dir && dir !== "." ? `${dir}/${name}` : name;
+
+  const folderPath = dir && dir !== "." ? `${dir}/${basename}` : basename;
+  return `${folderPath}/thumb-${sizeSuffix}.${ext}`;
 }

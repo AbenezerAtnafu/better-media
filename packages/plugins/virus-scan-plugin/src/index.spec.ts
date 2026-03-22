@@ -228,7 +228,7 @@ describe("virusScanPlugin", () => {
       virusScanPlugin({ scanner }).apply!(runtime);
       await getTapFn()(context);
 
-      expect(context.database.put).toHaveBeenCalledWith(
+      expect((context.database as unknown as { put: jest.Mock }).put).toHaveBeenCalledWith(
         "better-media:virus-scan:test-file.jpg",
         expect.objectContaining({
           fileKey: "test-file.jpg",
@@ -249,7 +249,7 @@ describe("virusScanPlugin", () => {
       virusScanPlugin({ scanner }).apply!(runtime);
       await getTapFn()(context);
 
-      expect(context.database.put).toHaveBeenCalledWith(
+      expect((context.database as unknown as { put: jest.Mock }).put).toHaveBeenCalledWith(
         "better-media:virus-scan:test-file.jpg",
         expect.objectContaining({
           fileKey: "test-file.jpg",
