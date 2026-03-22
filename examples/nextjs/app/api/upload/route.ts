@@ -16,17 +16,18 @@ const SAMPLE_JPEG = Buffer.from([
 
 export async function POST(request: Request) {
   try {
-    const { getMedia, storage } = await import("@/lib/media");
+    const { getMedia } = await import("@/lib/media");
     const media = await getMedia();
     const body = await request.json();
     const fileKey = body.fileKey ?? `photo-${Date.now()}.jpg`;
     const metadata = body.metadata ?? { contentType: "image/jpeg" };
     const simulateFail = body.simulateValidationFail === true;
 
-    // Seed storage with a sample file (in real app, file comes from presigned URL upload)
-    await storage.put(fileKey, simulateFail ? Buffer.from("not-an-image") : SAMPLE_JPEG);
-
-    await media.upload.multer(fileKey, metadata);
+    // Seed storage with a sample file and trigger pipeline
+    await media.upload.fromBuffer(simulateFail ? Buffer.from("not-an-image") : SAMPLE_JPEG, {
+      key: fileKey,
+      metadata,
+    });
     return NextResponse.json({ success: true, fileKey });
   } catch (err) {
     return NextResponse.json(

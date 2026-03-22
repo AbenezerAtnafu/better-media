@@ -52,7 +52,9 @@ describe("runMigrations", () => {
     expect(mockSqlAdapter.__createTable).toHaveBeenCalledTimes(models.length);
 
     // Check one specific call
-    expect(mockSqlAdapter.__createTable).toHaveBeenCalledWith("media", schema["media"]);
+    expect(mockSqlAdapter.__createTable).toHaveBeenCalledWith("media", schema["media"], {
+      mode: "safe",
+    });
   });
 
   it("should call __initCollection for MongoDB adapters", async () => {
@@ -74,6 +76,8 @@ describe("runMigrations", () => {
     const models = Object.keys(schema);
     expect(mockMongoAdapter.__initCollection).toHaveBeenCalledTimes(models.length);
 
-    expect(mockMongoAdapter.__initCollection).toHaveBeenCalledWith("media", schema["media"]);
+    expect(mockMongoAdapter.__initCollection).toHaveBeenCalledWith("media", schema["media"], {
+      mode: "safe",
+    });
   });
 });

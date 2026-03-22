@@ -8,11 +8,11 @@ Modular media pipeline framework for intake, validation, processing, and storage
 
 **Core defines contracts. Adapters implement infrastructure. Framework orchestrates.**
 
-| Layer         | Package(s)                                                                                                                                                                                                        | Responsibility                                                                                               |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Core**      | `@better-media/core`                                                                                                                                                                                              | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.           |
-| **Adapters**  | `@better-media/adapter-storage-memory`, `@better-media/adapter-storage-filesystem`, `@better-media/adapter-storage-s3`, `@better-media/adapter-db`, `@better-media/mongodb-adapter`, `@better-media/adapter-jobs` | Implement core contracts (memoryStorage, filesystemStorage, s3Storage, memoryDatabase, mongodbAdapter, etc). |
-| **Framework** | `better-media`                                                                                                                                                                                                    | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations.         |
+| Layer         | Package(s)                                                                                                                                                                                                        | Responsibility                                                                                       |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Core**      | `@better-media/core`                                                                                                                                                                                              | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.   |
+| **Adapters**  | `@better-media/adapter-storage-memory`, `@better-media/adapter-storage-filesystem`, `@better-media/adapter-storage-s3`, `@better-media/adapter-db`, `@better-media/mongodb-adapter`, `@better-media/adapter-jobs` | Implement core contracts (MemoryStorageAdapter, FileSystemStorageAdapter, S3StorageAdapter, etc).    |
+| **Framework** | `better-media`                                                                                                                                                                                                    | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations. |
 
 ## Monorepo Structure
 
@@ -102,17 +102,17 @@ Choose a storage implementation based on your environment:
 **Filesystem** (works with Multer in Express/NestJS):
 
 ```ts
-import { filesystemStorage } from "@better-media/adapter-storage-filesystem";
+import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 
-const storage = filesystemStorage({ baseDir: "/var/uploads" });
+const storage = new FileSystemStorageAdapter({ baseDir: "/var/uploads" });
 ```
 
 **S3** (AWS or MinIO):
 
 ```ts
-import { s3Storage } from "@better-media/adapter-storage-s3";
+import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
 
-const storage = s3Storage({
+const storage = new S3StorageAdapter({
   region: "us-east-1",
   bucket: "my-media-bucket",
   accessKeyId: process.env.AWS_ACCESS_KEY_ID!,

@@ -54,7 +54,7 @@ describe("validationPlugin - file type", () => {
     await storage.put("file.png", PNG_1X1);
 
     await expect(
-      media.upload.multer("file.png", { contentType: "image/png" })
+      media.upload.complete("file.png", { contentType: "image/png" })
     ).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("Extension") },
@@ -81,7 +81,7 @@ describe("validationPlugin - file type", () => {
     await storage.put("photo.jpg", MINIMAL_JPEG);
 
     await expect(
-      media.upload.multer("photo.jpg", { contentType: "image/jpeg" })
+      media.upload.complete("photo.jpg", { contentType: "image/jpeg" })
     ).resolves.toBeUndefined();
   });
 });
@@ -105,7 +105,7 @@ describe("validationPlugin - file size", () => {
     const large = Buffer.alloc(200);
     await storage.put("large.jpg", large);
 
-    await expect(media.upload.multer("large.jpg", {})).rejects.toMatchObject({
+    await expect(media.upload.complete("large.jpg", {})).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("exceeds maximum") },
     });
@@ -131,7 +131,7 @@ describe("validationPlugin - dimensions", () => {
     await storage.put("small.png", PNG_1X1);
 
     await expect(
-      media.upload.multer("small.png", { contentType: "image/png" })
+      media.upload.complete("small.png", { contentType: "image/png" })
     ).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("width") },
@@ -161,7 +161,7 @@ describe("validationPlugin - checksum", () => {
     await storage.put("file.txt", content);
 
     await expect(
-      media.upload.multer("file.txt", { expectedHash: wrongHash })
+      media.upload.complete("file.txt", { expectedHash: wrongHash })
     ).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("hash mismatch") },
@@ -189,7 +189,7 @@ describe("validationPlugin - checksum", () => {
     await storage.put("file.txt", content);
 
     await expect(
-      media.upload.multer("file.txt", { expectedHash: correctHash })
+      media.upload.complete("file.txt", { expectedHash: correctHash })
     ).resolves.toBeUndefined();
   });
 });
@@ -232,7 +232,7 @@ describe("validationPlugin - extract metadata", () => {
 
     await storage.put("photo.jpg", MINIMAL_JPEG);
 
-    await media.upload.multer("photo.jpg", {
+    await media.upload.complete("photo.jpg", {
       contentType: "image/gif",
       size: 99999,
       originalName: "wrong.png",
@@ -282,7 +282,7 @@ describe("validationPlugin - extract metadata", () => {
 
     await storage.put("file.bin", content);
 
-    await media.upload.multer("file.bin", {});
+    await media.upload.complete("file.bin", {});
 
     expect(capturedFile.checksums?.sha256).toBe(
       crypto.createHash("sha256").update(content).digest("hex")
@@ -331,7 +331,7 @@ describe("validationPlugin - extract metadata", () => {
     });
 
     await storage.put("large.bin", largeContent);
-    await media.upload.multer("large.bin", {});
+    await media.upload.complete("large.bin", {});
 
     expect(hadTempPath).toBe(true);
   });
@@ -374,7 +374,7 @@ describe("validationPlugin - extract metadata", () => {
 
     await storage.put("photo.jpg", MINIMAL_JPEG);
 
-    await media.upload.multer("photo.jpg", { contentType: "image/jpeg", size: 12345 });
+    await media.upload.complete("photo.jpg", { contentType: "image/jpeg", size: 12345 });
 
     expect(capturedFile.mimeType).toBe("image/jpeg");
     expect(capturedFile.size).toBe(12345);
@@ -398,7 +398,7 @@ describe("validationPlugin - file not found", () => {
       ],
     });
 
-    await expect(media.upload.multer("missing.jpg", {})).rejects.toMatchObject({
+    await expect(media.upload.complete("missing.jpg", {})).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("not found") },
     });
@@ -422,7 +422,7 @@ describe("validationPlugin - file not found", () => {
 
     await storage.put("too-big.jpg", Buffer.alloc(100));
 
-    await expect(media.upload.multer("too-big.jpg", {})).rejects.toMatchObject({
+    await expect(media.upload.complete("too-big.jpg", {})).rejects.toMatchObject({
       name: "ValidationError",
     });
 

@@ -30,69 +30,70 @@ function resolveSafePath(baseDir: string, key: string): string {
  * Works well with Multer in Express/NestJS - Multer saves to disk, then you
  * can read the file and put it into this storage using the desired key.
  */
-export function filesystemStorage(config: FilesystemStorageConfig): StorageAdapter {
-  const { baseDir } = config;
-  const base = path.resolve(baseDir);
+export class FileSystemStorageAdapter implements StorageAdapter {
+  private readonly baseDir: string;
 
-  return {
-    async get(key: string): Promise<Buffer | null> {
-      const filePath = resolveSafePath(base, key);
-      try {
-        return await fs.readFile(filePath);
-      } catch (err) {
-        if (isNotFoundError(err)) return null;
-        throw err;
-      }
-    },
+  constructor(config: FilesystemStorageConfig) {
+    this.baseDir = path.resolve(config.baseDir);
+  }
 
-    async put(key: string, value: Buffer): Promise<void> {
-      const filePath = resolveSafePath(base, key);
-      const dir = path.dirname(filePath);
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(filePath, value);
-    },
+  async get(key: string): Promise<Buffer | null> {
+    const filePath = resolveSafePath(this.baseDir, key);
+    try {
+      return await fs.readFile(filePath);
+    } catch (err) {
+      if (isNotFoundError(err)) return null;
+      throw err;
+    }
+  }
 
-    async delete(key: string): Promise<void> {
-      const filePath = resolveSafePath(base, key);
-      try {
-        await fs.unlink(filePath);
-      } catch (err) {
-        if (isNotFoundError(err)) return;
-        throw err;
-      }
-    },
+  async put(key: string, value: Buffer): Promise<void> {
+    const filePath = resolveSafePath(this.baseDir, key);
+    const dir = path.dirname(filePath);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(filePath, value);
+  }
 
-    async exists(key: string): Promise<boolean> {
-      const filePath = resolveSafePath(base, key);
-      try {
-        await fs.access(filePath);
-        return true;
-      } catch {
-        return false;
-      }
-    },
+  async delete(key: string): Promise<void> {
+    const filePath = resolveSafePath(this.baseDir, key);
+    try {
+      await fs.unlink(filePath);
+    } catch (err) {
+      if (isNotFoundError(err)) return;
+      throw err;
+    }
+  }
 
-    async getSize(key: string): Promise<number | null> {
-      const filePath = resolveSafePath(base, key);
-      try {
-        const stat = await fs.stat(filePath);
-        return stat.isFile() ? stat.size : null;
-      } catch {
-        return null;
-      }
-    },
+  async exists(key: string): Promise<boolean> {
+    const filePath = resolveSafePath(this.baseDir, key);
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
-    async getStream(key: string): Promise<ReadableStream<Uint8Array> | null> {
-      const filePath = resolveSafePath(base, key);
-      try {
-        await fs.access(filePath);
-      } catch {
-        return null;
-      }
-      const nodeStream = createReadStream(filePath);
-      return Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
-    },
-  };
+  async getSize(key: string): Promise<number | null> {
+    const filePath = resolveSafePath(this.baseDir, key);
+    try {
+      const stat = await fs.stat(filePath);
+      return stat.isFile() ? stat.size : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async getStream(key: string): Promise<ReadableStream<Uint8Array> | null> {
+    const filePath = resolveSafePath(this.baseDir, key);
+    try {
+      await fs.access(filePath);
+    } catch {
+      return null;
+    }
+    const nodeStream = createReadStream(filePath);
+    return Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>;
+  }
 }
 
 function isNotFoundError(err: unknown): boolean {

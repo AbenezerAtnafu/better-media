@@ -1,7 +1,15 @@
+import fs from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 import type { JobAdapter } from "@better-media/core";
 import { memoryJobAdapter } from "@better-media/adapter-jobs";
 import type { BetterMediaConfig } from "./config/config.interface";
-import type { BetterMediaRuntime } from "./runtime/runtime.interface";
+import type {
+  BetterMediaRuntime,
+  IngestInput,
+  MediaMetadata,
+  MediaResult,
+} from "./runtime/runtime.interface";
 import { buildPluginRegistry, hasBackgroundHandlers } from "./plugins/plugin-registry";
 import { LifecycleEngine } from "./core/lifecycle-engine";
 import { PipelineExecutor } from "./core/pipeline-executor";
@@ -16,13 +24,59 @@ function createNoopJobAdapter(): JobAdapter {
   };
 }
 
+type NormalizedFile = {
+  stream: Readable | Buffer;
+  metadata: MediaMetadata;
+  isTempPath?: boolean;
+  tempPath?: string;
+};
+
+async function normalizeInput(input: IngestInput): Promise<NormalizedFile> {
+  const { file, metadata = {} } = input;
+  let stream: Readable | Buffer;
+  let isTempPath = false;
+  let tempPath: string | undefined;
+
+  if ("buffer" in file && file.buffer) {
+    stream = file.buffer;
+  } else if ("path" in file && file.path) {
+    isTempPath = true;
+    tempPath = file.path;
+    stream = await fs.readFile(file.path);
+  } else if ("stream" in file && file.stream) {
+    // Collecting stream chunks because storage.put currently expects a Buffer
+    const chunks: Buffer[] = [];
+    for await (const chunk of file.stream) {
+      chunks.push(Buffer.from(chunk));
+    }
+    stream = Buffer.concat(chunks);
+  } else if ("url" in file && file.url) {
+    if (file.mode === "reference") {
+      throw new Error("URL reference mode is not fully implemented yet.");
+    }
+    const response = await fetch(file.url);
+    if (!response.ok) throw new Error(`Failed to fetch URL: ${response.statusText}`);
+    stream = Buffer.from(await response.arrayBuffer());
+  } else {
+    throw new Error("Invalid MediaFileInput. Must provide buffer, stream, path, or url.");
+  }
+
+  return { stream, metadata, isTempPath, tempPath };
+}
+
 /**
  * Create and initialize the Better Media runtime.
+
  *
  * @example
  * ```ts
  * const media = createBetterMedia({
- *   storage: s3Storage(...),
+ *   storage: new S3StorageAdapter({
+ *     bucket: "my-bucket",
+ *     region: "us-east-1",
+ *     accessKeyId: "...",
+ *     secretAccessKey: "..."
+ *   }),
  *   database: postgresAdapter(...),
  *   jobs: redisJobAdapter(),
  *   plugins: [
@@ -67,23 +121,57 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
 
   return {
     upload: {
-      multer(fileKey: string, metadata: Record<string, unknown> = {}) {
-        return runPipeline(fileKey, metadata);
+      async ingest(input: IngestInput): Promise<MediaResult> {
+        const normalized = await normalizeInput(input);
+        const finalKey = input.key ?? normalized.metadata.filename ?? `file-${randomUUID()}`;
+
+        try {
+          // Future Hook: pipeline.beforeStore?.(normalized)
+          await storage.put(finalKey, normalized.stream as Buffer);
+
+          await runPipeline(finalKey, { ...normalized.metadata, ...input.context });
+
+          return {
+            key: finalKey,
+            status: "processed",
+            metadata: normalized.metadata,
+          };
+        } finally {
+          if (normalized.isTempPath && normalized.tempPath) {
+            await fs
+              .unlink(normalized.tempPath)
+              .catch((err) => console.warn("Cleanup failed:", err));
+          }
+        }
       },
-      complete(fileKey: string, metadata: Record<string, unknown> = {}) {
-        return runPipeline(fileKey, metadata);
+      fromBuffer(buffer: Buffer, input?: Omit<IngestInput, "file">) {
+        return this.ingest({ file: { buffer }, ...input });
       },
-      async presignedPutUrl(
-        fileKey: string,
-        options?: { expiresIn?: number; contentType?: string }
-      ) {
+      fromStream(stream: Readable, input?: Omit<IngestInput, "file">) {
+        return this.ingest({ file: { stream }, ...input });
+      },
+      fromPath(path: string, input?: Omit<IngestInput, "file">) {
+        return this.ingest({ file: { path }, ...input });
+      },
+      fromUrl(url: string, input?: Omit<IngestInput, "file"> & { mode?: "import" | "reference" }) {
+        return this.ingest({ file: { url, mode: input?.mode ?? "import" }, ...input });
+      },
+      async presignedPutUrl(key: string, options?: { expiresIn?: number; contentType?: string }) {
         const fn = storage.createPresignedPutUrl;
         if (typeof fn !== "function") {
           throw new Error(
             "Presigned upload not supported by this storage adapter. Use an S3/GCS adapter."
           );
         }
-        return fn.call(storage, fileKey, options);
+        return fn.call(storage, key, options);
+      },
+      async complete(key: string, metadata: MediaMetadata = {}, context?: Record<string, unknown>) {
+        await runPipeline(key, { ...metadata, ...context });
+        return {
+          key,
+          status: "processed",
+          metadata,
+        };
       },
     },
     files: {
@@ -124,7 +212,15 @@ export {
   HOOK_NAMES,
 } from "./plugins/plugin-registry";
 export type { BackgroundJobPayload } from "./core/lifecycle-engine";
-export type { BetterMediaRuntime, FileRecord, Metadata } from "./runtime/runtime.interface";
+export type {
+  BetterMediaRuntime,
+  FileRecord,
+  Metadata,
+  IngestInput,
+  MediaFileInput,
+  MediaMetadata,
+  MediaResult,
+} from "./runtime/runtime.interface";
 export type { GetUrlOptions, PresignedPutUrlOptions } from "@better-media/core";
 export type { FileHandlingConfig } from "./core/file-loader";
 

@@ -137,7 +137,7 @@ describe("MongoDbAdapter", () => {
     expect(result).toEqual({ id: "1", status: "new" });
     expect(mockCollection.updateOne as jest.Mock).toHaveBeenCalledWith(
       { _id: "1" },
-      { $set: { status: "new", id: "1" } },
+      { $set: { status: "new" } },
       { session: undefined }
     );
   });
