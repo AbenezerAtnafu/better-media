@@ -20,7 +20,13 @@ export type IngestInput = {
   file: MediaFileInput;
   metadata?: MediaMetadata;
   context?: Record<string, unknown>; // userId, tenantId, requestId (for idempotency)
-  key?: string; // Explicitly unified key naming
+  key?: string;
+  /**
+   * When `file` is a filesystem path, whether to delete that file after ingest completes.
+   * Defaults to `true` (typical for temp uploads, e.g. Multer). Set to `false` when the path
+   * points at a permanent user file that must be kept on disk.
+   */
+  deleteAfterUpload?: boolean;
 };
 
 export type MediaResult = {

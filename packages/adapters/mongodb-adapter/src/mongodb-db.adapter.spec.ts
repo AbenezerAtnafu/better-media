@@ -121,11 +121,9 @@ describe("MongoDbAdapter", () => {
     );
   });
 
-  it("should update a record", async () => {
-    // Update calls collection.findOne to get target, then updateOne
+  it("should update a record and not include id in $set", async () => {
     const data = { _id: "1", status: "old" };
     (mockCollection.findOne as jest.Mock).mockResolvedValue(data);
-
     (mockCollection.updateOne as jest.Mock).mockResolvedValue({ modifiedCount: 1 });
 
     const result = await adapter.update({
@@ -135,6 +133,7 @@ describe("MongoDbAdapter", () => {
     });
 
     expect(result).toEqual({ id: "1", status: "new" });
+    // id must NOT appear in $set — updating the primary key is unsafe
     expect(mockCollection.updateOne as jest.Mock).toHaveBeenCalledWith(
       { _id: "1" },
       { $set: { status: "new" } },

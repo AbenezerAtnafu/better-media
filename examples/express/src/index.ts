@@ -81,7 +81,7 @@ app.post("/upload/multipart", upload.single("file"), async (req, res) => {
       return;
     }
 
-    // Layer 6: Handing off to Better Media's Ingest core
+    // Layer 6: Handing off to Better Media's Ingest core (default deletes Multer's temp path).
     const result = await media.upload.ingest({
       file: { path: req.file.path },
       metadata: {
@@ -175,11 +175,11 @@ app.post("/upload/complete", async (req, res) => {
     }
 
     // This downloads/streams it from S3 into the Better Media pipeline (Virus Scan, Validation, etc.)
-    await media.upload.complete(fileKey, metadata);
+    const result = await media.upload.complete(fileKey, metadata);
 
     res.json({
       success: true,
-      fileKey,
+      ...result,
       message: "File processing pipeline completed successfully.",
     });
   } catch (err) {

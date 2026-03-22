@@ -31,7 +31,8 @@
   },
   "dependencies": {
     "@better-media/core": "workspace:*",
-    "better-media": "workspace:*"
+    "better-media": "workspace:*",
+    "@better-media/mongodb-adapter": "workspace:*"
   },
   "peerDependencies": {
     "kysely": "^0.27.0 || ^0.28.0",

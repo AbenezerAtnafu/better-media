@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { Readable } from "node:stream";
+import type { Readable } from "node:stream";
 import type { JobAdapter } from "@better-media/core";
 import { memoryJobAdapter } from "@better-media/adapter-jobs";
 import type { BetterMediaConfig } from "./config/config.interface";
@@ -25,48 +25,73 @@ function createNoopJobAdapter(): JobAdapter {
 }
 
 type NormalizedFile = {
-  stream: Readable | Buffer;
+  /** File bytes ready for storage.put — always a Buffer. */
+  data: Buffer;
   metadata: MediaMetadata;
-  isTempPath?: boolean;
-  tempPath?: string;
+  /** True when path-based ingest should unlink the source (default deleteAfterUpload). */
+  shouldDeleteSource: boolean;
+  sourcePath?: string;
 };
 
-async function normalizeInput(input: IngestInput): Promise<NormalizedFile> {
-  const { file, metadata = {} } = input;
-  let stream: Readable | Buffer;
-  let isTempPath = false;
-  let tempPath: string | undefined;
+async function normalizeInput(
+  input: IngestInput,
+  fileHandling: import("./core/file-loader").FileHandlingConfig
+): Promise<NormalizedFile> {
+  const { file, metadata = {}, deleteAfterUpload = true } = input;
+  const maxBufferBytes = fileHandling.maxBufferBytes;
+  let data: Buffer;
+  let shouldDeleteSource = false;
+  let sourcePath: string | undefined;
 
   if ("buffer" in file && file.buffer) {
-    stream = file.buffer;
+    data = file.buffer;
   } else if ("path" in file && file.path) {
-    isTempPath = true;
-    tempPath = file.path;
-    stream = await fs.readFile(file.path);
-  } else if ("stream" in file && file.stream) {
-    // Collecting stream chunks because storage.put currently expects a Buffer
-    const chunks: Buffer[] = [];
-    for await (const chunk of file.stream) {
-      chunks.push(Buffer.from(chunk));
+    if (maxBufferBytes != null) {
+      const stat = await fs.stat(file.path);
+      if (stat.size > maxBufferBytes) {
+        throw new Error(
+          `File at "${file.path}" is ${stat.size} bytes, which exceeds the configured ` +
+            `maxBufferBytes limit of ${maxBufferBytes}. Use a storage adapter that supports ` +
+            `streaming uploads, or increase maxBufferBytes.`
+        );
+      }
     }
-    stream = Buffer.concat(chunks);
+    data = await fs.readFile(file.path);
+    if (deleteAfterUpload) {
+      shouldDeleteSource = true;
+      sourcePath = file.path;
+    }
+  } else if ("stream" in file && file.stream) {
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    for await (const chunk of file.stream) {
+      const buf = Buffer.from(chunk);
+      totalBytes += buf.length;
+      if (maxBufferBytes != null && totalBytes > maxBufferBytes) {
+        throw new Error(
+          `Stream exceeded the configured maxBufferBytes limit of ${maxBufferBytes}. ` +
+            `Use a storage adapter that supports streaming uploads, or increase maxBufferBytes.`
+        );
+      }
+      chunks.push(buf);
+    }
+    data = Buffer.concat(chunks);
   } else if ("url" in file && file.url) {
     if (file.mode === "reference") {
       throw new Error("URL reference mode is not fully implemented yet.");
     }
     const response = await fetch(file.url);
     if (!response.ok) throw new Error(`Failed to fetch URL: ${response.statusText}`);
-    stream = Buffer.from(await response.arrayBuffer());
+    data = Buffer.from(await response.arrayBuffer());
   } else {
     throw new Error("Invalid MediaFileInput. Must provide buffer, stream, path, or url.");
   }
 
-  return { stream, metadata, isTempPath, tempPath };
+  return { data, metadata, shouldDeleteSource, sourcePath };
 }
 
 /**
  * Create and initialize the Better Media runtime.
-
  *
  * @example
  * ```ts
@@ -87,7 +112,10 @@ async function normalizeInput(input: IngestInput): Promise<NormalizedFile> {
  *   ]
  * });
  *
- * await media.upload.multer("uploads/abc123.jpg", { contentType: "image/jpeg" });
+ * const result = await media.upload.ingest({
+ *   file: { buffer },
+ *   metadata: { filename: "photo.jpg", mimeType: "image/jpeg" },
+ * });
  * ```
  */
 export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime {
@@ -122,13 +150,11 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
   return {
     upload: {
       async ingest(input: IngestInput): Promise<MediaResult> {
-        const normalized = await normalizeInput(input);
+        const normalized = await normalizeInput(input, fileHandling);
         const finalKey = input.key ?? normalized.metadata.filename ?? `file-${randomUUID()}`;
 
         try {
-          // Future Hook: pipeline.beforeStore?.(normalized)
-          await storage.put(finalKey, normalized.stream as Buffer);
-
+          await storage.put(finalKey, normalized.data);
           await runPipeline(finalKey, { ...normalized.metadata, ...input.context });
 
           return {
@@ -137,9 +163,9 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
             metadata: normalized.metadata,
           };
         } finally {
-          if (normalized.isTempPath && normalized.tempPath) {
+          if (normalized.shouldDeleteSource && normalized.sourcePath) {
             await fs
-              .unlink(normalized.tempPath)
+              .unlink(normalized.sourcePath)
               .catch((err) => console.warn("Cleanup failed:", err));
           }
         }

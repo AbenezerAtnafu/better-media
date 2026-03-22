@@ -1,9 +1,9 @@
 // Types and schemas are now exported from "better-media" directly.
 export * from "./adapters/memory/memory-db.adapter";
 export * from "./adapters/kysely/kysely-db.adapter";
-export * from "./adapters/mongodb/mongodb-db.adapter";
+// MongoDB implementation lives in @better-media/mongodb-adapter; re-exported here for convenience.
+export * from "./adapters/mongodb/index";
 export type { KyselyDbConfig } from "./adapters/kysely/kysely-db-config.interface";
-export type { MongoDbConfig } from "./adapters/mongodb/mongodb-db-config.interface";
 
 // Backwards compatibility for the old memoryDatabase export
 import { MemoryDbAdapter } from "./adapters/memory/memory-db.adapter";

@@ -344,7 +344,8 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     })) as R;
   }
 
-  async getMetadata(): Promise<TableMetadata[]> {
+  /** @internal Used by runMigrations — not part of the public DatabaseAdapter contract. */
+  async __getMetadata(): Promise<TableMetadata[]> {
     const tables = await this.db.introspection.getTables();
     return tables.map((table) => ({
       name: table.name,
@@ -356,7 +357,8 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     }));
   }
 
-  private getDialect(): SqlDialect {
+  /** @internal Used by runMigrations to auto-detect the SQL dialect. */
+  __getDialect(): SqlDialect {
     switch (this.config.provider) {
       case "pg":
         return "postgres";
@@ -369,8 +371,9 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     }
   }
 
-  async executeMigration(operation: MigrationOperation): Promise<void> {
-    const dialect = this.getDialect();
+  /** @internal Used by runMigrations — not part of the public DatabaseAdapter contract. */
+  async __executeMigration(operation: MigrationOperation): Promise<void> {
+    const dialect = this.__getDialect();
 
     if (operation.type === "createTable") {
       let builder = this.db.schema.createTable(operation.table).ifNotExists();
@@ -440,7 +443,7 @@ export class KyselyDbAdapter implements DatabaseAdapter {
   }
 
   /**
-   * @deprecated Use MigrationPlanner and executeMigration instead.
+   * @deprecated Use runMigrations() instead.
    */
   async __createTable(
     model: string,
@@ -452,14 +455,14 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     }
 
     if (options.mode === "diff") {
-      const metadata = await this.getMetadata();
-      const planner = new (await import("better-media")).MigrationPlanner(this.getDialect());
+      const metadata = await this.__getMetadata();
+      const planner = new (await import("better-media")).MigrationPlanner(this.__getDialect());
       const operations = planner.plan({ [model]: definition }, metadata);
       for (const op of operations) {
-        await this.executeMigration(op);
+        await this.__executeMigration(op);
       }
     } else {
-      await this.executeMigration({ type: "createTable", table: model, definition });
+      await this.__executeMigration({ type: "createTable", table: model, definition });
     }
   }
 }

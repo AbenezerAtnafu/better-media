@@ -3,11 +3,16 @@ import { schema } from "./schema";
 import type { ModelDefinition, TableMetadata, MigrationOperation, SqlDialect } from "./types";
 import { MigrationPlanner } from "./plan";
 
+/**
+ * Internal interface used only by runMigrations. Adapter authors do NOT need to
+ * declare or implement this — the migration engine discovers these methods via
+ * duck-typing at runtime. Prefix `__` signals framework-internal use.
+ */
 interface MigratableAdapter extends DatabaseAdapter {
-  getMetadata(): Promise<TableMetadata[]>;
-  executeMigration(operation: MigrationOperation): Promise<void>;
+  __getMetadata?(): Promise<TableMetadata[]>;
+  __executeMigration?(operation: MigrationOperation): Promise<void>;
   __getDialect?(): SqlDialect;
-  // Legacy / Mono-adapter fallback
+  // Legacy fallback paths
   __createTable?(
     model: string,
     definition: ModelDefinition,
@@ -46,10 +51,10 @@ export async function runMigrations(
   const mode = options.mode ?? "safe";
   const migratable = adapter as MigratableAdapter;
 
-  // New robust SQL migration path
+  // Preferred path: adapter exposes __getMetadata + __executeMigration
   if (
-    typeof migratable.getMetadata === "function" &&
-    typeof migratable.executeMigration === "function"
+    typeof migratable.__getMetadata === "function" &&
+    typeof migratable.__executeMigration === "function"
   ) {
     console.log("[BetterMedia] Starting planned migration...");
 
@@ -57,18 +62,10 @@ export async function runMigrations(
     if (!dialect && typeof migratable.__getDialect === "function") {
       dialect = migratable.__getDialect();
     }
-    // Default to postgres if we can't detect, but KyselyDbAdapter now has it.
     const resolvedDialect = dialect || "postgres";
 
-    const metadata = await migratable.getMetadata();
+    const metadata = await migratable.__getMetadata();
     const planner = new MigrationPlanner(resolvedDialect);
-
-    if (mode === "force") {
-      // For force mode, we still use the planner but we might want to drop tables first.
-      // The old adapter __createTable handles 'force' at the table level.
-      // To keep it simple for now, we'll iterate and use legacy force if available.
-    }
-
     const operations = planner.plan(schema, metadata);
 
     if (operations.length === 0) {
@@ -78,7 +75,7 @@ export async function runMigrations(
 
     console.log(`[BetterMedia] Plan: ${operations.length} operation(s) to execute.`);
     for (const op of operations) {
-      await migratable.executeMigration(op);
+      await migratable.__executeMigration!(op);
     }
     console.log("[BetterMedia] Migration completed successfully.");
     return;

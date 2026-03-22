@@ -8,7 +8,15 @@ import type {
   DeleteOptions,
   CountOptions,
 } from "@better-media/core";
-import type { DbHooks, BmSchema, FieldType, ModelDefinition, HookContext } from "better-media";
+import type {
+  DbHooks,
+  BmSchema,
+  FieldType,
+  ModelDefinition,
+  HookContext,
+  TableMetadata,
+  MigrationOperation,
+} from "better-media";
 import { runHooks, serializeData, deserializeData } from "better-media";
 
 export interface MemoryDbOptions {
@@ -318,13 +326,11 @@ export class MemoryDbAdapter implements DatabaseAdapter {
     return await callback(this as unknown as DatabaseTransactionAdapter);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async getMetadata(): Promise<any[]> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const metadata: any[] = [];
+  /** @internal Used by runMigrations — not part of the public DatabaseAdapter contract. */
+  async __getMetadata(): Promise<TableMetadata[]> {
+    const metadata: TableMetadata[] = [];
     for (const [tableName, table] of this.store.entries()) {
       const columns = new Set<string>();
-      // Infer columns from existing data
       for (const record of table.values()) {
         Object.keys(record).forEach((k) => columns.add(k));
       }
@@ -332,7 +338,7 @@ export class MemoryDbAdapter implements DatabaseAdapter {
         name: tableName,
         columns: Array.from(columns).map((name) => ({
           name,
-          dataType: "text", // Memory storage is type-agnostic
+          dataType: "text",
           isNullable: true,
         })),
       });
@@ -340,8 +346,8 @@ export class MemoryDbAdapter implements DatabaseAdapter {
     return metadata;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async executeMigration(operation: any): Promise<void> {
+  /** @internal Used by runMigrations — not part of the public DatabaseAdapter contract. */
+  async __executeMigration(operation: MigrationOperation): Promise<void> {
     if (operation.type === "createTable") {
       this.getTable(operation.table);
     }
@@ -349,7 +355,7 @@ export class MemoryDbAdapter implements DatabaseAdapter {
   }
 
   /**
-   * @deprecated Use executeMigration instead.
+   * @deprecated Use __executeMigration instead.
    */
   async __initTable(
     model: string,
