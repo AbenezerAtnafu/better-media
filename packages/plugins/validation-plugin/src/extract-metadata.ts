@@ -24,10 +24,16 @@ export async function extractMetadataFromBuffer(
     trusted.file.size = buffer.length;
   }
 
-  // MIME type: set if not already present; from magic bytes
-  if (trusted.file.mimeType == null) {
+  // MIME type and Extension: set if not already present; from magic bytes
+  if (trusted.file.mimeType == null || trusted.file.extension == null) {
     const ft = await fileTypeFromBuffer(buffer);
-    trusted.file.mimeType = ft?.mime;
+    if (ft) {
+      if (trusted.file.mimeType == null) trusted.file.mimeType = ft.mime;
+      if (trusted.file.extension == null) {
+        // Ensure extension has a leading dot
+        trusted.file.extension = ft.ext.startsWith(".") ? ft.ext : `.${ft.ext}`;
+      }
+    }
   }
 
   // Checksums: set if not already present
