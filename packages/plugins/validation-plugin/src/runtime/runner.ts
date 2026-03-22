@@ -8,9 +8,19 @@ import type {
 import type { ValidationPluginOptions } from "../interfaces/options.interface";
 import { ValidationErrorItem } from "../interfaces/error-item.interface";
 import { extractMetadataFromBuffer } from "../extract-metadata";
-import { runValidators } from "../validators";
+import { runValidators, ValidatorService } from "../validators";
 
 const VALIDATION_DB_KEY_PREFIX = "better-media:validation:";
+
+// Boilerplate Logger (Industry Standard Placeholder)
+const SecurityLogger = {
+  logSuspiciousActivity: (fileKey: string, errors: ValidationErrorItem[]) => {
+    const threats = errors.filter((e) => e.rule === "security-threat" || e.rule === "magic-bytes");
+    if (threats.length > 0) {
+      console.warn(`[SECURITY ALERT] Suspicious activity on ${fileKey}:`, threats);
+    }
+  },
+};
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -56,19 +66,38 @@ function syncTrustedToFile(context: PipelineContext): void {
   if (trusted.checksums) file.checksums = { ...file.checksums, ...trusted.checksums };
 }
 
-function recordValidationResult(
+async function recordValidationResult(
   database: DatabaseAdapter,
   fileKey: string,
   valid: boolean,
   errors: ValidationErrorItem[]
 ): Promise<void> {
-  const key = `${VALIDATION_DB_KEY_PREFIX}${fileKey}`;
-  return database.put(key, {
+  const model = "validation_results";
+  const id = `${VALIDATION_DB_KEY_PREFIX}${fileKey}`;
+  const data = {
     fileKey,
     valid,
     errors,
     timestamp: new Date().toISOString(),
+  };
+
+  const existing = await database.findOne({
+    model,
+    where: [{ field: "id", value: id }],
   });
+
+  if (existing) {
+    await database.update({
+      model,
+      where: [{ field: "id", value: id }],
+      update: data,
+    });
+  } else {
+    await database.create({
+      model,
+      data: { id, ...data },
+    });
+  }
 }
 
 export async function runValidation(
@@ -122,6 +151,9 @@ export async function runValidation(
     return;
   }
 
+  // Security Logging (Mandatory for threats)
+  SecurityLogger.logSuspiciousActivity(fileKey, errors);
+
   await recordValidationResult(database, fileKey, false, errors);
 
   const message = errors.map((e) => e.message).join("; ");
@@ -141,3 +173,5 @@ export async function runValidation(
       return result;
   }
 }
+
+export { ValidatorService };

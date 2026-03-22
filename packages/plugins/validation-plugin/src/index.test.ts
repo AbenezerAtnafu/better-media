@@ -51,10 +51,10 @@ describe("validationPlugin - file type", () => {
       ],
     });
 
-    await storage.put("file.png", PNG_1X1);
+    await storage.put("file-disallowed.png", PNG_1X1);
 
     await expect(
-      media.upload.complete("file.png", { contentType: "image/png" })
+      media.upload.complete("file-disallowed.png", { contentType: "image/png" })
     ).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("Extension") },
@@ -78,11 +78,11 @@ describe("validationPlugin - file type", () => {
       ],
     });
 
-    await storage.put("photo.jpg", MINIMAL_JPEG);
+    await storage.put("photo-allowed.jpg", MINIMAL_JPEG);
 
     await expect(
-      media.upload.complete("photo.jpg", { contentType: "image/jpeg" })
-    ).resolves.toBeUndefined();
+      media.upload.complete("photo-allowed.jpg", { contentType: "image/jpeg" })
+    ).resolves.toBeDefined();
   });
 });
 
@@ -103,9 +103,9 @@ describe("validationPlugin - file size", () => {
     });
 
     const large = Buffer.alloc(200);
-    await storage.put("large.jpg", large);
+    await storage.put("large-size.jpg", large);
 
-    await expect(media.upload.complete("large.jpg", {})).rejects.toMatchObject({
+    await expect(media.upload.complete("large-size.jpg", {})).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("exceeds maximum") },
     });
@@ -128,10 +128,10 @@ describe("validationPlugin - dimensions", () => {
       ],
     });
 
-    await storage.put("small.png", PNG_1X1);
+    await storage.put("small-dim.png", PNG_1X1);
 
     await expect(
-      media.upload.complete("small.png", { contentType: "image/png" })
+      media.upload.complete("small-dim.png", { contentType: "image/png" })
     ).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("width") },
@@ -158,10 +158,11 @@ describe("validationPlugin - checksum", () => {
       ],
     });
 
-    await storage.put("file.txt", content);
+    // Use .bin to avoid spoofing checks on .txt/.jpg
+    await storage.put("file-checksum-fail.bin", content);
 
     await expect(
-      media.upload.complete("file.txt", { expectedHash: wrongHash })
+      media.upload.complete("file-checksum-fail.bin", { expectedHash: wrongHash })
     ).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("hash mismatch") },
@@ -186,11 +187,11 @@ describe("validationPlugin - checksum", () => {
       ],
     });
 
-    await storage.put("file.txt", content);
+    await storage.put("file-checksum-ok.bin", content);
 
     await expect(
-      media.upload.complete("file.txt", { expectedHash: correctHash })
-    ).resolves.toBeUndefined();
+      media.upload.complete("file-checksum-ok.bin", { expectedHash: correctHash })
+    ).resolves.toBeDefined();
   });
 });
 
@@ -230,9 +231,9 @@ describe("validationPlugin - extract metadata", () => {
       ],
     });
 
-    await storage.put("photo.jpg", MINIMAL_JPEG);
+    await storage.put("photo-extract.jpg", MINIMAL_JPEG);
 
-    await media.upload.complete("photo.jpg", {
+    await media.upload.complete("photo-extract.jpg", {
       contentType: "image/gif",
       size: 99999,
       originalName: "wrong.png",
@@ -280,9 +281,9 @@ describe("validationPlugin - extract metadata", () => {
       ],
     });
 
-    await storage.put("file.bin", content);
+    await storage.put("file-check.bin", content);
 
-    await media.upload.complete("file.bin", {});
+    await media.upload.complete("file-check.bin", {});
 
     expect(capturedFile.checksums?.sha256).toBe(
       crypto.createHash("sha256").update(content).digest("hex")
@@ -330,8 +331,8 @@ describe("validationPlugin - extract metadata", () => {
       ],
     });
 
-    await storage.put("large.bin", largeContent);
-    await media.upload.complete("large.bin", {});
+    await storage.put("large-stream.bin", largeContent);
+    await media.upload.complete("large-stream.bin", {});
 
     expect(hadTempPath).toBe(true);
   });
@@ -372,9 +373,9 @@ describe("validationPlugin - extract metadata", () => {
       ],
     });
 
-    await storage.put("photo.jpg", MINIMAL_JPEG);
+    await storage.put("photo-skip.jpg", MINIMAL_JPEG);
 
-    await media.upload.complete("photo.jpg", { contentType: "image/jpeg", size: 12345 });
+    await media.upload.complete("photo-skip.jpg", { contentType: "image/jpeg", size: 12345 });
 
     expect(capturedFile.mimeType).toBe("image/jpeg");
     expect(capturedFile.size).toBe(12345);
@@ -398,7 +399,7 @@ describe("validationPlugin - file not found", () => {
       ],
     });
 
-    await expect(media.upload.complete("missing.jpg", {})).rejects.toMatchObject({
+    await expect(media.upload.complete("missing-file.jpg", {})).rejects.toMatchObject({
       name: "ValidationError",
       result: { valid: false, message: expect.stringContaining("not found") },
     });
@@ -420,16 +421,94 @@ describe("validationPlugin - file not found", () => {
       ],
     });
 
-    await storage.put("too-big.jpg", Buffer.alloc(100));
+    const tooBigContent = Buffer.concat([MINIMAL_JPEG, Buffer.alloc(100)]);
+    await storage.put("too-big-db.jpg", tooBigContent);
 
-    await expect(media.upload.complete("too-big.jpg", {})).rejects.toMatchObject({
+    await expect(media.upload.complete("too-big-db.jpg", {})).rejects.toMatchObject({
       name: "ValidationError",
     });
 
-    const record = await database.get("better-media:validation:too-big.jpg");
+    const record = (await database.findOne({
+      model: "validation_results",
+      where: [{ field: "id", value: "better-media:validation:too-big-db.jpg" }],
+    })) as Record<string, unknown>;
     expect(record).toBeDefined();
     expect(record?.valid).toBe(false);
     expect(Array.isArray(record?.errors)).toBe(true);
     expect((record?.errors as { message: string }[])[0]?.message).toContain("exceeds maximum");
+  });
+});
+
+describe("validationPlugin - automated security scan", () => {
+  it("rejects suspicious strings in metadata", async () => {
+    const storage = memoryStorage();
+    const database = memoryDatabase();
+    const media = createBetterMedia({
+      storage,
+      database,
+      plugins: [
+        validationPlugin({
+          executionMode: "sync",
+          onFailure: "abort",
+        }),
+      ],
+    });
+
+    await storage.put("safe-sec.jpg", MINIMAL_JPEG);
+
+    // SQL Injection in title
+    await expect(
+      media.upload.complete("safe-sec.jpg", { title: "Normal'; DROP TABLE users;--" })
+    ).rejects.toMatchObject({
+      name: "ValidationError",
+      result: { valid: false, message: expect.stringContaining("Suspicious activity") },
+    });
+  });
+
+  it("rejects suspicious strings in filename", async () => {
+    const storage = memoryStorage();
+    const database = memoryDatabase();
+    const media = createBetterMedia({
+      storage,
+      database,
+      plugins: [
+        validationPlugin({
+          executionMode: "sync",
+          onFailure: "abort",
+        }),
+      ],
+    });
+
+    // XSS in filename
+    await storage.put("<script>alert(1)</script>.jpg", MINIMAL_JPEG);
+
+    await expect(media.upload.complete("<script>alert(1)</script>.jpg", {})).rejects.toMatchObject({
+      name: "ValidationError",
+      result: { valid: false, message: expect.stringContaining("Suspicious activity") },
+    });
+  });
+
+  it("rejects MIME spoofing (extension vs content mismatch)", async () => {
+    const storage = memoryStorage();
+    const database = memoryDatabase();
+    const media = createBetterMedia({
+      storage,
+      database,
+      plugins: [
+        validationPlugin({
+          executionMode: "sync",
+          onFailure: "abort",
+        }),
+      ],
+    });
+
+    // A text file renamed to .jpg
+    const TEXT_CONTENT = Buffer.from("this is just a text file");
+    await storage.put("spoofed-mime.jpg", TEXT_CONTENT);
+
+    await expect(media.upload.complete("spoofed-mime.jpg", {})).rejects.toMatchObject({
+      name: "ValidationError",
+      result: { valid: false, message: expect.stringContaining("MIME spoofing detected") },
+    });
   });
 });

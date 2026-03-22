@@ -5,6 +5,7 @@ import { validateFileType } from "./file-type";
 import { validateFileSize } from "./file-size";
 import { validateDimensions } from "./dimensions";
 import { validateChecksum } from "./checksum";
+import { runSecurityScan } from "./security-scanner";
 
 export async function runValidators(
   buffer: Buffer,
@@ -14,33 +15,43 @@ export async function runValidators(
 ): Promise<ValidationErrorItem[]> {
   const allErrors: ValidationErrorItem[] = [];
 
-  if (opts.allowedExtensions || opts.allowedMimeTypes || opts.useMagicBytes) {
+  // 1. Mandatory Security Scan (Zero-Config OWASP Layer)
+  // Scans filename and all metadata recursively for injection patterns.
+  allErrors.push(...runSecurityScan(file.key, "fileKey"));
+  if (file.originalName) {
+    allErrors.push(...runSecurityScan(file.originalName, "filename"));
+  }
+  allErrors.push(...runSecurityScan(metadata, "metadata"));
+
+  // 2. File-Specific Validators (Mandatory magic bytes/spoofing check by default)
+  if (opts.allowedExtensions || opts.allowedMimeTypes || opts.useMagicBytes !== false) {
     allErrors.push(...(await validateFileType(buffer, file, metadata, opts)));
   }
 
-  if (opts.minBytes != null || opts.maxBytes != null) {
+  if (opts.minBytes || opts.maxBytes) {
     allErrors.push(...validateFileSize(buffer, opts));
   }
 
-  if (
-    opts.minWidth != null ||
-    opts.maxWidth != null ||
-    opts.minHeight != null ||
-    opts.maxHeight != null
-  ) {
-    allErrors.push(...validateDimensions(buffer, opts));
+  if (opts.minWidth || opts.maxWidth || opts.minHeight || opts.maxHeight) {
+    allErrors.push(...(await validateDimensions(buffer, opts)));
   }
 
   if (opts.checksum) {
     allErrors.push(...validateChecksum(buffer, metadata, opts));
   }
 
-  if (opts.customValidators && opts.customValidators.length > 0) {
-    for (const fn of opts.customValidators) {
-      const customErrors = await fn(buffer, metadata, file.key);
-      allErrors.push(...customErrors);
+  // 3. Custom Validators
+  if (opts.customValidators) {
+    for (const v of opts.customValidators) {
+      const e = await v(buffer, metadata, file.key);
+      allErrors.push(...e);
     }
   }
 
   return allErrors;
 }
+
+export const ValidatorService = {
+  run: runValidators,
+  scan: runSecurityScan,
+};
