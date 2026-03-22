@@ -43,3 +43,4 @@ export type {
   CountOptions,
 } from "./database/index";
 export type { JobAdapter } from "./job/index";
+export { EXTENSION_TO_MIME_MAP } from "./constants/mime-types";

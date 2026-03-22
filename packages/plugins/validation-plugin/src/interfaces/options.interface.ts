@@ -31,7 +31,7 @@ export interface ValidationPluginOptions {
   /** Allowed MIME types (e.g. ["image/jpeg", "image/png"]). Omit to skip. */
   allowedMimeTypes?: string[];
 
-  /** Validate MIME via magic bytes (not extension). Requires file bytes. */
+  /** Validate MIME via magic bytes (not extension). Requires file bytes. Default: true. */
   useMagicBytes?: boolean;
 
   /**
