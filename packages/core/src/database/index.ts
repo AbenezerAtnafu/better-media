@@ -1,1 +1,10 @@
-export type { DatabaseAdapter } from "./interfaces/adapter.interface";
+export type {
+  DatabaseAdapter,
+  DatabaseTransactionAdapter,
+  WhereClause,
+  CreateOptions,
+  FindOptions,
+  UpdateOptions,
+  DeleteOptions,
+  CountOptions,
+} from "./interfaces/adapter.interface";

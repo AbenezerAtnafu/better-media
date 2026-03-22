@@ -23,7 +23,10 @@ export async function loadTrustedFromDb(
   fileKey: string
 ): Promise<TrustedMetadata | null> {
   const key = `${TRUSTED_DB_KEY_PREFIX}${fileKey}`;
-  const record = await database.get(key);
+  const record = await database.findOne({
+    model: "trusted_metadata",
+    where: [{ field: "id", value: key }],
+  });
   if (record == null || typeof record !== "object") return null;
   const trusted = record as unknown as TrustedMetadata;
   return (trusted.file ?? trusted.checksums) ? trusted : null;
@@ -35,7 +38,23 @@ export async function saveTrustedToDb(
   trusted: TrustedMetadata
 ): Promise<void> {
   const key = `${TRUSTED_DB_KEY_PREFIX}${fileKey}`;
-  await database.put(key, trusted as unknown as Record<string, unknown>);
+  const existing = await database.findOne({
+    model: "trusted_metadata",
+    where: [{ field: "id", value: key }],
+  });
+
+  if (existing) {
+    await database.update({
+      model: "trusted_metadata",
+      where: [{ field: "id", value: key }],
+      update: trusted as unknown as Record<string, unknown>,
+    });
+  } else {
+    await database.create({
+      model: "trusted_metadata",
+      data: { id: key, ...(trusted as unknown as Record<string, unknown>) },
+    });
+  }
 }
 
 async function streamToTempFile(

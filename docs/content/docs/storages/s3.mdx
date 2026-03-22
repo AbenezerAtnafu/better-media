@@ -17,16 +17,14 @@ pnpm add @better-media/adapter-storage-s3
   <Tab value="AWS S3">
     ```ts title="lib/media.ts"
     import { createBetterMedia } from "better-media";
-    import { s3Storage } from "@better-media/adapter-storage-s3";
+    import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
 
     export const media = createBetterMedia({
-      storage: s3Storage({
+      storage: new S3StorageAdapter({
         bucket: process.env.S3_BUCKET!,
         region: process.env.AWS_REGION!,
-        credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-        },
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
       }),
       // ...
     });
@@ -36,17 +34,15 @@ pnpm add @better-media/adapter-storage-s3
   <Tab value="Cloudflare R2">
     ```ts title="lib/media.ts"
     import { createBetterMedia } from "better-media";
-    import { s3Storage } from "@better-media/adapter-storage-s3";
+    import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
 
     export const media = createBetterMedia({
-      storage: s3Storage({
+      storage: new S3StorageAdapter({
         bucket: process.env.R2_BUCKET!,
         region: "auto",
         endpoint: `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-        credentials: {
-          accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-          secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-        },
+        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
       }),
       // ...
     });
@@ -56,18 +52,16 @@ pnpm add @better-media/adapter-storage-s3
   <Tab value="MinIO">
     ```ts title="lib/media.ts"
     import { createBetterMedia } from "better-media";
-    import { s3Storage } from "@better-media/adapter-storage-s3";
+    import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
 
     export const media = createBetterMedia({
-      storage: s3Storage({
+      storage: new S3StorageAdapter({
         bucket: "my-bucket",
         region: "us-east-1",
         endpoint: "http://localhost:9000",
         forcePathStyle: true, // required for MinIO
-        credentials: {
-          accessKeyId: "minioadmin",
-          secretAccessKey: "minioadmin",
-        },
+        accessKeyId: "minioadmin",
+        secretAccessKey: "minioadmin",
       }),
       // ...
     });
@@ -89,25 +83,28 @@ AWS_SECRET_ACCESS_KEY=...
 
 ## Configuration Options
 
-| Option           | Type                 | Default | Description                                                                         |
-| ---------------- | -------------------- | ------- | ----------------------------------------------------------------------------------- |
-| `bucket`         | `string`             | —       | **Required.** S3 bucket name.                                                       |
-| `region`         | `string`             | —       | **Required.** AWS region (e.g. `"us-east-1"`, `"auto"` for R2).                     |
-| `credentials`    | `object`             | —       | `{ accessKeyId, secretAccessKey }`. Falls back to AWS SDK default credential chain. |
-| `endpoint`       | `string`             | —       | Custom endpoint URL (for R2, MinIO, etc.).                                          |
-| `forcePathStyle` | `boolean`            | `false` | Use path-style URLs instead of subdomain-style. Required for MinIO.                 |
-| `publicUrl`      | `string \| Function` | —       | Override the public URL returned for files. Useful for CloudFront CDN.              |
-| `prefix`         | `string`             | `""`    | Key prefix for all uploaded objects (e.g. `"uploads/"`)                             |
-| `acl`            | `string`             | —       | S3 ACL for uploaded objects (e.g. `"public-read"`).                                 |
+| Option            | Type                 | Default | Description                                                            |
+| ----------------- | -------------------- | ------- | ---------------------------------------------------------------------- |
+| `bucket`          | `string`             | —       | **Required.** S3 bucket name.                                          |
+| `region`          | `string`             | —       | **Required.** AWS region (e.g. `"us-east-1"`, `"auto"` for R2).        |
+| `accessKeyId`     | `string`             | —       | AWS access key ID.                                                     |
+| `secretAccessKey` | `string`             | —       | AWS secret access key.                                                 |
+| `endpoint`        | `string`             | —       | Custom endpoint URL (for R2, MinIO, etc.).                             |
+| `forcePathStyle`  | `boolean`            | `false` | Use path-style URLs instead of subdomain-style. Required for MinIO.    |
+| `publicUrl`       | `string \| Function` | —       | Override the public URL returned for files. Useful for CloudFront CDN. |
+| `prefix`          | `string`             | `""`    | Key prefix for all uploaded objects (e.g. `"uploads/"`)                |
+| `acl`             | `string`             | —       | S3 ACL for uploaded objects (e.g. `"public-read"`).                    |
 
 ## Using a CDN (CloudFront)
 
 If your S3 bucket is fronted by CloudFront, set `publicUrl` to return the CDN URL:
 
 ```ts
-s3Storage({
+new S3StorageAdapter({
   bucket: "my-bucket",
   region: "us-east-1",
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   publicUrl: (key) => `https://cdn.example.com/${key}`,
 });
 ```
@@ -117,11 +114,13 @@ s3Storage({
 For multi-tenant apps, you can resolve the bucket per request:
 
 ```ts
-s3Storage({
-  bucket: async (ctx) => {
-    // ctx contains the user/tenant context set at upload time
-    return `tenant-${ctx.tenantId}-media`;
+new S3StorageAdapter({
+  bucket: (key) => {
+    // resolve bucket per key
+    return `tenant-media`;
   },
   region: "us-east-1",
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
 });
 ```

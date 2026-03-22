@@ -31,10 +31,14 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 /**
  * Record scan result to the database adapter.
  */
+interface LegacyDatabaseAdapter {
+  put(key: string, data: unknown): Promise<void>;
+}
+
 function recordScanResult(database: DatabaseAdapter, record: ScanRecord): Promise<void> {
   const key = `${SCAN_DB_KEY_PREFIX}${record.fileKey}`;
   const data: Record<string, unknown> = { ...record };
-  return database.put(key, data);
+  return (database as unknown as LegacyDatabaseAdapter).put(key, data);
 }
 
 /**

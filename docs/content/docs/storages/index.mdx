@@ -19,27 +19,25 @@ Storage Adapters tell Better Media where to persist uploaded files. Every adapte
   <Tab value="S3">
     ```ts title="lib/media.ts"
     import { createBetterMedia } from "better-media";
-    import { s3Storage } from "@better-media/adapter-storage-s3";
-
     export const media = createBetterMedia({
-      storage: s3Storage({
+      storage: new S3StorageAdapter({
         bucket: process.env.S3_BUCKET!,
         region: process.env.AWS_REGION!,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
       }),
       // ...
     });
-    ```
 
   </Tab>
   <Tab value="Filesystem">
     ```ts title="lib/media.ts"
     import { createBetterMedia } from "better-media";
-    import { filesystemStorage } from "@better-media/adapter-storage-filesystem";
+    import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 
     export const media = createBetterMedia({
-      storage: filesystemStorage({
-        directory: "./uploads",
-        publicUrl: "http://localhost:3000/uploads",
+      storage: new FileSystemStorageAdapter({
+        baseDir: "./uploads",
       }),
       // ...
     });

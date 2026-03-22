@@ -21,12 +21,11 @@ pnpm add @better-media/adapter-storage-filesystem
 
 ```ts title="lib/media.ts"
 import { createBetterMedia } from "better-media";
-import { filesystemStorage } from "@better-media/adapter-storage-filesystem";
+import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 
 export const media = createBetterMedia({
-  storage: filesystemStorage({
-    directory: "./uploads",
-    publicUrl: "http://localhost:3000/uploads",
+  storage: new FileSystemStorageAdapter({
+    baseDir: "./uploads",
   }),
   // ...
 });
@@ -72,12 +71,9 @@ The adapter stores files under the `directory` path. To serve them via HTTP, con
 
 ## Configuration Options
 
-| Option              | Type      | Default | Description                                                       |
-| ------------------- | --------- | ------- | ----------------------------------------------------------------- |
-| `directory`         | `string`  | —       | **Required.** Absolute or relative path to the storage directory. |
-| `publicUrl`         | `string`  | —       | **Required.** Base URL used to generate public file URLs.         |
-| `createDirectory`   | `boolean` | `true`  | Automatically create the directory if it doesn't exist.           |
-| `preserveFilenames` | `boolean` | `false` | Use original filenames instead of generated UUIDs.                |
+| Option    | Type     | Default | Description                                                       |
+| --------- | -------- | ------- | ----------------------------------------------------------------- |
+| `baseDir` | `string` | —       | **Required.** Absolute or relative path to the storage directory. |
 
 ## Switching to S3 in Production
 
@@ -87,16 +83,21 @@ The filesystem adapter is designed to be a drop-in development replacement for S
 import { createBetterMedia } from "better-media";
 
 // Development
-import { filesystemStorage } from "@better-media/adapter-storage-filesystem";
+import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 // Production
-import { s3Storage } from "@better-media/adapter-storage-s3";
+import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
 
 const isDev = process.env.NODE_ENV === "development";
 
 export const media = createBetterMedia({
   storage: isDev
-    ? filesystemStorage({ directory: "./uploads", publicUrl: "http://localhost:3000/uploads" })
-    : s3Storage({ bucket: process.env.S3_BUCKET!, region: process.env.AWS_REGION! }),
+    ? new FileSystemStorageAdapter({ baseDir: "./uploads" })
+    : new S3StorageAdapter({
+        bucket: process.env.S3_BUCKET!,
+        region: process.env.AWS_REGION!,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      }),
   // ...
 });
 ```

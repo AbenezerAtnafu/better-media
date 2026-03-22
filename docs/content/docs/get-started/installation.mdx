@@ -43,18 +43,16 @@ Create a file at `lib/media.ts` (or `src/lib/media.ts`) and configure Better Med
   <Tab value="S3 + PostgreSQL">
     ```ts title="lib/media.ts"
     import { createBetterMedia } from "better-media";
-    import { s3Storage } from "@better-media/adapter-storage-s3";
+    import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
     import { drizzleAdapter } from "@better-media/adapter-db/drizzle";
     import { db } from "@/db"; // your drizzle instance
 
     export const media = createBetterMedia({
-      storage: s3Storage({
+      storage: new S3StorageAdapter({
         bucket: process.env.S3_BUCKET!,
         region: process.env.AWS_REGION!,
-        credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-        },
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
       }),
       database: drizzleAdapter(db, { provider: "pg" }),
     });
@@ -64,13 +62,15 @@ Create a file at `lib/media.ts` (or `src/lib/media.ts`) and configure Better Med
   <Tab value="S3 + Memory (Dev)">
     ```ts title="lib/media.ts"
     import { createBetterMedia } from "better-media";
-    import { s3Storage } from "@better-media/adapter-storage-s3";
+    import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
     import { memoryDatabase } from "@better-media/adapter-db";
 
     export const media = createBetterMedia({
-      storage: s3Storage({
+      storage: new S3StorageAdapter({
         bucket: "my-bucket",
         region: "us-east-1",
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
       }),
       database: memoryDatabase(),
     });
@@ -80,13 +80,12 @@ Create a file at `lib/media.ts` (or `src/lib/media.ts`) and configure Better Med
   <Tab value="Filesystem + Memory (Dev)">
     ```ts title="lib/media.ts"
     import { createBetterMedia } from "better-media";
-    import { filesystemStorage } from "@better-media/adapter-storage-filesystem";
+    import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
     import { memoryDatabase } from "@better-media/adapter-db";
 
     export const media = createBetterMedia({
-      storage: filesystemStorage({
-        directory: "./uploads",
-        publicUrl: "http://localhost:3000/uploads",
+      storage: new FileSystemStorageAdapter({
+        baseDir: "./uploads",
       }),
       database: memoryDatabase(),
     });
@@ -105,13 +104,18 @@ pnpm add @better-media/plugin-validation @better-media/plugin-virus-scan
 
 ```ts title="lib/media.ts"
 import { createBetterMedia } from "better-media";
-import { s3Storage } from "@better-media/adapter-storage-s3";
+import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
 import { memoryDatabase } from "@better-media/adapter-db";
 import { validationPlugin } from "@better-media/plugin-validation";
 import { virusScanPlugin } from "@better-media/plugin-virus-scan";
 
 export const media = createBetterMedia({
-  storage: s3Storage({ bucket: "my-bucket", region: "us-east-1" }),
+  storage: new S3StorageAdapter({
+    bucket: "my-bucket",
+    region: "us-east-1",
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  }),
   database: memoryDatabase(),
   plugins: [
     validationPlugin({

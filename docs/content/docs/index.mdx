@@ -66,15 +66,17 @@ Better Media is built around a strict **Core / Adapter / Framework** separation:
 
 ```ts title="lib/media.ts"
 import { createBetterMedia } from "better-media";
-import { s3Storage } from "@better-media/adapter-storage-s3";
+import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
 import { memoryDatabase } from "@better-media/adapter-db";
 import { validationPlugin } from "@better-media/plugin-validation";
 import { virusScanPlugin } from "@better-media/plugin-virus-scan";
 
 export const media = createBetterMedia({
-  storage: s3Storage({
+  storage: new S3StorageAdapter({
     bucket: "my-media-bucket",
     region: "us-east-1",
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   }),
   database: memoryDatabase(),
   plugins: [
