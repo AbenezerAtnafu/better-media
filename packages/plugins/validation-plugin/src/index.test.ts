@@ -199,7 +199,12 @@ describe("validationPlugin - extract metadata", () => {
   it("overrides critical fields from file content (trust library over caller)", async () => {
     const storage = memoryStorage();
     const database = memoryDatabase();
-    let capturedFile: { mimeType?: string; size?: number; checksums?: Record<string, string> } = {};
+    let capturedFile: {
+      mimeType?: string;
+      size?: number;
+      extension?: string;
+      checksums?: Record<string, string>;
+    } = {};
 
     const spyPlugin = {
       name: "spy",
@@ -241,6 +246,7 @@ describe("validationPlugin - extract metadata", () => {
 
     expect(capturedFile.mimeType).toBe("image/jpeg");
     expect(capturedFile.size).toBe(MINIMAL_JPEG.length);
+    expect(capturedFile.extension).toBe(".jpg");
     expect(capturedFile.checksums?.sha256).toBeDefined();
     expect(typeof capturedFile.checksums?.sha256).toBe("string");
     expect(capturedFile.checksums!.sha256).toHaveLength(64);
@@ -340,7 +346,12 @@ describe("validationPlugin - extract metadata", () => {
   it("skips extraction when extractMetadata is false", async () => {
     const storage = memoryStorage();
     const database = memoryDatabase();
-    let capturedFile: { mimeType?: string; size?: number; checksums?: Record<string, string> } = {};
+    let capturedFile: {
+      mimeType?: string;
+      size?: number;
+      extension?: string;
+      checksums?: Record<string, string>;
+    } = {};
 
     const spyPlugin = {
       name: "spy",

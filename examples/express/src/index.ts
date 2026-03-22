@@ -35,7 +35,7 @@ const media = createBetterMedia({
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "application/pdf",
       ],
-      // useMagicBytes: true,
+      useMagicBytes: true,
     }),
     // virusScanPlugin({
     //   executionMode: "background",
