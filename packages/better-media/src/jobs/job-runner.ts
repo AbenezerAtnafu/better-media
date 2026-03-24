@@ -100,7 +100,23 @@ export async function runBackgroundJob(
       throw new Error(`Handler not found: ${hookName}/${pluginName}`);
     }
 
-    await handler.fn(context);
+    // Use the manifest from the registry exclusively to prevent trust escalation
+    const manifest = handler.manifest;
+
+    // TODO: Ideally createSecureContext should be in a shared utility.
+    // For now, we'll implement it or use it if exported from LifecycleEngine.
+    // Let's assume we need to implement it here for now or I should have exported it.
+    // I will export it from LifecycleEngine.
+    const { createSecureContext } = await import("../core/lifecycle-engine");
+    const { proxy, api } = createSecureContext(
+      context,
+      pluginName,
+      manifest.namespace,
+      manifest.trustLevel,
+      manifest.capabilities
+    );
+
+    await handler.fn(proxy, api);
 
     if (context.trusted.file ?? context.trusted.checksums) {
       await saveTrustedToDb(database, file.key, context.trusted);

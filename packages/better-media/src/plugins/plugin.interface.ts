@@ -1,10 +1,17 @@
-import type { PipelineContext, HookName, ValidationResult } from "@better-media/core";
+import type {
+  PipelineContext,
+  HookName,
+  ValidationResult,
+  PluginApi,
+  PluginManifest,
+} from "@better-media/core";
 
 /** Single tapped handler entry */
 export interface TapInfo {
   name: string;
-  fn: (ctx: PipelineContext) => Promise<void | ValidationResult>;
+  fn: (ctx: PipelineContext, api: PluginApi) => Promise<void | ValidationResult>;
   mode: "sync" | "background";
+  manifest: PluginManifest;
   stage?: number;
 }
 

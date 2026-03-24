@@ -1,4 +1,4 @@
-import type { PipelinePlugin, MediaRuntime } from "@better-media/core";
+import type { PipelinePlugin, MediaRuntime, PipelineContext, PluginApi } from "@better-media/core";
 import type { VirusScanPluginOptions } from "./interfaces/options.interface";
 import { ClamScanner } from "./scanners/clam.scanner";
 import { runVirusScan } from "./runtime/runner";
@@ -35,6 +35,13 @@ export function virusScanPlugin(opts: VirusScanPluginOptions = {}): PipelinePlug
 
   return {
     name: "virus-scan",
+    runtimeManifest: {
+      id: "better-media-virus-scan",
+      version: "1.0.0",
+      trustLevel: "untrusted",
+      capabilities: ["file.read", "metadata.write.own", "processing.write.own"],
+      namespace: "antivirus",
+    },
     executionMode,
     intensive: isBackground,
 
@@ -44,14 +51,14 @@ export function virusScanPlugin(opts: VirusScanPluginOptions = {}): PipelinePlug
 
       runtime.hooks["scan:run"].tap(
         "virus-scan",
-        async (context) => {
+        async (context: PipelineContext, api: PluginApi) => {
           // Lazy init — only once across all invocations
           if (!initPromise) {
             initPromise = scanner.init();
           }
           await initPromise;
 
-          return runVirusScan(context, scanner, opts);
+          return runVirusScan(context, api, scanner, opts);
         },
         { mode: executionMode }
       );

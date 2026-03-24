@@ -19,14 +19,14 @@ export const schema: BmSchema = {
       width: { type: "number" },
       height: { type: "number" },
       duration: { type: "number" },
-      metadata: { type: "json" },
+      context: { type: "json" },
       status: { type: "string" },
       visibility: { type: "string" },
       createdAt: { type: "date" },
       updatedAt: { type: "date" },
       deletedAt: { type: "date" },
     },
-    indexes: [{ fields: ["checksum"] }],
+    indexes: [{ fields: ["checksum", "storageKey"] }],
   },
 
   // Different versions of the media (thumbnails, previews, etc.)
@@ -77,6 +77,34 @@ export const schema: BmSchema = {
       startedAt: { type: "date" },
       completedAt: { type: "date" },
       error: { type: "string" },
+      createdAt: { type: "date" },
+    },
+  },
+
+  validation_results: {
+    fields: {
+      id: { type: "string", primaryKey: true, required: true },
+      mediaId: {
+        type: "string",
+        references: { model: "media", field: "id", onDelete: "cascade" },
+      },
+      valid: { type: "boolean" },
+      pluginId: { type: "string" },
+      errors: { type: "json" },
+      createdAt: { type: "date" },
+    },
+  },
+
+  virus_scan_results: {
+    fields: {
+      id: { type: "string", primaryKey: true, required: true },
+      mediaId: {
+        type: "string",
+        references: { model: "media", field: "id", onDelete: "cascade" },
+      },
+      status: { type: "string" }, // 'clean', 'infected', 'error'
+      threats: { type: "json" }, // List of detected threats
+      scanner: { type: "string" }, // clamd, etc.
       createdAt: { type: "date" },
     },
   },

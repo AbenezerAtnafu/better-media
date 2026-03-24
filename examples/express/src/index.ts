@@ -36,6 +36,7 @@ const media = createBetterMedia({
         "application/pdf",
       ],
       useMagicBytes: true,
+      onFailure: "abort",
     }),
     // virusScanPlugin({
     //   executionMode: "background",

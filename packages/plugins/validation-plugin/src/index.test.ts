@@ -1,8 +1,18 @@
 import crypto from "node:crypto";
+import type { PluginManifest } from "@better-media/core";
 import { validationPlugin } from "./index";
 import { memoryStorage } from "@better-media/adapter-storage-memory";
 import { memoryDatabase } from "@better-media/adapter-db";
 import { createBetterMedia } from "better-media";
+
+/** Manifest for test-only spy plugins (required by buildPluginRegistry). */
+const TEST_SPY_MANIFEST: PluginManifest = {
+  id: "test-spy-plugin",
+  version: "1.0.0",
+  trustLevel: "untrusted",
+  capabilities: ["file.read", "metadata.write.own", "processing.write.own"],
+  namespace: "spy",
+};
 
 // Minimal JPEG header (valid for magic byte detection)
 const MINIMAL_JPEG = Buffer.from([
@@ -208,6 +218,7 @@ describe("validationPlugin - extract metadata", () => {
 
     const spyPlugin = {
       name: "spy",
+      runtimeManifest: TEST_SPY_MANIFEST,
       apply(runtime: {
         hooks: {
           "upload:complete": {
@@ -259,6 +270,7 @@ describe("validationPlugin - extract metadata", () => {
 
     const spyPlugin = {
       name: "spy",
+      runtimeManifest: TEST_SPY_MANIFEST,
       apply(runtime: {
         hooks: {
           "upload:complete": {
@@ -306,6 +318,7 @@ describe("validationPlugin - extract metadata", () => {
 
     const spyPlugin = {
       name: "spy",
+      runtimeManifest: TEST_SPY_MANIFEST,
       apply(runtime: {
         hooks: {
           "upload:complete": {
@@ -355,6 +368,7 @@ describe("validationPlugin - extract metadata", () => {
 
     const spyPlugin = {
       name: "spy",
+      runtimeManifest: TEST_SPY_MANIFEST,
       apply(runtime: {
         hooks: {
           "upload:complete": {

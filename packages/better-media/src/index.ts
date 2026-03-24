@@ -15,6 +15,7 @@ import { LifecycleEngine } from "./core/lifecycle-engine";
 import { PipelineExecutor } from "./core/pipeline-executor";
 import { runBackgroundJob } from "./jobs/job-runner";
 import type { BackgroundJobPayload } from "./core/lifecycle-engine";
+import type { FileHandlingConfig } from "./core/file-loader";
 
 function createNoopJobAdapter(): JobAdapter {
   return {
@@ -35,7 +36,7 @@ type NormalizedFile = {
 
 async function normalizeInput(
   input: IngestInput,
-  fileHandling: import("./core/file-loader").FileHandlingConfig
+  fileHandling: FileHandlingConfig
 ): Promise<NormalizedFile> {
   const { file, metadata = {}, deleteAfterUpload = true } = input;
   const maxBufferBytes = fileHandling.maxBufferBytes;
@@ -119,8 +120,8 @@ async function normalizeInput(
  * ```
  */
 export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime {
-  const { storage, database, plugins } = config;
-  const { registry } = buildPluginRegistry(plugins);
+  const { storage, database, plugins, trustedPolicy } = config;
+  const { registry } = buildPluginRegistry(plugins, trustedPolicy);
 
   const fileHandling = config.fileHandling ?? {};
   const jobAdapter =
@@ -144,8 +145,11 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
   const engine = new LifecycleEngine(registry, jobAdapter);
   const executor = new PipelineExecutor(engine, storage, database, jobAdapter, fileHandling);
 
-  const runPipeline = (fileKey: string, metadata: Record<string, unknown> = {}) =>
-    executor.run(fileKey, metadata);
+  const runPipeline = (
+    fileKey: string,
+    metadata: Record<string, unknown> = {},
+    context: Record<string, unknown> = {}
+  ) => executor.run(fileKey, metadata, context);
 
   return {
     upload: {
@@ -155,7 +159,12 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
 
         try {
           await storage.put(finalKey, normalized.data);
-          await runPipeline(finalKey, { ...normalized.metadata, ...input.context });
+          // Pass metadata and context separately to the executor to persist once at the end
+          await runPipeline(
+            finalKey,
+            normalized.metadata,
+            (normalized.metadata.context as Record<string, unknown>) ?? {}
+          );
 
           return {
             key: finalKey,
@@ -191,8 +200,8 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
         }
         return fn.call(storage, key, options);
       },
-      async complete(key: string, metadata: MediaMetadata = {}, context?: Record<string, unknown>) {
-        await runPipeline(key, { ...metadata, ...context });
+      async complete(key: string, metadata: MediaMetadata = {}) {
+        await runPipeline(key, metadata, (metadata.context as Record<string, unknown>) ?? {});
         return {
           key,
           status: "processed",
