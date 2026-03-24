@@ -7,6 +7,7 @@ import type {
 
 import type { BetterMediaSettings } from "./settings.interface";
 import type { FileHandlingConfig } from "../core/file-loader";
+import type { TrustedPluginPolicy } from "../plugins/plugin-registry";
 
 /** Configuration for the Better Media framework */
 export interface BetterMediaConfig {
@@ -25,4 +26,6 @@ export interface BetterMediaConfig {
    * are streamed to a temp file instead of loaded into memory.
    */
   fileHandling?: FileHandlingConfig;
+  /** Optional policy gate for authorizing trusted plugins */
+  trustedPolicy?: TrustedPluginPolicy;
 }

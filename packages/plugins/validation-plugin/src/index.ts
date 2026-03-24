@@ -1,4 +1,4 @@
-import type { PipelinePlugin, MediaRuntime } from "@better-media/core";
+import type { PipelinePlugin, MediaRuntime, PipelineContext, PluginApi } from "@better-media/core";
 import type { ValidationPluginOptions } from "./interfaces/options.interface";
 import { runValidation } from "./runtime/runner";
 
@@ -15,12 +15,21 @@ export function validationPlugin(opts: ValidationPluginOptions = {}): PipelinePl
 
   return {
     name: "validation",
+    runtimeManifest: {
+      id: "better-media-validation",
+      version: "1.0.0",
+      trustLevel: "trusted", // Authorized for core metadata (size, mime, checksums)
+      capabilities: ["file.read", "metadata.write.own", "processing.write.own", "trusted.propose"],
+      namespace: "validation",
+    },
     executionMode,
     intensive: isBackground,
     apply(runtime: MediaRuntime) {
       runtime.hooks["validation:run"].tap(
         "validation",
-        async (context) => runValidation(context, opts),
+        async (context: PipelineContext, api: PluginApi) => {
+          return runValidation(context, api, opts);
+        },
         { mode: executionMode }
       );
     },

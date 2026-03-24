@@ -74,7 +74,11 @@ export class PipelineExecutor {
     private readonly fileHandling: FileHandlingConfig = {}
   ) {}
 
-  async run(fileKey: string, metadata: Record<string, unknown> = {}): Promise<void> {
+  async run(
+    fileKey: string,
+    metadata: Record<string, unknown> = {},
+    appContext: Record<string, unknown> = {}
+  ): Promise<void> {
     const meta = { ...metadata };
     const trustedFromDb = await loadTrustedFromDb(this.database, fileKey);
 
@@ -82,7 +86,7 @@ export class PipelineExecutor {
       file: buildFileInfo(fileKey, meta),
       storageLocation: buildStorageLocation(fileKey),
       processing: {},
-      metadata: meta,
+      metadata: { ...meta, ...appContext }, // Merge for plugins to read backwards-compatibly
       trusted: trustedFromDb ?? {},
       utilities: {},
       storage: this.storage,
@@ -104,9 +108,13 @@ export class PipelineExecutor {
         }
       }
 
-      if (context.trusted.file ?? context.trusted.checksums) {
-        await saveTrustedToDb(this.database, fileKey, context.trusted);
-      }
+      // Single-shot Upsert of initial data and trusted results
+      await saveTrustedToDb(this.database, fileKey, context.trusted, {
+        filename: context.file.originalName,
+        mimeType: context.file.mimeType,
+        size: context.file.size,
+        context: appContext,
+      });
     } finally {
       await cleanupTempFile(context);
     }

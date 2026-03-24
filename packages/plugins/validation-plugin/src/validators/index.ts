@@ -1,16 +1,18 @@
-import type { FileInfo } from "@better-media/core";
+import type { FileInfo, DatabaseAdapter } from "@better-media/core";
 import type { ValidationPluginOptions } from "../interfaces/options.interface";
 import type { ValidationErrorItem } from "../interfaces/error-item.interface";
 import { validateFileType } from "./file-type";
 import { validateFileSize } from "./file-size";
 import { validateDimensions } from "./dimensions";
 import { validateChecksum } from "./checksum";
+import { validateChecksumUniqueness } from "./checksum-uniqueness";
 import { runSecurityScan } from "./security-scanner";
 
 export async function runValidators(
   buffer: Buffer,
   file: FileInfo,
   metadata: Record<string, unknown>,
+  database: DatabaseAdapter,
   opts: ValidationPluginOptions
 ): Promise<ValidationErrorItem[]> {
   const allErrors: ValidationErrorItem[] = [];
@@ -38,6 +40,10 @@ export async function runValidators(
 
   if (opts.checksum) {
     allErrors.push(...validateChecksum(buffer, metadata, opts));
+  }
+
+  if (opts.preventDuplicates) {
+    allErrors.push(...(await validateChecksumUniqueness(buffer, file.key, database, opts)));
   }
 
   // 3. Custom Validators

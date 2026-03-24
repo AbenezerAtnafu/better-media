@@ -13,13 +13,13 @@ export type MediaMetadata = {
   filename?: string;
   mimeType?: string;
   size?: number;
+  context?: Record<string, unknown>; // userId, tenantId, requestId (for idempotency)
   [key: string]: unknown;
 };
 
 export type IngestInput = {
   file: MediaFileInput;
   metadata?: MediaMetadata;
-  context?: Record<string, unknown>; // userId, tenantId, requestId (for idempotency)
   key?: string;
   /**
    * When `file` is a filesystem path, whether to delete that file after ingest completes.
@@ -58,11 +58,7 @@ export interface BetterMediaRuntime {
     // Direct-to-Storage (Presigned URLs) Flow
     presignedPutUrl(key: string, options?: PresignedPutUrlOptions): Promise<string>;
     /** Called by the client *after* successfully uploading to the presigned URL */
-    complete(
-      key: string,
-      metadata?: MediaMetadata,
-      context?: Record<string, unknown>
-    ): Promise<MediaResult>;
+    complete(key: string, metadata?: MediaMetadata): Promise<MediaResult>;
   };
 
   /** File operations */

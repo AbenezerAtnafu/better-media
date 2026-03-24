@@ -10,6 +10,8 @@ import {
   type MediaRuntimeHook,
   type ValidationResult,
   type JobAdapter,
+  type PluginManifest,
+  type PluginApi,
 } from "@better-media/core";
 import { LifecycleEngine } from "../core/lifecycle-engine";
 import type { HookRegistry, TapInfo } from "./plugin.interface";
@@ -28,11 +30,15 @@ function clearRegistry(registry: HookRegistry): void {
   }
 }
 
-function createHook(registry: HookRegistry, hookName: HookName): MediaRuntimeHook {
+function createHook(
+  registry: HookRegistry,
+  hookName: HookName,
+  manifest: PluginManifest
+): MediaRuntimeHook {
   return {
     tap(
       name: string,
-      fn: (ctx: PipelineContext) => Promise<void | ValidationResult>,
+      fn: (ctx: PipelineContext, api: PluginApi) => Promise<void | ValidationResult>,
       options?: { mode?: "sync" | "background" }
     ) {
       const requested = options?.mode ?? "sync";
@@ -43,7 +49,7 @@ function createHook(registry: HookRegistry, hookName: HookName): MediaRuntimeHoo
         );
       }
       const list = registry.get(hookName)!;
-      list.push({ name, fn, mode: effective });
+      list.push({ name, fn, mode: effective, manifest });
     },
   };
 }
@@ -52,11 +58,11 @@ function createHook(registry: HookRegistry, hookName: HookName): MediaRuntimeHoo
 function createPluginRuntime(registry: HookRegistry, plugin: PipelinePlugin): MediaRuntime {
   const hooks = {} as MediaRuntime["hooks"];
   for (const name of HOOK_NAMES) {
-    const baseTap = createHook(registry, name).tap;
+    const baseTap = createHook(registry, name, plugin.runtimeManifest).tap;
     hooks[name] = {
       tap(
         handlerName: string,
-        fn: (ctx: PipelineContext) => Promise<void | ValidationResult>,
+        fn: (ctx: PipelineContext, api: PluginApi) => Promise<void | ValidationResult>,
         options?: { mode?: "sync" | "background" }
       ) {
         const mode = options?.mode ?? (plugin.intensive ? "background" : "sync");
@@ -67,6 +73,15 @@ function createPluginRuntime(registry: HookRegistry, plugin: PipelinePlugin): Me
   return { hooks };
 }
 
+/** Manifest for the global framework-level runtime */
+const SYSTEM_MANIFEST: PluginManifest = {
+  id: "better-media-system",
+  version: "1.0.0",
+  trustLevel: "trusted",
+  capabilities: ["file.read", "metadata.write.own", "processing.write.own", "trusted.propose"],
+  namespace: "system",
+};
+
 /**
  * Build MediaRuntime with hooks that plugins tap into.
  * Legacy plugins with only execute() are auto-tapped to process:run.
@@ -75,19 +90,23 @@ export function createMediaRuntime(
   plugins: PipelinePlugin[],
   registry: HookRegistry
 ): MediaRuntime {
-  const baseHooks = {} as MediaRuntime["hooks"];
-  for (const name of HOOK_NAMES) {
-    baseHooks[name] = createHook(registry, name);
-  }
-  const runtime: MediaRuntime = { hooks: baseHooks };
+  // Use a system manifest to initialize the global runtime, ensuring it's not "empty"
+  const runtime = createPluginRuntime(registry, {
+    name: "system",
+    runtimeManifest: SYSTEM_MANIFEST,
+  } as PipelinePlugin);
 
   for (const plugin of plugins) {
+    // Every plugin (apply or execute) gets a dedicated runtime bound to its manifest
+    const pluginRuntime = createPluginRuntime(registry, plugin);
+
     if (plugin.apply) {
-      const pluginRuntime = createPluginRuntime(registry, plugin);
       plugin.apply(pluginRuntime);
     } else if (plugin.execute) {
       const mode = plugin.executionMode ?? (plugin.intensive ? "background" : "sync");
-      runtime.hooks["process:run"].tap(plugin.name, plugin.execute, { mode });
+      const wrappedExecute = (ctx: PipelineContext, _api: PluginApi) => plugin.execute!(ctx);
+
+      pluginRuntime.hooks["process:run"].tap(plugin.name, wrappedExecute, { mode });
     }
   }
 
@@ -95,13 +114,58 @@ export function createMediaRuntime(
 }
 
 /**
- * Build hook registry from plugins via apply pattern.
- * Bridges legacy execute()-only plugins to process:run.
+ * Policy gate for explicitly authorizing trusted plugins.
+ * Prevents unauthorized plugins from claiming "trusted" status.
  */
-export function buildPluginRegistry(plugins: PipelinePlugin[]): {
+export interface TrustedPluginPolicy {
+  isAuthorized(pluginId: string, namespace: string): boolean;
+}
+
+/** Default policy: allows only a hardcoded list of internal plugins to be trusted */
+const DEFAULT_TRUSTED_POLICY: TrustedPluginPolicy = {
+  isAuthorized(id) {
+    // In a real app, this might check against a signed allowlist or config
+    const allowed = ["better-media-validation"];
+    return allowed.includes(id);
+  },
+};
+
+/**
+ * Build hook registry from plugins via apply pattern.
+ */
+export function buildPluginRegistry(
+  plugins: PipelinePlugin[],
+  policy: TrustedPluginPolicy = DEFAULT_TRUSTED_POLICY
+): {
   registry: HookRegistry;
   runtime: MediaRuntime;
 } {
+  // 1. Validate all plugins first
+  const seenIds = new Set<string>();
+  const seenNamespaces = new Set<string>();
+
+  for (const plugin of plugins) {
+    validatePlugin(plugin);
+
+    const { id, namespace, trustLevel } = plugin.runtimeManifest;
+
+    // Policy Gate: Block unauthorized trusted plugins
+    if (trustLevel === "trusted" && !policy.isAuthorized(id, namespace)) {
+      throw new Error(
+        `Security Violation: Plugin "${plugin.name}" (${id}) is not authorized for "trusted" status.`
+      );
+    }
+
+    if (seenIds.has(id)) {
+      throw new Error(`Duplicate plugin ID detected: ${id} (Plugin: ${plugin.name})`);
+    }
+    if (seenNamespaces.has(namespace)) {
+      throw new Error(`Duplicate namespace detected: ${namespace} (Plugin: ${plugin.name})`);
+    }
+    seenIds.add(id);
+    seenNamespaces.add(namespace);
+  }
+
   const registry = createEmptyRegistry();
   const runtime = createMediaRuntime(plugins, registry);
   return { registry, runtime };
@@ -110,15 +174,45 @@ export function buildPluginRegistry(plugins: PipelinePlugin[]): {
 export { HOOK_NAMES };
 
 /**
- * Validates that a plugin has required fields (name, apply or execute).
+ * Validates that a plugin has required fields (name, apply or execute)
+ * and a valid runtimeManifest.
  * @throws Error if plugin is invalid
  */
-export function validatePlugin(plugin: MediaPlugin): void {
+export function validatePlugin(plugin: PipelinePlugin): void {
   if (!plugin.name || typeof plugin.name !== "string") {
     throw new Error("Plugin must have a non-empty string name");
   }
   if (!plugin.apply && !plugin.execute) {
     throw new Error(`Plugin "${plugin.name}" must define apply() or execute()`);
+  }
+
+  if (!plugin.runtimeManifest) {
+    throw new Error(
+      `Plugin "${plugin.name}" is missing runtimeManifest. V1 Secure Model requires manifests.`
+    );
+  }
+
+  const { id, version, trustLevel, capabilities, namespace } = plugin.runtimeManifest;
+
+  if (!id || !version || !namespace) {
+    throw new Error(
+      `Plugin "${plugin.name}" manifest is missing required fields (id, version, namespace)`
+    );
+  }
+
+  if (!["untrusted", "trusted"].includes(trustLevel)) {
+    throw new Error(`Plugin "${plugin.name}" has invalid trustLevel: ${trustLevel}`);
+  }
+
+  if (!Array.isArray(capabilities)) {
+    throw new Error(`Plugin "${plugin.name}" capabilities must be an array`);
+  }
+
+  // Hard rule: untrusted plugins cannot have trusted.propose capability
+  if (trustLevel === "untrusted" && capabilities.includes("trusted.propose")) {
+    throw new Error(
+      `Untrusted plugin "${plugin.name}" cannot request "trusted.propose" capability`
+    );
   }
 }
 

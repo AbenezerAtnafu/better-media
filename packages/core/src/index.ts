@@ -28,9 +28,16 @@ export type {
   MediaRuntimeHook,
   ValidationResult,
   TrustedMetadata,
-  TrustedFileInfo,
-  TrustedChecksums,
+  PluginManifest,
+  PluginApi,
 } from "./plugin/index";
+export {
+  ValidationResultSchema,
+  VirusScanResultSchema,
+  TrustedMetadataSchema,
+  markFileContentVerified,
+} from "./plugin/index";
+export type { VerifiedSourceId, PipelineContextWithVerified } from "./plugin/index";
 export type { StorageAdapter, GetUrlOptions, PresignedPutUrlOptions } from "./storage/index";
 export type {
   DatabaseAdapter,
