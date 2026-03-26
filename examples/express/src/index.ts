@@ -2,56 +2,9 @@ import express from "express";
 import multer from "multer";
 import os from "node:os";
 
-import { createBetterMedia } from "better-media";
-import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
-import { memoryDatabase } from "@better-media/adapter-db";
-import { validationPlugin } from "@better-media/plugin-validation";
-import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
+import { media } from "../media.config";
 
 const PORT = process.env.PORT ?? 3000;
-const database = memoryDatabase();
-
-const storage = new FileSystemStorageAdapter({
-  baseDir: "./uploads",
-});
-
-const media = createBetterMedia({
-  // storage: new S3StorageAdapter({
-  //   accessKeyId: "SBED9NQLZZZWOMSVNB8Q",
-  //   secretAccessKey: "7M5gJytgaJH46j3QNDF9rIRLRgv69fygF0rJ8y3J",
-  //   bucket: "test-er",
-  //   region: "et-global-1",
-  //   endpoint: "https://obsv3.et-global-1.ethiotelecom.et",
-  //   forcePathStyle: true,
-  // } as S3StorageConfig),
-  storage,
-  database,
-  plugins: [
-    validationPlugin({
-      executionMode: "sync",
-      allowedMimeTypes: [
-        "image/jpeg",
-        "application/zip",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/pdf",
-      ],
-      useMagicBytes: true,
-      onFailure: "abort",
-    }),
-    // virusScanPlugin({
-    //   executionMode: "background",
-    //   onFailure: "abort",
-    //   scanner: new ClamScanner({
-    //     clamdscan: { host: "127.0.0.1", port: 3310 },
-    //   }),
-    //   scanTimeoutMs: 30_000,
-    //   retryOptions: { maxAttempts: 3, backoff: "exponential" },
-    // }),
-    mediaProcessingPlugin({
-      executionMode: "sync",
-    }),
-  ],
-});
 
 const app = express();
 app.use(express.json());

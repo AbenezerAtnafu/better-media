@@ -55,21 +55,38 @@ export function getColumnType(field: FieldDefinition, dialect: SqlDialect): stri
 
 export function matchType(dbType: string, expectedType: FieldType, dialect: SqlDialect): boolean {
   const normalizedDb = (dbType.toLowerCase().split("(")[0] || "").trim();
-  const types = dialectMap[expectedType];
-  const mapped = ((types ? types[dialect] : "text") || "text").toLowerCase().split("(")[0]!.trim();
-
-  // Common aliases
-  const aliases: Record<string, string[]> = {
-    integer: ["int", "int4", "int8", "bigint", "smallint", "tinyint"],
-    text: ["varchar", "nvarchar", "character varying", "mediumtext", "longtext"],
-    timestamp: ["timestamptz", "datetime", "datetime2", "date"],
-    boolean: ["bool", "bit", "tinyint"],
+  const normalizedMap: Record<SqlDialect, Record<FieldType, string[]>> = {
+    postgres: {
+      string: ["character varying", "varchar", "text", "uuid"],
+      number: ["int4", "integer", "bigint", "smallint", "numeric", "real", "double precision"],
+      boolean: ["bool", "boolean"],
+      date: ["timestamptz", "timestamp", "date"],
+      json: ["json", "jsonb"],
+    },
+    mysql: {
+      string: ["varchar", "text", "uuid", "char"],
+      number: ["integer", "int", "bigint", "smallint", "decimal", "float", "double"],
+      boolean: ["boolean", "tinyint", "bit"],
+      date: ["timestamp", "datetime", "date"],
+      json: ["json", "text", "longtext"],
+    },
+    sqlite: {
+      string: ["text", "varchar"],
+      number: ["integer", "real", "numeric"],
+      boolean: ["integer", "boolean"],
+      date: ["date", "text", "integer"],
+      json: ["text"],
+    },
+    mssql: {
+      string: ["varchar", "nvarchar", "uniqueidentifier"],
+      number: ["int", "bigint", "smallint", "decimal", "float", "double", "numeric"],
+      boolean: ["bit", "smallint"],
+      date: ["datetime2", "date", "datetime", "timestamp"],
+      json: ["varchar", "nvarchar"],
+    },
   };
 
-  if (normalizedDb === mapped) return true;
-  if (aliases[mapped]?.includes(normalizedDb)) return true;
-
-  return false;
+  return normalizedMap[dialect][expectedType].includes(normalizedDb);
 }
 
 /**

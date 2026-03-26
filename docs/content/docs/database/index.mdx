@@ -5,14 +5,52 @@ description: Configure a database adapter to persist media records, metadata, an
 
 Better Media uses a **Database Adapter** to persist media records, file metadata, and background job states. The adapter abstracts your database behind a unified interface so you can swap implementations without touching application code.
 
-## Supported Adapters
+## Built-in PostgreSQL
 
-| Adapter              | Package                            | Description                                               |
-| -------------------- | ---------------------------------- | --------------------------------------------------------- |
-| Memory               | `@better-media/adapter-db`         | In-memory store. Fast, zero-config. **For testing only.** |
-| Drizzle (PostgreSQL) | `@better-media/adapter-db/drizzle` | Production-ready PostgreSQL via Drizzle ORM.              |
-| Prisma               | `@better-media/adapter-db/prisma`  | PostgreSQL, MySQL, or SQLite via Prisma.                  |
-| MongoDB              | `@better-media/adapter-db/mongodb` | MongoDB via the official Node.js driver.                  |
+Better Media now includes a built-in PostgreSQL database adapter. You can pass a `pg` pool directly:
+
+```bash
+pnpm add pg
+```
+
+```ts title="lib/media.ts"
+import { createBetterMedia } from "better-media";
+import { Pool } from "pg";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL!,
+});
+
+export const media = createBetterMedia({
+  database: pool,
+  // ...
+});
+```
+
+If you prefer being explicit, you can also wrap it:
+
+```ts title="lib/media.ts"
+import { createBetterMedia, postgresDatabase } from "better-media";
+import { Pool } from "pg";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+
+export const media = createBetterMedia({
+  database: postgresDatabase(pool),
+  // ...
+});
+```
+
+## Optional Adapters
+
+Install optional adapters only when you need non-default integrations:
+
+| Adapter              | Package                            | Description                                   |
+| -------------------- | ---------------------------------- | --------------------------------------------- |
+| Drizzle (PostgreSQL) | `@better-media/adapter-db/drizzle` | PostgreSQL via Drizzle ORM                    |
+| Prisma               | `@better-media/adapter-db/prisma`  | PostgreSQL, MySQL, or SQLite via Prisma       |
+| MongoDB              | `@better-media/adapter-db/mongodb` | MongoDB via the official Node.js driver       |
+| Memory               | `@better-media/adapter-db`         | In-memory store for tests/local development   |
 
 ```bash
 pnpm add @better-media/adapter-db
@@ -20,7 +58,7 @@ pnpm add @better-media/adapter-db
 
 ---
 
-## Memory Adapter
+## Memory Adapter (Optional)
 
 The memory adapter stores all records in a JavaScript `Map`. It requires zero configuration and is ideal for unit tests and local development.
 
@@ -62,7 +100,13 @@ export const media = createBetterMedia({
 Better Media automatically manages its own tables. Run the migration after adding the adapter:
 
 ```bash
-pnpm better-media db:migrate
+npx media@latest migrate
+```
+
+If your config file is in a custom location, pass `--config`:
+
+```bash
+npx media@latest migrate --config ./media.config.ts
 ```
 
 The following tables are created:

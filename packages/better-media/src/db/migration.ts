@@ -2,6 +2,7 @@ import type { DatabaseAdapter } from "@better-media/core";
 import { schema } from "./schema";
 import type { ModelDefinition, TableMetadata, MigrationOperation, SqlDialect } from "./types";
 import { MigrationPlanner } from "./plan";
+import { compileMigrationOperationsSql } from "./sql";
 
 /**
  * Internal interface used only by runMigrations. Adapter authors do NOT need to
@@ -40,6 +41,80 @@ export interface MigrationOptions {
   dialect?: SqlDialect;
 }
 
+export interface PlannedMigrationTable {
+  table: string;
+  fields: string[];
+}
+
+export interface PlannedMigrations {
+  toBeCreated: PlannedMigrationTable[];
+  toBeAdded: PlannedMigrationTable[];
+  operations: MigrationOperation[];
+  compileMigrations: () => string;
+  runMigrations: () => Promise<void>;
+}
+
+export async function getMigrations(
+  adapter: DatabaseAdapter,
+  options: MigrationOptions = {}
+): Promise<PlannedMigrations> {
+  const migratable = adapter as MigratableAdapter;
+
+  if (
+    typeof migratable.__getMetadata !== "function" ||
+    typeof migratable.__executeMigration !== "function"
+  ) {
+    return {
+      toBeCreated: [],
+      toBeAdded: [],
+      operations: [],
+      compileMigrations: () => "",
+      runMigrations: async () => {
+        throw new Error("[BetterMedia] Adapter does not support planned migrations.");
+      },
+    };
+  }
+
+  let dialect = options.dialect;
+  if (!dialect && typeof migratable.__getDialect === "function") {
+    dialect = migratable.__getDialect();
+  }
+  const resolvedDialect = dialect || "postgres";
+  const metadata = await migratable.__getMetadata();
+  const planner = new MigrationPlanner(resolvedDialect);
+  const operations = planner.plan(schema, metadata);
+
+  const toBeCreated = operations
+    .filter(
+      (op): op is Extract<MigrationOperation, { type: "createTable" }> => op.type === "createTable"
+    )
+    .map((op) => ({ table: op.table, fields: Object.keys(op.definition.fields) }));
+
+  const toBeAdded = operations
+    .filter(
+      (op): op is Extract<MigrationOperation, { type: "addColumn" }> => op.type === "addColumn"
+    )
+    .reduce<PlannedMigrationTable[]>((acc, op) => {
+      const existing = acc.find((t) => t.table === op.table);
+      if (existing) existing.fields.push(op.field);
+      else acc.push({ table: op.table, fields: [op.field] });
+      return acc;
+    }, []);
+
+  return {
+    toBeCreated,
+    toBeAdded,
+    operations,
+    compileMigrations: () =>
+      compileMigrationOperationsSql({ operations, dialect: resolvedDialect }),
+    runMigrations: async () => {
+      for (const op of operations) {
+        await migratable.__executeMigration!(op);
+      }
+    },
+  };
+}
+
 /**
  * Migration engine. It iterates through the central BmSchema and invokes
  * engine-specific setup commands on the adapter.
@@ -58,15 +133,10 @@ export async function runMigrations(
   ) {
     console.log("[BetterMedia] Starting planned migration...");
 
-    let dialect = options.dialect;
-    if (!dialect && typeof migratable.__getDialect === "function") {
-      dialect = migratable.__getDialect();
-    }
-    const resolvedDialect = dialect || "postgres";
-
-    const metadata = await migratable.__getMetadata();
-    const planner = new MigrationPlanner(resolvedDialect);
-    const operations = planner.plan(schema, metadata);
+    const { operations, runMigrations: runPlannedMigrations } = await getMigrations(
+      adapter,
+      options
+    );
 
     if (operations.length === 0) {
       console.log("[BetterMedia] Database is up to date.");
@@ -74,9 +144,7 @@ export async function runMigrations(
     }
 
     console.log(`[BetterMedia] Plan: ${operations.length} operation(s) to execute.`);
-    for (const op of operations) {
-      await migratable.__executeMigration!(op);
-    }
+    await runPlannedMigrations();
     console.log("[BetterMedia] Migration completed successfully.");
     return;
   }

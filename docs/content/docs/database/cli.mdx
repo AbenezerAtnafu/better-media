@@ -1,0 +1,95 @@
+---
+title: CLI (Schema)
+description: Generate and migrate the Better Media database schema.
+---
+
+Better Media ships with a built-in CLI for managing the schema required by core features and plugins.
+
+## Commands
+
+### Generate
+
+Generate a dialect-specific SQL schema file from Better Media’s central schema definition:
+
+```bash
+npx media@latest generate
+```
+
+Common options:
+
+```bash
+npx media@latest generate --out better-media-migrations/1711459200000-schema.sql --dialect postgres
+```
+
+### Migrate (Kysely only)
+
+Apply the Better Media schema directly to your database (available when using the built-in Kysely adapter):
+
+```bash
+npx media@latest migrate
+```
+
+Common options:
+
+```bash
+npx media@latest migrate --mode diff
+```
+
+If you’re using a different adapter (e.g. Prisma/Drizzle), use `generate` and apply the schema using your ORM’s migration tooling.
+
+## Project config
+
+The CLI loads a dedicated Better Media config file from your project that exports either:
+
+- `database`: an initialized `DatabaseAdapter`, or
+- `createDatabase()`: a factory returning a `DatabaseAdapter`
+
+Default discovery order:
+
+- `media.config.ts`
+- `media.config.js`
+- `better-media.config.ts`
+- `better-media.config.js`
+
+You can also pass an explicit config path:
+
+```bash
+npx media@latest generate --config ./media.config.ts
+```
+
+TypeScript config files require `ts-node` in your app.
+
+Example config:
+
+```ts title="media.config.ts"
+import { kyselyAdapter } from "@better-media/adapter-db/kysely";
+import { schema } from "better-media";
+import { Kysely, SqliteDialect } from "kysely";
+import Database from "better-sqlite3";
+
+const db = new Kysely({
+  dialect: new SqliteDialect({ database: new Database("dev.db") }),
+});
+
+export default {
+  createDatabase: () =>
+    kyselyAdapter(db, {
+      config: { provider: "sqlite" },
+      schema,
+    }),
+  dialect: "sqlite",
+  schemaOutput: "better-media-migrations/1711459200000-schema.sql",
+};
+```
+
+## Programmatic adapter resolution (Better Auth-style)
+
+Better Media also exposes a single helper to resolve your adapter from an options object (Better Auth-style):
+
+```ts title="example.ts"
+import { getAdapter } from "better-media";
+import config from "./media.config.js";
+
+const adapter = await getAdapter(config);
+```
+

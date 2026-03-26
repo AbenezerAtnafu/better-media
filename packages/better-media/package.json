@@ -12,6 +12,10 @@
       "require": "./dist/index.js"
     }
   },
+  "bin": {
+    "media": "./bin/media.mjs",
+    "better-media": "./bin/media.mjs"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -21,6 +25,7 @@
   },
   "dependencies": {
     "@better-media/adapter-jobs": "workspace:*",
+    "@better-media/cli": "workspace:*",
     "@better-media/core": "workspace:*"
   },
   "keywords": [],
