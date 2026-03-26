@@ -16,6 +16,7 @@ import { PipelineExecutor } from "./core/pipeline-executor";
 import { runBackgroundJob } from "./jobs/job-runner";
 import type { BackgroundJobPayload } from "./core/lifecycle-engine";
 import type { FileHandlingConfig } from "./core/file-loader";
+import { toDatabaseAdapter } from "./db/postgres";
 
 function createNoopJobAdapter(): JobAdapter {
   return {
@@ -120,7 +121,8 @@ async function normalizeInput(
  * ```
  */
 export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime {
-  const { storage, database, plugins, trustedPolicy } = config;
+  const { storage, plugins, trustedPolicy } = config;
+  const database = toDatabaseAdapter(config.database);
   const { registry } = buildPluginRegistry(plugins, trustedPolicy);
 
   const fileHandling = config.fileHandling ?? {};
@@ -261,3 +263,6 @@ export type { FileHandlingConfig } from "./core/file-loader";
 
 // DB Architecture exports
 export * from "./db";
+
+// CLI/Tooling utilities
+export * from "./adapter/get-adapter";
