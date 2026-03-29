@@ -7,31 +7,27 @@ import type {
   FindOptions,
   UpdateOptions,
   WhereClause,
+  FieldDefinition,
+  MigrationOperation,
+  SqlDialect,
+  TableMetadata,
 } from "@better-media/core";
-import { schema } from "./schema";
-import { deserializeData, serializeData } from "./fields";
-import { getColumnType } from "./plan";
-import type { FieldDefinition, MigrationOperation, SqlDialect, TableMetadata } from "./types";
-import { toCamelCase, toDbFieldName } from "./naming";
+import {
+  schema,
+  deserializeData,
+  serializeData,
+  getColumnType,
+  toCamelCase,
+  toDbFieldName,
+  isPgPoolLike,
+  type PgPoolLike,
+  type PgClientLike,
+  type Queryable,
+  type DatabaseHookContext,
+  type QueryResultLike,
+} from "@better-media/core";
 
-type QueryResultLike<T = unknown> = { rows: T[]; rowCount?: number | null };
-type Queryable = {
-  query: (text: string, values?: unknown[]) => Promise<QueryResultLike<Record<string, unknown>>>;
-};
-
-export type PgPoolLike = Queryable & {
-  connect?: () => Promise<PgClientLike>;
-};
-
-type PgClientLike = Queryable & {
-  release?: () => void;
-};
-
-function isPgPoolLike(value: unknown): value is PgPoolLike {
-  return Boolean(
-    value && typeof value === "object" && typeof (value as { query?: unknown }).query === "function"
-  );
-}
+export type { PgPoolLike, PgClientLike, Queryable, QueryResultLike, DatabaseHookContext };
 
 function quote(name: string): string {
   return `"${name.replace(/"/g, '""')}"`;
@@ -245,7 +241,7 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
 
   async __executeMigration(operation: MigrationOperation): Promise<void> {
     if (operation.type === "createTable") {
-      const columns = Object.entries(operation.definition.fields)
+      const columns = (Object.entries(operation.definition.fields) as [string, FieldDefinition][])
         .map(([name, field]) => {
           const parts = [quote(toDbFieldName(name)), getColumnType(field, "postgres")];
           if (field.primaryKey) parts.push("PRIMARY KEY");
@@ -265,7 +261,7 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
       await this.db.query(`CREATE TABLE IF NOT EXISTS ${quote(operation.table)} (${columns})`);
 
       for (const index of operation.definition.indexes ?? []) {
-        const indexName = `idx_${operation.table}_${index.fields.map((f) => toDbFieldName(f)).join("_")}`;
+        const indexName = `idx_${operation.table}_${index.fields.map((f: string) => toDbFieldName(f)).join("_")}`;
         await this.db.query(
           `CREATE ${index.unique ? "UNIQUE " : ""}INDEX IF NOT EXISTS ${quote(indexName)} ON ${quote(
             operation.table
@@ -277,7 +273,10 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
 
     if (operation.type === "addColumn") {
       const field = operation.definition;
-      const parts = [quote(toDbFieldName(operation.field)), getColumnType(field, "postgres")];
+      const parts = [
+        quote(toDbFieldName(operation.field)),
+        getColumnType(operation.definition as FieldDefinition, "postgres"),
+      ];
       if (field.required) parts.push("NOT NULL");
       if (field.unique) parts.push("UNIQUE");
       if (field.references) {

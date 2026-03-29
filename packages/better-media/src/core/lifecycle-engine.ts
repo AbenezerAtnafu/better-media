@@ -15,6 +15,7 @@ const JOB_QUEUE_NAME = "better-media:background";
 
 /** Background job payload (serializable) */
 export interface BackgroundJobPayload {
+  recordId: string;
   metadata: Record<string, unknown>;
   file: PipelineContext["file"];
   storageLocation: PipelineContext["storageLocation"];
@@ -190,6 +191,7 @@ export class LifecycleEngine {
     for (const { name, manifest } of backgroundHandlers) {
       // Deep clone to prevent shared references in memory-based adapters
       const payload: BackgroundJobPayload = {
+        recordId: context.recordId,
         metadata: JSON.parse(JSON.stringify(context.metadata)),
         file: JSON.parse(JSON.stringify(context.file)),
         storageLocation: JSON.parse(JSON.stringify(context.storageLocation)),

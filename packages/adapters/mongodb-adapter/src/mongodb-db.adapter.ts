@@ -9,8 +9,14 @@ import type {
   DeleteOptions,
   CountOptions,
 } from "@better-media/core";
-import type { FieldType, BmSchema, DbHooks, HookContext, ModelDefinition } from "better-media";
-import { serializeData, deserializeData, runHooks } from "better-media";
+import type {
+  FieldType,
+  BmSchema,
+  DbHooks,
+  DatabaseHookContext,
+  ModelDefinition,
+} from "@better-media/core";
+import { serializeData, deserializeData, runHooks } from "@better-media/core";
 import type { MongoDbConfig } from "./mongodb-db-config.interface";
 
 export interface MongoDbOptions {
@@ -50,7 +56,7 @@ export class MongoDbAdapter implements DatabaseAdapter {
     return this.schema[model];
   }
 
-  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): HookContext {
+  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): DatabaseHookContext {
     return {
       model,
       adapter: this,

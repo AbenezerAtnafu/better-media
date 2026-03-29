@@ -36,6 +36,7 @@ export async function runBackgroundJob(
   fileHandling: FileHandlingConfig = {}
 ): Promise<void> {
   const {
+    recordId: payloadRecordId,
     metadata = {},
     file: payloadFile,
     storageLocation: payloadStorage,
@@ -69,13 +70,16 @@ export async function runBackgroundJob(
         }
       : { key: "" });
 
+  const recordId = payloadRecordId ?? file.key ?? "unknown";
+
   const storageLocation: PipelineContext["storageLocation"] = payloadStorage ?? { key: file.key };
 
   const processing: PipelineContext["processing"] = payloadProcessing ?? {};
 
-  const trustedFromDb = await loadTrustedFromDb(database, file.key);
+  const trustedFromDb = await loadTrustedFromDb(database, recordId);
 
   const context: PipelineContext = {
+    recordId,
     file,
     storageLocation,
     processing,
@@ -119,7 +123,7 @@ export async function runBackgroundJob(
     await handler.fn(proxy, api);
 
     if (context.trusted.file ?? context.trusted.checksums) {
-      await saveTrustedToDb(database, file.key, context.trusted);
+      await saveTrustedToDb(database, recordId, file.key, context.trusted);
     }
   } finally {
     await cleanupTempFile(context);

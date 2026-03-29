@@ -4,7 +4,12 @@ import path from "node:path";
 import process from "node:process";
 import { existsSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
-import { getAdapter, getMigrations, type MigrationOptions, type SqlDialect } from "better-media";
+import {
+  getAdapter,
+  getMigrations,
+  type MigrationOptions,
+  type SqlDialect,
+} from "@better-media/core";
 import { loadProjectConfig } from "../project-config";
 import { migrateWithAdapter } from "../generators";
 

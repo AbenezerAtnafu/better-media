@@ -1,4 +1,4 @@
-import type { DatabaseAdapter } from "@better-media/core";
+import type { DatabaseAdapter } from "./interfaces/adapter.interface";
 import { schema } from "./schema";
 import type { ModelDefinition, TableMetadata, MigrationOperation, SqlDialect } from "./types";
 import { MigrationPlanner } from "./plan";

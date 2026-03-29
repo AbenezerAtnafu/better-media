@@ -1,6 +1,5 @@
-import type { DatabaseAdapter } from "@better-media/core";
-import { toDatabaseAdapter } from "../db/postgres";
-import type { PgPoolLike } from "../db/postgres";
+import type { DatabaseAdapter } from "../database/interfaces/adapter.interface";
+import { toDatabaseAdapter, type PgPoolLike } from "../database/postgres-utils";
 
 export type GetAdapterOptions = {
   database?: DatabaseAdapter | PgPoolLike;

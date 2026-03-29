@@ -290,8 +290,38 @@ export type {
 } from "@better-media/core";
 export type { FileHandlingConfig } from "./core/file-loader";
 
-// DB Architecture exports
-export * from "./db";
+// DB Architecture re-exports from core
+export {
+  schema,
+  getMigrations,
+  runMigrations,
+  MigrationPlanner,
+  compileMigrationOperationsSql,
+  toCamelCase,
+  toDbFieldName,
+  applyOperationsToMetadata,
+  isPgPoolLike,
+  serializeData,
+  deserializeData,
+  runHooks,
+  getColumnType,
+  type SqlDialect,
+  type TableMetadata,
+  type MigrationOperation,
+  type FieldDefinition,
+  type FieldType,
+  type BmSchema,
+  type ModelDefinition,
+  type IndexDefinition,
+  type MigrationOptions,
+  type DbHooks,
+  type DatabaseHookContext,
+  type HookContext,
+} from "@better-media/core";
 
-// CLI/Tooling utilities
-export * from "./adapter/get-adapter";
+// Specific adapter implementations stay here
+export * from "./db/postgres";
+export { toDatabaseAdapter } from "./db/postgres";
+
+// CLI/Tooling utilities (moved to core)
+export { getAdapter, type GetAdapterOptions } from "@better-media/core";

@@ -13,11 +13,11 @@ import type {
   BmSchema,
   FieldType,
   ModelDefinition,
-  HookContext,
+  DatabaseHookContext,
   TableMetadata,
   MigrationOperation,
-} from "better-media";
-import { runHooks, serializeData, deserializeData } from "better-media";
+} from "@better-media/core";
+import { runHooks, serializeData, deserializeData } from "@better-media/core";
 
 export interface MemoryDbOptions {
   schema?: BmSchema;
@@ -54,7 +54,7 @@ export class MemoryDbAdapter implements DatabaseAdapter {
     return this.schema?.[model];
   }
 
-  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): HookContext {
+  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): DatabaseHookContext {
     return {
       model,
       adapter: this,

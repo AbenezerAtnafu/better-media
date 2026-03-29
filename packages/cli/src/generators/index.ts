@@ -10,7 +10,7 @@ import {
   type MigrationOptions,
   type TableMetadata,
   applyOperationsToMetadata,
-} from "better-media";
+} from "@better-media/core";
 import type { DatabaseAdapter } from "@better-media/core";
 
 type CustomSchemaResult = {
@@ -55,9 +55,9 @@ async function findLatestTimestampRunDir(migrationsDir: string): Promise<string 
   const entries = await fs.readdir(migrationsDir, { withFileTypes: true });
   const names = entries
     .filter((e) => e.isDirectory() && TIMESTAMP_DIR.test(e.name))
-    .map((e) => e.name)
-    .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
-  return names.length ? path.join(migrationsDir, names[0]) : undefined;
+    .map((e) => e.name);
+  const latest = names[0];
+  return latest ? path.join(migrationsDir, latest) : undefined;
 }
 
 async function resolveSnapshotReadPath(migrationsDir: string): Promise<string | undefined> {
@@ -124,7 +124,9 @@ const builtInGenerators: Record<string, GenerateFn> = {
     console.log(chalk.green(`[media] Generated migration at ${path.relative(cwd, migrationFile)}`));
   },
   async postgres(args) {
-    await builtInGenerators.kysely(args);
+    const kysely = builtInGenerators.kysely;
+    if (!kysely) throw new Error("Kysely generator not found");
+    await kysely(args);
   },
   async prisma() {
     throw new Error(
@@ -154,7 +156,9 @@ const builtInMigrators: Record<string, MigrateFn> = {
     await planned.runMigrations();
   },
   async postgres(args) {
-    await builtInMigrators.kysely(args);
+    const kysely = builtInMigrators.kysely;
+    if (!kysely) throw new Error("Kysely migrator not found");
+    await kysely(args);
   },
   async prisma() {
     throw new Error(
@@ -218,7 +222,9 @@ export async function migrateWithAdapter(args: {
     typeof (args.adapter as { __getMetadata?: unknown }).__getMetadata === "function" &&
     typeof (args.adapter as { __executeMigration?: unknown }).__executeMigration === "function"
   ) {
-    await builtInMigrators.kysely(args);
+    const kysely = builtInMigrators.kysely;
+    if (!kysely) throw new Error("Kysely migrator not found");
+    await kysely(args);
     return;
   }
 

@@ -56,4 +56,7 @@ export type {
   CountOptions,
 } from "./database/index";
 export type { JobAdapter } from "./job/index";
+export * from "./database/index";
+export type { DatabaseHookContext } from "./database/index";
+export { getAdapter, type GetAdapterOptions } from "./adapter/get-adapter";
 export { EXTENSION_TO_MIME_MAP } from "./constants/mime-types";

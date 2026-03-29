@@ -1,14 +1,14 @@
-import type { WhereClause, DbHooks, HookContext } from "./types";
+import type { WhereClause, DbHooks, DatabaseHookContext } from "./types";
 
 /**
  * Utility to run hooks sequentially.
- * Supports multiple handlers and passes HookContext.
+ * Supports multiple handlers and passes DatabaseHookContext.
  */
 export const runHooks = {
   async beforeCreate(
     hooks: DbHooks | undefined,
     data: Record<string, unknown>,
-    context: HookContext
+    context: DatabaseHookContext
   ) {
     let currentData = data;
     const handlers = hooks?.before?.create || [];
@@ -21,7 +21,7 @@ export const runHooks = {
   async beforeUpdate(
     hooks: DbHooks | undefined,
     data: Record<string, unknown>,
-    context: HookContext
+    context: DatabaseHookContext
   ) {
     let currentData = data;
     const handlers = hooks?.before?.update || [];
@@ -31,7 +31,7 @@ export const runHooks = {
     return currentData;
   },
 
-  async beforeDelete(hooks: DbHooks | undefined, where: WhereClause, context: HookContext) {
+  async beforeDelete(hooks: DbHooks | undefined, where: WhereClause, context: DatabaseHookContext) {
     const handlers = hooks?.before?.delete || [];
     for (const handler of handlers) {
       await handler(where, context);
@@ -41,7 +41,7 @@ export const runHooks = {
   async afterCreate(
     hooks: DbHooks | undefined,
     result: Record<string, unknown>,
-    context: HookContext
+    context: DatabaseHookContext
   ) {
     const handlers = hooks?.after?.create || [];
     for (const handler of handlers) {
@@ -52,7 +52,7 @@ export const runHooks = {
   async afterUpdate(
     hooks: DbHooks | undefined,
     result: Record<string, unknown>,
-    context: HookContext
+    context: DatabaseHookContext
   ) {
     const handlers = hooks?.after?.update || [];
     for (const handler of handlers) {
@@ -60,7 +60,7 @@ export const runHooks = {
     }
   },
 
-  async afterDelete(hooks: DbHooks | undefined, where: WhereClause, context: HookContext) {
+  async afterDelete(hooks: DbHooks | undefined, where: WhereClause, context: DatabaseHookContext) {
     const handlers = hooks?.after?.delete || [];
     for (const handler of handlers) {
       await handler(where, context);

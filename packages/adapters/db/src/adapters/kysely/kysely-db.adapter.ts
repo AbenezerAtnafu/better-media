@@ -14,13 +14,13 @@ import type {
   FieldDefinition,
   BmSchema,
   DbHooks,
-  HookContext,
+  DatabaseHookContext,
   ModelDefinition,
   MigrationOperation,
   SqlDialect,
   TableMetadata,
-} from "better-media";
-import { serializeData, deserializeData, runHooks, getColumnType } from "better-media";
+} from "@better-media/core";
+import { serializeData, deserializeData, runHooks, getColumnType } from "@better-media/core";
 import type { KyselyDbConfig } from "./kysely-db-config.interface";
 
 export interface KyselyDbOptions {
@@ -73,7 +73,7 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     return this.schema[model];
   }
 
-  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): HookContext {
+  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): DatabaseHookContext {
     return {
       model,
       adapter: this,
