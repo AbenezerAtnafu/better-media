@@ -8,6 +8,7 @@ export default defineConfig({
   clean: true,
   minify: false,
   target: "es2022",
+  external: ["better-media"],
   banner: {
     js: "#!/usr/bin/env node",
   },

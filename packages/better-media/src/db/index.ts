@@ -6,3 +6,5 @@ export * from "./migration";
 export * from "./plan";
 export * from "./sql";
 export * from "./postgres";
+export * from "./naming";
+export { applyOperationsToMetadata } from "./plan";

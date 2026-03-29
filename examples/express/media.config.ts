@@ -29,7 +29,7 @@ export const mediaOptions = {
   storage,
   database: new Pool({
     connectionString:
-      process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/better_media",
+      process.env.DATABASE_URL ?? "postgres://postgres:root@localhost:5432/better-media",
   }),
   plugins,
   dialect: "postgres",

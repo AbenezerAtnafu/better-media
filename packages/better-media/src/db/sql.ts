@@ -6,6 +6,7 @@ import type {
   MigrationOperation,
 } from "./types";
 import { getColumnType } from "./plan";
+import { toDbFieldName } from "./naming";
 
 function quoteIdent(ident: string, dialect: SqlDialect): string {
   // Keep it simple and safe; Better Media table/field names are controlled.
@@ -35,7 +36,8 @@ function columnSql(
   dialect: SqlDialect
 ): string {
   const parts: string[] = [];
-  parts.push(quoteIdent(name, dialect));
+  const dbName = toDbFieldName(name);
+  parts.push(quoteIdent(dbName, dialect));
   parts.push(getColumnType(field, dialect));
 
   if (field.primaryKey) parts.push("PRIMARY KEY");
@@ -45,7 +47,7 @@ function columnSql(
   if (field.references) {
     const ref = field.references;
     const refTable = quoteIdent(ref.model, dialect);
-    const refField = quoteIdent(ref.field, dialect);
+    const refField = quoteIdent(toDbFieldName(ref.field), dialect);
     parts.push(`REFERENCES ${refTable}(${refField})${onDeleteSql(ref.onDelete)}`);
   }
 
@@ -70,7 +72,7 @@ function createIndexSql(
 ): string {
   const idx = quoteIdent(indexName, dialect);
   const tbl = quoteIdent(table, dialect);
-  const cols = fields.map((f) => quoteIdent(f, dialect)).join(", ");
+  const cols = fields.map((f) => quoteIdent(toDbFieldName(f), dialect)).join(", ");
   const uniqueSql = unique ? "UNIQUE " : "";
   const ifNotExists = dialect === "mssql" ? "" : " IF NOT EXISTS";
   return `CREATE ${uniqueSql}INDEX${ifNotExists} ${idx} ON ${tbl} (${cols});`;
@@ -104,7 +106,7 @@ export function compileMigrationOperationsSql(options: {
       statements.push(createTableSql(op.table, op.definition, dialect));
       if (op.definition.indexes) {
         for (const index of op.definition.indexes) {
-          const indexName = `idx_${op.table}_${index.fields.join("_")}`;
+          const indexName = `idx_${op.table}_${index.fields.map((f) => toDbFieldName(f)).join("_")}`;
           statements.push(createIndexSql(op.table, indexName, index.fields, index.unique, dialect));
         }
       }
@@ -145,7 +147,7 @@ export function generateCreateSchemaSql(options: {
   for (const [table, def] of Object.entries(schema)) {
     if (!def.indexes) continue;
     for (const index of def.indexes) {
-      const indexName = `idx_${table}_${index.fields.join("_")}`;
+      const indexName = `idx_${table}_${index.fields.map((f) => toDbFieldName(f)).join("_")}`;
       statements.push(createIndexSql(table, indexName, index.fields, index.unique, dialect));
     }
   }

@@ -12,6 +12,7 @@ import { schema } from "./schema";
 import { deserializeData, serializeData } from "./fields";
 import { getColumnType } from "./plan";
 import type { FieldDefinition, MigrationOperation, SqlDialect, TableMetadata } from "./types";
+import { toCamelCase, toDbFieldName } from "./naming";
 
 type QueryResultLike<T = unknown> = { rows: T[]; rowCount?: number | null };
 type Queryable = {
@@ -36,6 +37,14 @@ function quote(name: string): string {
   return `"${name.replace(/"/g, '""')}"`;
 }
 
+function rowToAppKeys(row: Record<string, unknown>): Record<string, unknown> {
+  const mapped: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    mapped[toCamelCase(key)] = value;
+  }
+  return mapped;
+}
+
 function buildWhere(where?: WhereClause, startAt = 1): { sql: string; values: unknown[] } {
   if (!where?.length) return { sql: "", values: [] };
   const parts: string[] = [];
@@ -47,7 +56,7 @@ function buildWhere(where?: WhereClause, startAt = 1): { sql: string; values: un
     if (!condition) continue;
 
     const connector = i > 0 ? (where[i - 1]?.connector ?? "AND") : "AND";
-    const field = quote(condition.field);
+    const field = quote(toDbFieldName(condition.field));
     const op = condition.operator ?? "=";
 
     if (i > 0) parts.push(connector);
@@ -101,14 +110,14 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
     const fields = this.modelFields(options.model);
     const serialized = serializeData(fields, options.data as Record<string, unknown>);
     const keys = Object.keys(serialized);
-    const columns = keys.map(quote).join(", ");
+    const columns = keys.map((k) => quote(toDbFieldName(k))).join(", ");
     const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
     const values = keys.map((k) => serialized[k]);
     const result = await this.db.query(
       `INSERT INTO ${quote(options.model)} (${columns}) VALUES (${placeholders}) RETURNING *`,
       values
     );
-    return deserializeData(fields, result.rows[0] ?? serialized) as T;
+    return deserializeData(fields, rowToAppKeys(result.rows[0] ?? serialized)) as T;
   }
 
   async findOne<T extends Record<string, unknown>>(options: FindOptions<T>): Promise<T | null> {
@@ -119,14 +128,16 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
   async findMany<T extends Record<string, unknown>>(options: FindOptions<T>): Promise<T[]> {
     const fields = this.modelFields(options.model);
     const select =
-      options.select && options.select.length > 0 ? options.select.map(quote).join(", ") : "*";
+      options.select && options.select.length > 0
+        ? options.select.map((f) => `${quote(toDbFieldName(f))} AS ${quote(f)}`).join(", ")
+        : "*";
     let query = `SELECT ${select} FROM ${quote(options.model)}`;
     const where = buildWhere(options.where);
     query += where.sql;
     const values = [...where.values];
 
     if (options.sortBy) {
-      query += ` ORDER BY ${quote(options.sortBy.field)} ${options.sortBy.direction.toUpperCase()}`;
+      query += ` ORDER BY ${quote(toDbFieldName(options.sortBy.field))} ${options.sortBy.direction.toUpperCase()}`;
     }
     if (typeof options.limit === "number") {
       query += ` LIMIT $${values.length + 1}`;
@@ -138,7 +149,7 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
     }
 
     const result = await this.db.query(query, values);
-    return result.rows.map((r) => deserializeData(fields, r) as T);
+    return result.rows.map((r) => deserializeData(fields, rowToAppKeys(r)) as T);
   }
 
   async update<T extends Record<string, unknown>>(options: UpdateOptions<T>): Promise<T | null> {
@@ -153,7 +164,7 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
     const entries = Object.entries(serialized);
     if (!entries.length) return 0;
 
-    const setSql = entries.map(([key], i) => `${quote(key)} = $${i + 1}`).join(", ");
+    const setSql = entries.map(([key], i) => `${quote(toDbFieldName(key))} = $${i + 1}`).join(", ");
     const setValues = entries.map(([, value]) => value);
     const where = buildWhere(options.where, setValues.length + 1);
     const query = `UPDATE ${quote(options.model)} SET ${setSql}${where.sql}`;
@@ -224,7 +235,7 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
       const tableName = String(row.tableName);
       if (!grouped.has(tableName)) grouped.set(tableName, { name: tableName, columns: [] });
       grouped.get(tableName)!.columns.push({
-        name: String(row.columnName),
+        name: toCamelCase(String(row.columnName)),
         dataType: String(row.dataType),
         isNullable: String(row.isNullable).toUpperCase() === "YES",
       });
@@ -236,13 +247,13 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
     if (operation.type === "createTable") {
       const columns = Object.entries(operation.definition.fields)
         .map(([name, field]) => {
-          const parts = [quote(name), getColumnType(field, "postgres")];
+          const parts = [quote(toDbFieldName(name)), getColumnType(field, "postgres")];
           if (field.primaryKey) parts.push("PRIMARY KEY");
           if (field.required) parts.push("NOT NULL");
           if (field.unique) parts.push("UNIQUE");
           if (field.references) {
             parts.push(
-              `REFERENCES ${quote(field.references.model)}(${quote(field.references.field)}) ON DELETE ${String(
+              `REFERENCES ${quote(field.references.model)}(${quote(toDbFieldName(field.references.field))}) ON DELETE ${String(
                 field.references.onDelete ?? "CASCADE"
               ).toUpperCase()}`
             );
@@ -254,11 +265,11 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
       await this.db.query(`CREATE TABLE IF NOT EXISTS ${quote(operation.table)} (${columns})`);
 
       for (const index of operation.definition.indexes ?? []) {
-        const indexName = `idx_${operation.table}_${index.fields.join("_")}`;
+        const indexName = `idx_${operation.table}_${index.fields.map((f) => toDbFieldName(f)).join("_")}`;
         await this.db.query(
           `CREATE ${index.unique ? "UNIQUE " : ""}INDEX IF NOT EXISTS ${quote(indexName)} ON ${quote(
             operation.table
-          )} (${index.fields.map((f) => quote(f)).join(", ")})`
+          )} (${index.fields.map((f) => quote(toDbFieldName(f))).join(", ")})`
         );
       }
       return;
@@ -266,12 +277,12 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
 
     if (operation.type === "addColumn") {
       const field = operation.definition;
-      const parts = [quote(operation.field), getColumnType(field, "postgres")];
+      const parts = [quote(toDbFieldName(operation.field)), getColumnType(field, "postgres")];
       if (field.required) parts.push("NOT NULL");
       if (field.unique) parts.push("UNIQUE");
       if (field.references) {
         parts.push(
-          `REFERENCES ${quote(field.references.model)}(${quote(field.references.field)}) ON DELETE ${String(
+          `REFERENCES ${quote(field.references.model)}(${quote(toDbFieldName(field.references.field))}) ON DELETE ${String(
             field.references.onDelete ?? "CASCADE"
           ).toUpperCase()}`
         );
@@ -286,7 +297,7 @@ class PostgresDatabaseAdapter implements DatabaseAdapter {
       await this.db.query(
         `CREATE ${operation.unique ? "UNIQUE " : ""}INDEX IF NOT EXISTS ${quote(
           operation.name
-        )} ON ${quote(operation.table)} (${operation.fields.map((f) => quote(f)).join(", ")})`
+        )} ON ${quote(operation.table)} (${operation.fields.map((f) => quote(toDbFieldName(f))).join(", ")})`
       );
     }
   }
