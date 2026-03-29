@@ -6,6 +6,7 @@
     [
       "@better-media/core",
       "better-media",
+      "@better-media/cli",
       "@better-media/plugin-validation",
       "@better-media/plugin-virus-scan",
       "@better-media/plugin-media-processing",
@@ -18,5 +19,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@better-media/cli"]
+  "ignore": []
 }

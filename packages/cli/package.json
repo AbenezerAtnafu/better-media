@@ -1,6 +1,6 @@
 {
   "name": "@better-media/cli",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": false,
   "author": "Abenezer Atnafu",
   "repository": {
@@ -20,6 +20,10 @@
     "better-media": "dist/index.js"
   },
   "type": "module",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

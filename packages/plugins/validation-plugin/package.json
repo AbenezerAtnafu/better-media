@@ -19,6 +19,10 @@
     "lint": "eslint .",
     "test": "jest"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "dependencies": {
     "@better-media/core": "workspace:*",
     "file-type": "^19.6.0",
