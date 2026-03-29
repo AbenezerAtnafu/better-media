@@ -112,65 +112,94 @@ export function Hero() {
                 <div className="text-slate-800 select-none text-right w-4">02</div>
                 <div>
                   <span className="text-purple-400">import</span> {"{ "}
-                  <span className="text-blue-400">S3StorageAdapter</span> {"} "}
+                  <span className="text-blue-400">memoryStorage</span> {"} "}
                   <span className="text-purple-400">from</span>{" "}
-                  <span className="text-emerald-400">"@better-media/adapter-storage-s3"</span>;
+                  <span className="text-emerald-400">"@better-media/adapter-storage-memory"</span>;
                 </div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">03</div>
-                <div className="pl-6">
-                  <span className="text-slate-400">plugins</span>: [
+                <div>
+                  <span className="text-purple-400">import</span> {"{ "}
+                  <span className="text-blue-400">memoryDatabase</span> {"} "}
+                  <span className="text-purple-400">from</span>{" "}
+                  <span className="text-emerald-400">"@better-media/adapter-db"</span>;
                 </div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">04</div>
-                <div className="pl-12">
-                  <span className="text-blue-400">validationPlugin</span>({"{"}
+                <div>
+                  <span className="text-purple-400">import</span> {"{ "}
+                  <span className="text-blue-400">validationPlugin</span> {"} "}
+                  <span className="text-purple-400">from</span>{" "}
+                  <span className="text-emerald-400">"@better-media/plugin-validation"</span>;
                 </div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">05</div>
-                <div className="pl-[4.5rem]">
-                  <span className="text-slate-400">useMagicBytes</span>:{" "}
-                  <span className="text-amber-400">true</span>,
-                </div>
+                <div className="h-4"></div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">06</div>
-                <div className="pl-[4.5rem]">
-                  <span className="text-slate-400">allowedMime</span>: [
-                  <span className="text-emerald-400">"image/webp"</span>]
+                <div>
+                  <span className="text-purple-400">export const</span>{" "}
+                  <span className="text-blue-400">media</span> ={" "}
+                  <span className="text-blue-400">createBetterMedia</span>({"{"}
                 </div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">07</div>
-                <div className="pl-12">{"}),"}</div>
+                <div className="pl-6">
+                  <span className="text-slate-400">storage</span>:{" "}
+                  <span className="text-blue-400">memoryStorage</span>(),
+                </div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">08</div>
-                <div className="pl-12">
-                  <span className="text-blue-400">virusScanPlugin</span>({"{"}
+                <div className="pl-6">
+                  <span className="text-slate-400">database</span>:{" "}
+                  <span className="text-blue-400">memoryDatabase</span>(),
                 </div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">09</div>
-                <div className="pl-[4.5rem]">
-                  <span className="text-slate-400">scanner</span>:{" "}
-                  <span className="text-purple-400">new</span>{" "}
-                  <span className="text-blue-400">ClamScanner</span>(),
+                <div className="pl-12">
+                  <span className="text-slate-400">plugins</span>: [
                 </div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">10</div>
-                <div className="pl-12">{"}),"}</div>
+                <div className="pl-[4.5rem]">
+                  <span className="text-blue-400">validationPlugin</span>({"{"}
+                </div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">11</div>
-                <div className="pl-6">]</div>
+                <div className="pl-[6rem]">
+                  <span className="text-slate-400">allowedMimeTypes</span>: [
+                  <span className="text-emerald-400">"image/jpeg"</span>,{" "}
+                  <span className="text-emerald-400">"image/png"</span>],
+                </div>
               </div>
               <div className="flex gap-6">
                 <div className="text-slate-800 select-none text-right w-4">12</div>
+                <div className="pl-[6rem]">
+                  <span className="text-slate-400">maxBytes</span>:{" "}
+                  <span className="text-amber-400">10</span> *{" "}
+                  <span className="text-amber-400">1024</span> *{" "}
+                  <span className="text-amber-400">1024</span>,
+                </div>
+              </div>
+              <div className="flex gap-6">
+                <div className="text-slate-800 select-none text-right w-4">13</div>
+                <div className="pl-[4.5rem]">{"}),"}</div>
+              </div>
+              <div className="flex gap-6">
+                <div className="text-slate-800 select-none text-right w-4">14</div>
+                <div className="pl-12">],</div>
+              </div>
+              <div className="flex gap-6">
+                <div className="text-slate-800 select-none text-right w-4">15</div>
                 <div>{"});"}</div>
               </div>
             </div>
