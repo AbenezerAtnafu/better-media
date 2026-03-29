@@ -1,6 +1,6 @@
 {
   "name": "@better-media/plugin-validation",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Validation plugin for Better Media pipeline",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
