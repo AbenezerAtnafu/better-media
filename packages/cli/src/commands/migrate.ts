@@ -16,7 +16,6 @@ export function registerMigrateCommand(program: Command): void {
     .option("--config <path>", "Path to media config file")
     .option("--mode <mode>", "Migration mode (safe|diff|force)", "diff")
     .option("-y, --yes", "Automatically accept and run migrations without prompting", false)
-    .option("--y", "(deprecated) same as --yes", false)
     .option(
       "--dialect <dialect>",
       "SQL dialect override (postgres|mysql|sqlite|mssql). Defaults from adapter/config.",
@@ -64,11 +63,6 @@ export function registerMigrateCommand(program: Command): void {
           : undefined;
       const dialect =
         options.dialect ?? (loaded.config.dialect as SqlDialect | undefined) ?? dialectFromAdapter;
-
-      if (options.y) {
-        console.warn("[media] WARNING: --y is deprecated. Use -y or --yes.");
-        options.yes = true;
-      }
 
       const planned = await getMigrations(adapter, { mode: options.mode, dialect });
       if (!planned.operations.length) {

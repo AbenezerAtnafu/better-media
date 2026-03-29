@@ -99,10 +99,3 @@ export class FileSystemStorageAdapter implements StorageAdapter {
 function isNotFoundError(err: unknown): boolean {
   return err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT";
 }
-
-/**
- * @deprecated Use `new FileSystemStorageAdapter(config)` instead.
- */
-export function filesystemStorage(config: FilesystemStorageConfig): FileSystemStorageAdapter {
-  return new FileSystemStorageAdapter(config);
-}

@@ -471,28 +471,4 @@ export class KyselyDbAdapter implements DatabaseAdapter {
       await builder.execute();
     }
   }
-
-  /**
-   * @deprecated Use runMigrations() instead.
-   */
-  async __createTable(
-    model: string,
-    definition: ModelDefinition,
-    options: { mode: "safe" | "diff" | "force" }
-  ): Promise<void> {
-    if (options.mode === "force") {
-      await this.db.schema.dropTable(model).ifExists().execute();
-    }
-
-    if (options.mode === "diff") {
-      const metadata = await this.__getMetadata();
-      const planner = new (await import("better-media")).MigrationPlanner(this.__getDialect());
-      const operations = planner.plan({ [model]: definition }, metadata);
-      for (const op of operations) {
-        await this.__executeMigration(op);
-      }
-    } else {
-      await this.__executeMigration({ type: "createTable", table: model, definition });
-    }
-  }
 }

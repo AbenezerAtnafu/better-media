@@ -1,5 +1,7 @@
 export type {
   StorageAdapter,
   GetUrlOptions,
-  PresignedPutUrlOptions,
+  PresignedUploadMethod,
+  PresignedUploadOptions,
+  PresignedUploadResult,
 } from "./interfaces/adapter.interface";

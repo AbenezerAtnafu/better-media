@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import type {
   PipelineContext,
   ValidationResult,
@@ -11,8 +12,6 @@ import type { ValidationPluginOptions } from "../interfaces/options.interface";
 import { ValidationErrorItem } from "../interfaces/error-item.interface";
 import { extractMetadataFromBuffer } from "../extract-metadata";
 import { runValidators, ValidatorService } from "../validators";
-
-const VALIDATION_DB_KEY_PREFIX = "better-media:validation:";
 
 // Boilerplate Logger (Industry Standard Placeholder)
 const SecurityLogger = {
@@ -62,35 +61,38 @@ async function readBufferForValidation(context: PipelineContext): Promise<Buffer
 
 async function recordValidationResult(
   database: DatabaseAdapter,
-  fileKey: string,
+  recordId: string,
   valid: boolean,
   errors: ValidationErrorItem[]
 ): Promise<void> {
-  const model = "validation_results";
-  const id = `${VALIDATION_DB_KEY_PREFIX}${fileKey}`;
+  const model = "media_validation_results";
+  const pluginId = "better-media-validation";
   const data = {
-    mediaId: fileKey,
+    mediaId: recordId,
     valid,
-    pluginId: "better-media-validation", // Consistent with manifest ID
+    pluginId,
     errors,
     createdAt: new Date().toISOString(),
   };
 
   const existing = await database.findOne({
     model,
-    where: [{ field: "id", value: id }],
+    where: [
+      { field: "mediaId", value: recordId },
+      { field: "pluginId", value: pluginId },
+    ],
   });
 
   if (existing) {
     await database.update({
       model,
-      where: [{ field: "id", value: id }],
+      where: [{ field: "id", value: existing.id }],
       update: data,
     });
   } else {
     await database.create({
       model,
-      data: { id, ...data },
+      data: { id: randomUUID(), ...data },
     });
   }
 }
@@ -120,7 +122,7 @@ export async function runValidation(
       return; // Skip validation, let pipeline continue
     }
 
-    await recordValidationResult(database, fileKey, false, [notFoundError]);
+    await recordValidationResult(database, context.recordId, false, [notFoundError]);
 
     if (opts.onFailure === "continue" || opts.onFailure === "custom") {
       if (opts.onFailure === "custom" && opts.onFailureCallback) {
@@ -152,14 +154,14 @@ export async function runValidation(
   const errors = await runValidators(buffer, context.file, metadata, database, opts);
 
   if (errors.length === 0) {
-    await recordValidationResult(database, fileKey, true, []);
+    await recordValidationResult(database, context.recordId, true, []);
     return;
   }
 
   // Security Logging (Mandatory for threats)
   SecurityLogger.logSuspiciousActivity(fileKey, errors);
 
-  await recordValidationResult(database, fileKey, false, errors);
+  await recordValidationResult(database, context.recordId, false, errors);
 
   const message = errors.map((e) => e.message).join("; ");
   const result: ValidationResult = { valid: false, message };

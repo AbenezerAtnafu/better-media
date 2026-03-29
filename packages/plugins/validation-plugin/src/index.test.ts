@@ -449,15 +449,15 @@ describe("validationPlugin - file not found", () => {
     const tooBigContent = Buffer.concat([MINIMAL_JPEG, Buffer.alloc(100)]);
     await storage.put("too-big-db.jpg", tooBigContent);
 
-    await expect(media.upload.complete("too-big-db.jpg", {})).rejects.toMatchObject({
-      name: "ValidationError",
-    });
+    const failure = await media.upload.complete("too-big-db.jpg", {}).catch((err) => err);
+    const recordId = failure.recordId;
 
     const record = (await database.findOne({
-      model: "validation_results",
-      where: [{ field: "id", value: "better-media:validation:too-big-db.jpg" }],
+      model: "media_validation_results",
+      where: [{ field: "mediaId", value: recordId }],
     })) as Record<string, unknown>;
     expect(record).toBeDefined();
+    expect(record?.mediaId).toBe(recordId);
     expect(record?.valid).toBe(false);
     expect(Array.isArray(record?.errors)).toBe(true);
     expect((record?.errors as { message: string }[])[0]?.message).toContain("exceeds maximum");

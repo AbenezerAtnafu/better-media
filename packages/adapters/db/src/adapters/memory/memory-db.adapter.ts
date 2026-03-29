@@ -353,18 +353,4 @@ export class MemoryDbAdapter implements DatabaseAdapter {
     }
     // Other operations are implicitly handled by the schemaless nature of MemoryDbAdapter
   }
-
-  /**
-   * @deprecated Use __executeMigration instead.
-   */
-  async __initTable(
-    model: string,
-    definition: ModelDefinition,
-    options: { mode: "safe" | "diff" | "force" }
-  ): Promise<void> {
-    if (options.mode === "force") {
-      this.store.delete(model);
-    }
-    this.getTable(model);
-  }
 }
