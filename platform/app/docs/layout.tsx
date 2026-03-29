@@ -25,7 +25,7 @@ const sectionIcons = new Map<string, string>([
   ["References", "menu_book"],
 ]);
 
-function getNodeLabel(name: ReactNode): string {
+function getNodeLabel(name: unknown): string {
   return typeof name === "string" ? name : "";
 }
 
