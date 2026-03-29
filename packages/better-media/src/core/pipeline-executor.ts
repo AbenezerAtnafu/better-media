@@ -56,7 +56,11 @@ function syncTrustedToFile(context: PipelineContext): void {
 
 /** Error thrown when validation phase aborts the pipeline */
 export class ValidationError extends Error {
-  constructor(public readonly result: ValidationResult) {
+  constructor(
+    public readonly recordId: string,
+    public readonly fileKey: string,
+    public readonly result: ValidationResult
+  ) {
     super(result.message ?? "Validation failed");
     this.name = "ValidationError";
   }
@@ -75,14 +79,16 @@ export class PipelineExecutor {
   ) {}
 
   async run(
+    recordId: string,
     fileKey: string,
     metadata: Record<string, unknown> = {},
     appContext: Record<string, unknown> = {}
   ): Promise<void> {
     const meta = { ...metadata };
-    const trustedFromDb = await loadTrustedFromDb(this.database, fileKey);
+    const trustedFromDb = await loadTrustedFromDb(this.database, recordId);
 
     const context: PipelineContext = {
+      recordId,
       file: buildFileInfo(fileKey, meta),
       storageLocation: buildStorageLocation(fileKey),
       processing: {},
@@ -101,15 +107,24 @@ export class PipelineExecutor {
     try {
       await loadFileIntoContext(context, this.fileHandling);
 
+      // Initialize the media record early to satisfy foreign key constraints
+      // for any results (validation, scan) persisted by plugins during the pipeline.
+      await saveTrustedToDb(this.database, recordId, fileKey, context.trusted, {
+        filename: context.file.originalName,
+        mimeType: context.file.mimeType,
+        size: context.file.size,
+        context: appContext,
+      });
+
       for (const phase of HOOK_NAMES) {
         const result = await this.engine.trigger(phase, context);
         if (result !== undefined && typeof result === "object" && result.valid === false) {
-          throw new ValidationError(result);
+          throw new ValidationError(recordId, fileKey, result);
         }
       }
 
       // Single-shot Upsert of initial data and trusted results
-      await saveTrustedToDb(this.database, fileKey, context.trusted, {
+      await saveTrustedToDb(this.database, recordId, fileKey, context.trusted, {
         filename: context.file.originalName,
         mimeType: context.file.mimeType,
         size: context.file.size,

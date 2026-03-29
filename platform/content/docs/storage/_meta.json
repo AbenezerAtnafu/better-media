@@ -1,0 +1,6 @@
+{
+  "index": "Storage",
+  "s3": "S3 Compatible",
+  "filesystem": "Filesystem",
+  "memory": "Memory"
+}

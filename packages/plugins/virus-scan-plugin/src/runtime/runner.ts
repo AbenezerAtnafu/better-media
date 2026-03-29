@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type {
   PipelineContext,
   ValidationResult,
@@ -7,8 +8,6 @@ import type {
 import type { VirusScanPluginOptions } from "../interfaces/options.interface";
 import type { VirusScanner } from "../interfaces/scanner.interface";
 import type { ScanRecord } from "../interfaces/scan-result.interface";
-
-const SCAN_DB_KEY_PREFIX = "better-media:virus-scan:";
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -34,12 +33,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 async function recordScanResult(database: DatabaseAdapter, record: ScanRecord): Promise<void> {
-  const model = "virus_scan_results";
-  const id = `${SCAN_DB_KEY_PREFIX}${record.fileKey}`;
+  const model = "media_virus_scan_results";
   const status = record.infected ? "infected" : "clean";
 
   const data = {
-    mediaId: record.fileKey,
+    mediaId: record.recordId,
     status,
     threats: record.viruses,
     scanner: record.scannerName,
@@ -48,19 +46,19 @@ async function recordScanResult(database: DatabaseAdapter, record: ScanRecord): 
 
   const existing = await database.findOne({
     model,
-    where: [{ field: "id", value: id }],
+    where: [{ field: "mediaId", value: record.recordId }],
   });
 
   if (existing) {
     await database.update({
       model,
-      where: [{ field: "id", value: id }],
+      where: [{ field: "id", value: existing.id }],
       update: data,
     });
   } else {
     await database.create({
       model,
-      data: { id, ...data },
+      data: { id: randomUUID(), ...data },
     });
   }
 }
@@ -152,6 +150,7 @@ export async function runVirusScan(
 
   // Persist scan result to DB
   const record: ScanRecord = {
+    recordId: context.recordId,
     fileKey,
     infected,
     viruses,

@@ -13,6 +13,9 @@ export interface FileContent {
 }
 
 export interface PipelineContext {
+  /** The unique database record identifier (typically a generated UUID). */
+  recordId: string;
+
   /** Core file information. Mutable. */
   file: FileInfo;
 

@@ -22,12 +22,12 @@ export interface FileHandlingConfig {
 
 export async function loadTrustedFromDb(
   database: DatabaseAdapter,
-  fileKey: string
+  recordId: string
 ): Promise<TrustedMetadata | null> {
   // Trusted metadata aligns with the central `media` model
   const record = await database.findOne({
     model: "media",
-    where: [{ field: "id", value: fileKey }],
+    where: [{ field: "id", value: recordId }],
   });
 
   if (!record || typeof record !== "object") return null;
@@ -53,7 +53,7 @@ export async function loadTrustedFromDb(
   const result = TrustedMetadataSchema.safeParse(rawTrusted);
 
   if (!result.success) {
-    console.error(`[QUARANTINE] Invalid TrustedMetadata mapped from media record "${fileKey}"!`);
+    console.error(`[QUARANTINE] Invalid TrustedMetadata mapped from media record "${recordId}"!`);
     console.error(`[QUARANTINE] Reason: ${JSON.stringify(result.error.format())}`);
     console.error(`[QUARANTINE] Data: ${JSON.stringify(rawTrusted)}`);
     return null;
@@ -65,6 +65,7 @@ export async function loadTrustedFromDb(
 
 export async function saveTrustedToDb(
   database: DatabaseAdapter,
+  recordId: string,
   fileKey: string,
   trusted: TrustedMetadata,
   initialArgs?: {
@@ -96,20 +97,22 @@ export async function saveTrustedToDb(
   // Perform a single-shot Upsert
   const existing = await database.findOne({
     model: "media",
-    where: [{ field: "id", value: fileKey }],
+    where: [{ field: "id", value: recordId }],
   });
+
+  updatePayload.storageKey = fileKey;
 
   if (existing) {
     if (Object.keys(updatePayload).length > 0) {
       await database.update({
         model: "media",
-        where: [{ field: "id", value: fileKey }],
+        where: [{ field: "id", value: recordId }],
         update: updatePayload,
       });
     }
   } else {
     // Record does not exist, initialize it
-    updatePayload.id = fileKey;
+    updatePayload.id = recordId;
     updatePayload.status = "PROCESSING"; // Default standard
     updatePayload.createdAt = new Date();
     await database.create({

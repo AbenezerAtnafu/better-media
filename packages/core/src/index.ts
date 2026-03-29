@@ -38,7 +38,13 @@ export {
   markFileContentVerified,
 } from "./plugin/index";
 export type { VerifiedSourceId, PipelineContextWithVerified } from "./plugin/index";
-export type { StorageAdapter, GetUrlOptions, PresignedPutUrlOptions } from "./storage/index";
+export type {
+  StorageAdapter,
+  GetUrlOptions,
+  PresignedUploadMethod,
+  PresignedUploadOptions,
+  PresignedUploadResult,
+} from "./storage/index";
 export type {
   DatabaseAdapter,
   DatabaseTransactionAdapter,

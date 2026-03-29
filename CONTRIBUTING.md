@@ -34,7 +34,7 @@ This project is a monorepo managed with [pnpm](https://pnpm.io/) and [Turborepo]
 ## Development Workflow
 
 - **Watching for changes**: Run `pnpm dev` to start the watch mode for all packages.
-- **Running documentation**: Run `pnpm dev --filter @better-media/docs` to start the Fumadocs development server.
+- **Running the website**: Run `pnpm dev --filter @better-media/platform` to start the landing page and docs app.
 - **Testing**: Run `pnpm test` to run tests for all packages. You can filter for a specific package using `pnpm test --filter <package-name>`.
 
 ## Submitting a Pull Request

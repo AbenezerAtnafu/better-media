@@ -1,4 +1,8 @@
-import type { GetUrlOptions, PresignedPutUrlOptions } from "@better-media/core";
+import type {
+  GetUrlOptions,
+  PresignedUploadOptions,
+  PresignedUploadResult,
+} from "@better-media/core";
 import type { BackgroundJobPayload } from "../core/lifecycle-engine";
 
 import type { Readable } from "node:stream";
@@ -30,6 +34,9 @@ export type IngestInput = {
 };
 
 export type MediaResult = {
+  /** The unique database record identifier (UUID). */
+  id: string;
+  /** The storage key (filename or path). */
   key: string;
   url?: string;
   metadata?: MediaMetadata;
@@ -56,7 +63,17 @@ export interface BetterMediaRuntime {
     ): Promise<MediaResult>;
 
     // Direct-to-Storage (Presigned URLs) Flow
-    presignedPutUrl(key: string, options?: PresignedPutUrlOptions): Promise<string>;
+
+    /**
+     * Create a presigned upload for direct-to-storage upload.
+     * Supports both PUT (binary body) and POST (multipart form) with strict server-side validation.
+     * After the client uploads, call `complete()` to run the processing pipeline.
+     */
+    requestPresignedUpload(
+      key: string,
+      options: PresignedUploadOptions
+    ): Promise<PresignedUploadResult>;
+
     /** Called by the client *after* successfully uploading to the presigned URL */
     complete(key: string, metadata?: MediaMetadata): Promise<MediaResult>;
   };

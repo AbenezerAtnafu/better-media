@@ -4,7 +4,7 @@ import os from "node:os";
 
 import { media } from "../media.config";
 
-const PORT = process.env.PORT ?? 3000;
+const PORT = process.env.PORT ?? 6000;
 
 const app = express();
 app.use(express.json());
@@ -101,13 +101,20 @@ app.post("/upload/presign", async (req, res) => {
     const contentType = req.body.contentType ?? "application/octet-stream";
 
     // Generate the URL (Does NOT trigger the validation/processing pipeline yet)
-    const uploadUrl = await media.upload.presignedPutUrl(fileKey, { contentType });
+    const result = await media.upload.requestPresignedUpload(fileKey, {
+      method: req.body.method ?? "PUT",
+      contentType,
+      maxSizeBytes: req.body.maxSizeBytes,
+    });
 
     res.json({
       success: true,
       fileKey,
-      uploadUrl,
-      message: "Use this URL to upload the file directly to S3 via an HTTP PUT request.",
+      ...result,
+      message:
+        result.method === "PUT"
+          ? "Use this URL to upload the file directly to S3 via an HTTP PUT request with the specified headers."
+          : "Use this URL and form fields to upload via a multipart/form-data POST request.",
     });
   } catch (err) {
     res.status(500).json({

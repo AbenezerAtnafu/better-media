@@ -81,7 +81,7 @@ export const schema: BmSchema = {
     },
   },
 
-  validation_results: {
+  media_validation_results: {
     fields: {
       id: { type: "string", primaryKey: true, required: true },
       mediaId: {
@@ -95,7 +95,7 @@ export const schema: BmSchema = {
     },
   },
 
-  virus_scan_results: {
+  media_virus_scan_results: {
     fields: {
       id: { type: "string", primaryKey: true, required: true },
       mediaId: {
