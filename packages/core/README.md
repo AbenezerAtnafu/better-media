@@ -36,4 +36,4 @@ export const myPlugin: PipelinePlugin = {
 
 ## Documentation
 
-For full documentation, visit [better-media.dev](https://better-media.dev/docs/core).
+For full documentation, visit [better-media-platform.vercel.app](https://better-media-platform.vercel.app/docs/core).

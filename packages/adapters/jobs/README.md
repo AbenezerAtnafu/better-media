@@ -17,4 +17,4 @@ import { InMemoryJobAdapter } from "@better-media/adapter-jobs";
 const jobs = new InMemoryJobAdapter({ concurrency: 2 });
 ```
 
-Visit [better-media.dev/docs/adapters/jobs](https://better-media.dev/docs/adapters/jobs) for more.
+Visit [better-media-platform.vercel.app/docs/adapters/jobs](https://better-media-platform.vercel.app/docs/adapters/jobs) for more.
