@@ -4,14 +4,16 @@ import path from "node:path";
 import os from "node:os";
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
-import type {
-  PipelineContext,
-  StorageAdapter,
-  DatabaseAdapter,
-  TrustedMetadata,
+import {
+  type PipelineContext,
+  type StorageAdapter,
+  type DatabaseAdapter,
+  TrustedMetadataSchema,
+  type TrustedMetadata,
+  markFileContentVerified,
 } from "@better-media/core";
 
-const TRUSTED_DB_KEY_PREFIX = "better-media:trusted:";
+// const TRUSTED_DB_KEY_PREFIX = "better-media:trusted:";
 
 export interface FileHandlingConfig {
   /** When set, files larger than this use streaming to temp file instead of loading into memory. */
@@ -20,39 +22,102 @@ export interface FileHandlingConfig {
 
 export async function loadTrustedFromDb(
   database: DatabaseAdapter,
-  fileKey: string
+  recordId: string
 ): Promise<TrustedMetadata | null> {
-  const key = `${TRUSTED_DB_KEY_PREFIX}${fileKey}`;
+  // Trusted metadata aligns with the central `media` model
   const record = await database.findOne({
-    model: "trusted_metadata",
-    where: [{ field: "id", value: key }],
+    model: "media",
+    where: [{ field: "id", value: recordId }],
   });
-  if (record == null || typeof record !== "object") return null;
-  const trusted = record as unknown as TrustedMetadata;
-  return (trusted.file ?? trusted.checksums) ? trusted : null;
+
+  if (!record || typeof record !== "object") return null;
+
+  // Reconstruct TrustedMetadata shape from media record
+  const rawTrusted = {
+    file: {
+      mimeType: record.mimeType ?? undefined,
+      size: record.size ?? undefined,
+      originalName: record.filename ?? undefined,
+    },
+    checksums: {
+      sha256: record.checksum ?? undefined,
+    },
+    media: {
+      width: record.width ?? undefined,
+      height: record.height ?? undefined,
+      duration: record.duration ?? undefined,
+    },
+  };
+
+  // Strict runtime schema validation via Zod
+  const result = TrustedMetadataSchema.safeParse(rawTrusted);
+
+  if (!result.success) {
+    console.error(`[QUARANTINE] Invalid TrustedMetadata mapped from media record "${recordId}"!`);
+    console.error(`[QUARANTINE] Reason: ${JSON.stringify(result.error.format())}`);
+    console.error(`[QUARANTINE] Data: ${JSON.stringify(rawTrusted)}`);
+    return null;
+  }
+
+  const validated = result.data;
+  return validated.file || validated.checksums || validated.media ? validated : null;
 }
 
 export async function saveTrustedToDb(
   database: DatabaseAdapter,
+  recordId: string,
   fileKey: string,
-  trusted: TrustedMetadata
+  trusted: TrustedMetadata,
+  initialArgs?: {
+    filename?: string;
+    mimeType?: string;
+    size?: number;
+    context?: Record<string, unknown>;
+  }
 ): Promise<void> {
-  const key = `${TRUSTED_DB_KEY_PREFIX}${fileKey}`;
+  // We map the trusted metadata back to the central media table, falling back to initial args.
+  const updatePayload: Record<string, unknown> = {};
+
+  if (trusted.file?.mimeType !== undefined) updatePayload.mimeType = trusted.file.mimeType;
+  else if (initialArgs?.mimeType !== undefined) updatePayload.mimeType = initialArgs.mimeType;
+
+  if (trusted.file?.size !== undefined) updatePayload.size = trusted.file.size;
+  else if (initialArgs?.size !== undefined) updatePayload.size = initialArgs.size;
+
+  if (trusted.file?.originalName !== undefined) updatePayload.filename = trusted.file.originalName;
+  else if (initialArgs?.filename !== undefined) updatePayload.filename = initialArgs.filename;
+
+  if (trusted.checksums?.sha256 !== undefined) updatePayload.checksum = trusted.checksums.sha256;
+  if (trusted.media?.width !== undefined) updatePayload.width = trusted.media.width;
+  if (trusted.media?.height !== undefined) updatePayload.height = trusted.media.height;
+  if (trusted.media?.duration !== undefined) updatePayload.duration = trusted.media.duration;
+
+  if (initialArgs?.context !== undefined) updatePayload.context = initialArgs.context;
+
+  // Perform a single-shot Upsert
   const existing = await database.findOne({
-    model: "trusted_metadata",
-    where: [{ field: "id", value: key }],
+    model: "media",
+    where: [{ field: "id", value: recordId }],
   });
 
+  updatePayload.storageKey = fileKey;
+
   if (existing) {
-    await database.update({
-      model: "trusted_metadata",
-      where: [{ field: "id", value: key }],
-      update: trusted as unknown as Record<string, unknown>,
-    });
+    if (Object.keys(updatePayload).length > 0) {
+      await database.update({
+        model: "media",
+        where: [{ field: "id", value: recordId }],
+        update: updatePayload,
+      });
+    }
   } else {
+    // Record does not exist, initialize it
+    updatePayload.id = recordId;
+    updatePayload.status = "PROCESSING"; // Default standard
+    updatePayload.createdAt = new Date();
     await database.create({
-      model: "trusted_metadata",
-      data: { id: key, ...(trusted as unknown as Record<string, unknown>) },
+      model: "media",
+      data: updatePayload,
     });
   }
 }
@@ -121,13 +186,21 @@ export async function loadFileIntoContext(
   }
 
   context.utilities!.fileContent = fileContent;
+
+  if (fileContent.buffer != null || fileContent.tempPath != null) {
+    markFileContentVerified(context);
+  }
 }
 
 export async function getBufferFromContext(context: PipelineContext): Promise<Buffer | null> {
   const fileContent = context.utilities?.fileContent;
   if (!fileContent) return null;
-  if (fileContent.buffer) return fileContent.buffer;
+  if (fileContent.buffer) {
+    markFileContentVerified(context);
+    return fileContent.buffer;
+  }
   if (fileContent.tempPath) {
+    markFileContentVerified(context);
     return fs.readFile(fileContent.tempPath);
   }
   return null;

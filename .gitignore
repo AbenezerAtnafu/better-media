@@ -202,3 +202,6 @@ state.txt
 
 .cursor/
 .claude/worktrees
+
+examples/express/uploads
+examples/express/better-media-migrations

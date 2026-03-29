@@ -1,16 +1,17 @@
 import fs from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import type {
   PipelineContext,
   ValidationResult,
   StorageAdapter,
   DatabaseAdapter,
+  PluginApi,
 } from "@better-media/core";
+import { markFileContentVerified } from "@better-media/core";
 import type { ValidationPluginOptions } from "../interfaces/options.interface";
 import { ValidationErrorItem } from "../interfaces/error-item.interface";
 import { extractMetadataFromBuffer } from "../extract-metadata";
 import { runValidators, ValidatorService } from "../validators";
-
-const VALIDATION_DB_KEY_PREFIX = "better-media:validation:";
 
 // Boilerplate Logger (Industry Standard Placeholder)
 const SecurityLogger = {
@@ -51,64 +52,60 @@ async function fetchWithRetry(
   return null;
 }
 
-async function getBufferFromContext(context: PipelineContext): Promise<Buffer | null> {
+async function readBufferForValidation(context: PipelineContext): Promise<Buffer | null> {
   const fileContent = context.utilities?.fileContent;
   if (fileContent?.buffer) return fileContent.buffer;
   if (fileContent?.tempPath) return fs.readFile(fileContent.tempPath);
   return null;
 }
 
-function syncTrustedToFile(context: PipelineContext): void {
-  const { trusted, file } = context;
-  if (trusted.file?.mimeType != null) file.mimeType = trusted.file.mimeType;
-  if (trusted.file?.size != null) file.size = trusted.file.size;
-  if (trusted.file?.originalName != null) file.originalName = trusted.file.originalName;
-  if (trusted.file?.extension != null) file.extension = trusted.file.extension;
-  if (trusted.checksums) file.checksums = { ...file.checksums, ...trusted.checksums };
-}
-
 async function recordValidationResult(
   database: DatabaseAdapter,
-  fileKey: string,
+  recordId: string,
   valid: boolean,
   errors: ValidationErrorItem[]
 ): Promise<void> {
-  const model = "validation_results";
-  const id = `${VALIDATION_DB_KEY_PREFIX}${fileKey}`;
+  const model = "media_validation_results";
+  const pluginId = "better-media-validation";
   const data = {
-    fileKey,
+    mediaId: recordId,
     valid,
+    pluginId,
     errors,
-    timestamp: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
   };
 
   const existing = await database.findOne({
     model,
-    where: [{ field: "id", value: id }],
+    where: [
+      { field: "mediaId", value: recordId },
+      { field: "pluginId", value: pluginId },
+    ],
   });
 
   if (existing) {
     await database.update({
       model,
-      where: [{ field: "id", value: id }],
+      where: [{ field: "id", value: existing.id }],
       update: data,
     });
   } else {
     await database.create({
       model,
-      data: { id, ...data },
+      data: { id: randomUUID(), ...data },
     });
   }
 }
 
 export async function runValidation(
   context: PipelineContext,
+  api: PluginApi,
   opts: ValidationPluginOptions
 ): Promise<void | ValidationResult> {
   const { file, metadata, storage, database } = context;
   const fileKey = file.key;
 
-  let buffer = await getBufferFromContext(context);
+  let buffer = await readBufferForValidation(context);
   if (buffer == null) buffer = await fetchWithRetry(storage, fileKey, opts);
 
   if (buffer == null) {
@@ -125,7 +122,7 @@ export async function runValidation(
       return; // Skip validation, let pipeline continue
     }
 
-    await recordValidationResult(database, fileKey, false, [notFoundError]);
+    await recordValidationResult(database, context.recordId, false, [notFoundError]);
 
     if (opts.onFailure === "continue" || opts.onFailure === "custom") {
       if (opts.onFailure === "custom" && opts.onFailureCallback) {
@@ -141,21 +138,30 @@ export async function runValidation(
     };
   }
 
-  // Extract critical metadata: first-writer-wins into context.trusted
-  await extractMetadataFromBuffer(buffer, context, opts);
-  syncTrustedToFile(context);
+  // Provenance: bytes were read from storage (utilities or retry path) — required for proposeTrusted guard
+  markFileContentVerified(context);
 
-  const errors = await runValidators(buffer, context.file, metadata, opts);
+  // Extract critical metadata: first-writer-wins via PluginApi (skip when nothing to merge)
+  const patch = await extractMetadataFromBuffer(buffer, context, opts);
+  const hasTrustedPatch =
+    (patch.file && Object.keys(patch.file).length > 0) ||
+    (patch.checksums && Object.keys(patch.checksums).length > 0) ||
+    (patch.media && Object.keys(patch.media).length > 0);
+  if (hasTrustedPatch) {
+    api.proposeTrusted(patch);
+  }
+
+  const errors = await runValidators(buffer, context.file, metadata, database, opts);
 
   if (errors.length === 0) {
-    await recordValidationResult(database, fileKey, true, []);
+    await recordValidationResult(database, context.recordId, true, []);
     return;
   }
 
   // Security Logging (Mandatory for threats)
   SecurityLogger.logSuspiciousActivity(fileKey, errors);
 
-  await recordValidationResult(database, fileKey, false, errors);
+  await recordValidationResult(database, context.recordId, false, errors);
 
   const message = errors.map((e) => e.message).join("; ");
   const result: ValidationResult = { valid: false, message };

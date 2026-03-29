@@ -1,0 +1,28 @@
+---
+title: Why Using Better Media
+description: Explain the value proposition, tradeoffs, and when Better Media is a good fit.
+---
+
+Modern media pipelines are often a mess of multipart forms, custom S3 clients, and ad-hoc processing scripts. Better Media provides a **unified, type-safe architecture** to handle media ingest.
+
+## Problems Solved
+
+- **Ad-hoc Storage Logic**: Switch between local disk, S3, or MinIO by changing a single adapter.
+- **Security Gaps**: Built-in plugins for MIME-type validation and virus scanning prevent malicious uploads.
+- **Blocked Threads**: Move heavy processing like video transcoding or image optimization to background workers with a job adapter.
+- **Metadata Fragmentation**: Unified storage of media metadata alongside your files.
+
+## Modular Architecture
+
+The framework is built on three pillars:
+
+1.  **Core Contracts**: Zero-dependency interfaces.
+2.  **Pluggable Adapters**: Infrastructure implementations (Storage, DB, Jobs).
+3.  **Lifecycle Plugins**: Business logic (Validation, Processing, Scanning).
+
+## When to Use Better Media
+
+- You have varied storage needs (e.g., local dev vs. S3 production).
+- You need to process media files (resizing, transcoding) reliably.
+- You require security checks like virus scanning or deep MIME inspection.
+- You want a consistent API for presigned URLs regardless of the storage provider.

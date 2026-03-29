@@ -15,6 +15,9 @@ import { LifecycleEngine } from "./core/lifecycle-engine";
 import { PipelineExecutor } from "./core/pipeline-executor";
 import { runBackgroundJob } from "./jobs/job-runner";
 import type { BackgroundJobPayload } from "./core/lifecycle-engine";
+import type { FileHandlingConfig } from "./core/file-loader";
+import { toDatabaseAdapter } from "./db/postgres";
+import type { PresignedUploadOptions } from "@better-media/core";
 
 function createNoopJobAdapter(): JobAdapter {
   return {
@@ -35,7 +38,7 @@ type NormalizedFile = {
 
 async function normalizeInput(
   input: IngestInput,
-  fileHandling: import("./core/file-loader").FileHandlingConfig
+  fileHandling: FileHandlingConfig
 ): Promise<NormalizedFile> {
   const { file, metadata = {}, deleteAfterUpload = true } = input;
   const maxBufferBytes = fileHandling.maxBufferBytes;
@@ -119,8 +122,9 @@ async function normalizeInput(
  * ```
  */
 export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime {
-  const { storage, database, plugins } = config;
-  const { registry } = buildPluginRegistry(plugins);
+  const { storage, plugins, trustedPolicy } = config;
+  const database = toDatabaseAdapter(config.database);
+  const { registry } = buildPluginRegistry(plugins, trustedPolicy);
 
   const fileHandling = config.fileHandling ?? {};
   const jobAdapter =
@@ -144,20 +148,32 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
   const engine = new LifecycleEngine(registry, jobAdapter);
   const executor = new PipelineExecutor(engine, storage, database, jobAdapter, fileHandling);
 
-  const runPipeline = (fileKey: string, metadata: Record<string, unknown> = {}) =>
-    executor.run(fileKey, metadata);
+  const runPipeline = (
+    recordId: string,
+    fileKey: string,
+    metadata: Record<string, unknown> = {},
+    context: Record<string, unknown> = {}
+  ) => executor.run(recordId, fileKey, metadata, context);
 
   return {
     upload: {
       async ingest(input: IngestInput): Promise<MediaResult> {
         const normalized = await normalizeInput(input, fileHandling);
-        const finalKey = input.key ?? normalized.metadata.filename ?? `file-${randomUUID()}`;
+        const recordId = randomUUID();
+        const finalKey = input.key ?? normalized.metadata.filename ?? recordId;
 
         try {
           await storage.put(finalKey, normalized.data);
-          await runPipeline(finalKey, { ...normalized.metadata, ...input.context });
+          // Pass metadata and context separately to the executor to persist once at the end
+          await runPipeline(
+            recordId,
+            finalKey,
+            normalized.metadata,
+            (normalized.metadata.context as Record<string, unknown>) ?? {}
+          );
 
           return {
+            id: recordId,
             key: finalKey,
             status: "processed",
             metadata: normalized.metadata,
@@ -182,8 +198,8 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
       fromUrl(url: string, input?: Omit<IngestInput, "file"> & { mode?: "import" | "reference" }) {
         return this.ingest({ file: { url, mode: input?.mode ?? "import" }, ...input });
       },
-      async presignedPutUrl(key: string, options?: { expiresIn?: number; contentType?: string }) {
-        const fn = storage.createPresignedPutUrl;
+      async requestPresignedUpload(key: string, options: PresignedUploadOptions) {
+        const fn = storage.createPresignedUpload;
         if (typeof fn !== "function") {
           throw new Error(
             "Presigned upload not supported by this storage adapter. Use an S3/GCS adapter."
@@ -191,9 +207,21 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
         }
         return fn.call(storage, key, options);
       },
-      async complete(key: string, metadata: MediaMetadata = {}, context?: Record<string, unknown>) {
-        await runPipeline(key, { ...metadata, ...context });
+      async complete(key: string, metadata: MediaMetadata = {}) {
+        const existing = await database.findOne({
+          model: "media",
+          where: [{ field: "storageKey", value: key }],
+        });
+        const recordId = (existing?.id as string) ?? randomUUID();
+
+        await runPipeline(
+          recordId,
+          key,
+          metadata,
+          (metadata.context as Record<string, unknown>) ?? {}
+        );
         return {
+          id: recordId,
           key,
           status: "processed",
           metadata,
@@ -201,26 +229,33 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
       },
     },
     files: {
-      get(fileKey: string) {
-        return database.findOne({ model: "media", where: [{ field: "id", value: fileKey }] });
+      get(id: string) {
+        return database.findOne({ model: "media", where: [{ field: "id", value: id }] });
       },
-      async delete(fileKey: string) {
+      async delete(id: string) {
+        const record = await this.get(id);
+        const storageKey = (record?.storageKey as string) ?? id;
         await Promise.all([
-          storage.delete(fileKey),
-          database.delete({ model: "media", where: [{ field: "id", value: fileKey }] }),
+          storage.delete(storageKey),
+          database.delete({ model: "media", where: [{ field: "id", value: id }] }),
         ]);
       },
-      async getUrl(fileKey: string, options?: { expiresIn?: number }) {
+      async getUrl(id: string, options?: { expiresIn?: number }) {
+        const record = await this.get(id);
+        const storageKey = (record?.storageKey as string) ?? id;
         const fn = storage.getUrl;
         if (typeof fn !== "function") {
           throw new Error(
             "URL generation not supported by this storage adapter. Use an S3/GCS adapter."
           );
         }
-        return fn.call(storage, fileKey, options);
+        return fn.call(storage, storageKey, options);
       },
-      reprocess(fileKey: string, metadata: Record<string, unknown> = {}) {
-        return runPipeline(fileKey, metadata);
+      async reprocess(id: string, metadata: Record<string, unknown> = {}) {
+        const record = await this.get(id);
+        if (!record) throw new Error(`Media record not found: ${id}`);
+        const storageKey = (record.storageKey as string) ?? id;
+        return runPipeline(id, storageKey, metadata);
       },
     },
     async runBackgroundJob(payload: BackgroundJobPayload) {
@@ -247,8 +282,46 @@ export type {
   MediaMetadata,
   MediaResult,
 } from "./runtime/runtime.interface";
-export type { GetUrlOptions, PresignedPutUrlOptions } from "@better-media/core";
+export type {
+  GetUrlOptions,
+  PresignedUploadMethod,
+  PresignedUploadOptions,
+  PresignedUploadResult,
+} from "@better-media/core";
 export type { FileHandlingConfig } from "./core/file-loader";
 
-// DB Architecture exports
-export * from "./db";
+// DB Architecture re-exports from core
+export {
+  schema,
+  getMigrations,
+  runMigrations,
+  MigrationPlanner,
+  compileMigrationOperationsSql,
+  toCamelCase,
+  toDbFieldName,
+  applyOperationsToMetadata,
+  isPgPoolLike,
+  serializeData,
+  deserializeData,
+  runHooks,
+  getColumnType,
+  type SqlDialect,
+  type TableMetadata,
+  type MigrationOperation,
+  type FieldDefinition,
+  type FieldType,
+  type BmSchema,
+  type ModelDefinition,
+  type IndexDefinition,
+  type MigrationOptions,
+  type DbHooks,
+  type DatabaseHookContext,
+  type HookContext,
+} from "@better-media/core";
+
+// Specific adapter implementations stay here
+export * from "./db/postgres";
+export { toDatabaseAdapter } from "./db/postgres";
+
+// CLI/Tooling utilities (moved to core)
+export { getAdapter, type GetAdapterOptions } from "@better-media/core";

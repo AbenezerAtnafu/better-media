@@ -1,0 +1,6 @@
+{
+  "postgres": "Postgres",
+  "mysql": "MySQL",
+  "sqlite": "SQLite",
+  "other-relational": "Other Relational Databases"
+}

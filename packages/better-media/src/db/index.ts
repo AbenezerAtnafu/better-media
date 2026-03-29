@@ -1,6 +1,2 @@
-export * from "./schema";
-export * from "./types";
-export * from "./fields";
-export * from "./hooks";
-export * from "./migration";
-export * from "./plan";
+export * from "@better-media/core";
+export { postgresDatabase, toDatabaseAdapter } from "./postgres";

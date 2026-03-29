@@ -93,6 +93,21 @@ export interface ValidationPluginOptions {
     backoff?: "linear" | "exponential";
   };
 
+  /**
+   * Block upload if a file with the same checksum already exists in the database.
+   * Default: false.
+   */
+  preventDuplicates?: boolean | { algorithm?: "sha256" | "md5"; metadataKey?: string };
+
+  /**
+   * Filename handling when sanitizing for storage (see `sanitizeFilename`).
+   * @default "sanitize"
+   */
+  filenameSafety?: "sanitize" | "randomize";
+
+  /** Max length for sanitized filenames (default 255). */
+  maxFilenameLength?: number;
+
   /** Custom validators. Receives buffer and metadata; return errors to fail. */
   customValidators?: Array<
     (

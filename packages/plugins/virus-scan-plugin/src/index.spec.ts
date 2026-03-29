@@ -1,4 +1,4 @@
-import type { PipelineContext, MediaRuntime } from "@better-media/core";
+import type { PipelineContext, MediaRuntime, PluginApi } from "@better-media/core";
 import type { VirusScanner } from "./interfaces/scanner.interface";
 import type { ScanResult } from "./interfaces/scan-result.interface";
 import { virusScanPlugin } from "./index";
@@ -29,10 +29,19 @@ function cleanResult(): ScanResult {
 // Mock Runtime
 // ---------------------------------------------------------------------------
 
-type TapFn = (ctx: PipelineContext) => Promise<void | { valid: boolean; message?: string }>;
+type TapFn = (
+  ctx: PipelineContext,
+  api: PluginApi
+) => Promise<void | { valid: boolean; message?: string }>;
 
-function createMockRuntime(): { runtime: MediaRuntime; getTapFn: () => TapFn } {
+function createMockRuntime(): { runtime: MediaRuntime; api: PluginApi; getTapFn: () => TapFn } {
   let captured: TapFn | null = null;
+
+  const api: PluginApi = {
+    emitMetadata: jest.fn(),
+    emitProcessing: jest.fn(),
+    proposeTrusted: jest.fn(),
+  };
 
   const runtime: MediaRuntime = {
     hooks: {
@@ -50,6 +59,7 @@ function createMockRuntime(): { runtime: MediaRuntime; getTapFn: () => TapFn } {
 
   return {
     runtime,
+    api,
     getTapFn: () => {
       if (!captured) throw new Error("tap was not called");
       return captured;
@@ -63,6 +73,7 @@ function createMockRuntime(): { runtime: MediaRuntime; getTapFn: () => TapFn } {
 
 function createMockContext(fileContent?: { buffer?: Buffer; tempPath?: string }): PipelineContext {
   return {
+    recordId: "test-uuid",
     file: { key: "test-file.jpg" } as PipelineContext["file"],
     storageLocation: {} as PipelineContext["storageLocation"],
     processing: {} as PipelineContext["processing"],
@@ -70,7 +81,9 @@ function createMockContext(fileContent?: { buffer?: Buffer; tempPath?: string })
     trusted: {} as PipelineContext["trusted"],
     storage: {} as PipelineContext["storage"],
     database: {
-      put: jest.fn().mockResolvedValue(undefined),
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue(undefined),
+      update: jest.fn().mockResolvedValue(undefined),
     } as unknown as PipelineContext["database"],
     jobs: {} as PipelineContext["jobs"],
     utilities: fileContent ? { fileContent } : undefined,
@@ -117,26 +130,30 @@ describe("virusScanPlugin", () => {
       const scanner = createMockScanner({
         scanBuffer: jest.fn().mockResolvedValue(cleanResult()),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
 
       virusScanPlugin({ scanner }).apply!(runtime);
-      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("clean") }));
+      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("clean") }), api);
 
       expect(result).toBeUndefined();
       expect(scanner.scanBuffer).toHaveBeenCalled();
+      expect(api.emitMetadata).toHaveBeenCalled();
     });
 
     it("should return undefined for a clean file on disk", async () => {
       const scanner = createMockScanner({
         scanFile: jest.fn().mockResolvedValue(cleanResult()),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
 
       virusScanPlugin({ scanner }).apply!(runtime);
-      const result = await getTapFn()(createMockContext({ tempPath: "/tmp/clean.jpg" }));
+      const result = await getTapFn()(createMockContext({ tempPath: "/tmp/clean.jpg" }), api);
 
       expect(result).toBeUndefined();
       expect(scanner.scanFile).toHaveBeenCalledWith("/tmp/clean.jpg");
+      expect(api.emitMetadata).toHaveBeenCalledWith(
+        expect.objectContaining({ infected: false, viruses: [] })
+      );
     });
   });
 
@@ -145,25 +162,28 @@ describe("virusScanPlugin", () => {
       const scanner = createMockScanner({
         scanBuffer: jest.fn().mockResolvedValue(infectedResult(["Win.Test.EICAR"])),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
 
       virusScanPlugin({ scanner }).apply!(runtime);
-      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("bad") }));
+      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("bad") }), api);
 
       expect(result).toEqual({
         valid: false,
         message: expect.stringContaining("Win.Test.EICAR"),
       });
+      expect(api.emitMetadata).toHaveBeenCalledWith(
+        expect.objectContaining({ infected: true, viruses: ["Win.Test.EICAR"] })
+      );
     });
 
     it("should abort by default when a virus is detected via tempPath", async () => {
       const scanner = createMockScanner({
         scanFile: jest.fn().mockResolvedValue(infectedResult(["Trojan.Generic"])),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
 
       virusScanPlugin({ scanner }).apply!(runtime);
-      const result = await getTapFn()(createMockContext({ tempPath: "/tmp/malware.exe" }));
+      const result = await getTapFn()(createMockContext({ tempPath: "/tmp/malware.exe" }), api);
 
       expect(result).toEqual({
         valid: false,
@@ -177,10 +197,10 @@ describe("virusScanPlugin", () => {
       const scanner = createMockScanner({
         scanBuffer: jest.fn().mockResolvedValue(infectedResult()),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
 
       virusScanPlugin({ scanner, onFailure: "continue" }).apply!(runtime);
-      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("bad") }));
+      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("bad") }), api);
 
       expect(result).toBeUndefined();
     });
@@ -190,12 +210,12 @@ describe("virusScanPlugin", () => {
       const scanner = createMockScanner({
         scanBuffer: jest.fn().mockResolvedValue(infectedResult(["EICAR"])),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
 
       virusScanPlugin({ scanner, onFailure: "custom", onFailureCallback: callback }).apply!(
         runtime
       );
-      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("bad") }));
+      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("bad") }), api);
 
       expect(callback).toHaveBeenCalledWith("test-file.jpg", ["EICAR"]);
       expect(result).toEqual({ valid: false, message: "custom rejection" });
@@ -206,12 +226,12 @@ describe("virusScanPlugin", () => {
       const scanner = createMockScanner({
         scanBuffer: jest.fn().mockResolvedValue(infectedResult()),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
 
       virusScanPlugin({ scanner, onFailure: "custom", onFailureCallback: callback }).apply!(
         runtime
       );
-      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("bad") }));
+      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("bad") }), api);
 
       expect(result).toBeUndefined();
     });
@@ -222,19 +242,21 @@ describe("virusScanPlugin", () => {
       const scanner = createMockScanner({
         scanBuffer: jest.fn().mockResolvedValue(cleanResult()),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
       const context = createMockContext({ buffer: Buffer.from("clean") });
 
       virusScanPlugin({ scanner }).apply!(runtime);
-      await getTapFn()(context);
+      await getTapFn()(context, api);
 
-      expect((context.database as unknown as { put: jest.Mock }).put).toHaveBeenCalledWith(
-        "better-media:virus-scan:test-file.jpg",
+      expect(context.database.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          fileKey: "test-file.jpg",
-          infected: false,
-          viruses: [],
-          scannerName: "mock-scanner",
+          model: "media_virus_scan_results",
+          data: expect.objectContaining({
+            id: expect.any(String),
+            mediaId: "test-uuid",
+            status: "clean",
+            scanner: "mock-scanner",
+          }),
         })
       );
     });
@@ -243,18 +265,21 @@ describe("virusScanPlugin", () => {
       const scanner = createMockScanner({
         scanBuffer: jest.fn().mockResolvedValue(infectedResult(["EICAR"])),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
       const context = createMockContext({ buffer: Buffer.from("bad") });
 
       virusScanPlugin({ scanner }).apply!(runtime);
-      await getTapFn()(context);
+      await getTapFn()(context, api);
 
-      expect((context.database as unknown as { put: jest.Mock }).put).toHaveBeenCalledWith(
-        "better-media:virus-scan:test-file.jpg",
+      expect(context.database.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          fileKey: "test-file.jpg",
-          infected: true,
-          viruses: ["EICAR"],
+          model: "media_virus_scan_results",
+          data: expect.objectContaining({
+            id: expect.any(String),
+            mediaId: "test-uuid",
+            status: "infected",
+            threats: ["EICAR"],
+          }),
         })
       );
     });
@@ -263,25 +288,25 @@ describe("virusScanPlugin", () => {
   describe("error handling", () => {
     it("should throw if no file content is provided", async () => {
       const scanner = createMockScanner();
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
 
       virusScanPlugin({ scanner }).apply!(runtime);
 
-      await expect(getTapFn()(createMockContext())).rejects.toThrow("fileContent");
+      await expect(getTapFn()(createMockContext(), api)).rejects.toThrow("fileContent");
     });
 
     it("should return invalid result when scanner fails after retries", async () => {
       const scanner = createMockScanner({
         scanBuffer: jest.fn().mockRejectedValue(new Error("Daemon unreachable")),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
 
       virusScanPlugin({
         scanner,
         retryOptions: { maxAttempts: 2, delayMs: 10, backoff: "linear" },
       }).apply!(runtime);
 
-      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("data") }));
+      const result = await getTapFn()(createMockContext({ buffer: Buffer.from("data") }), api);
 
       expect(result).toEqual({
         valid: false,
@@ -296,13 +321,13 @@ describe("virusScanPlugin", () => {
       const scanner = createMockScanner({
         scanBuffer: jest.fn().mockResolvedValue(cleanResult()),
       });
-      const { runtime, getTapFn } = createMockRuntime();
+      const { runtime, api, getTapFn } = createMockRuntime();
       const context = createMockContext({ buffer: Buffer.from("clean") });
 
       virusScanPlugin({ scanner }).apply!(runtime);
-      await getTapFn()(context);
+      await getTapFn()(context, api);
 
-      expect(context.metadata["virusScan"]).toEqual(
+      expect(api.emitMetadata).toHaveBeenCalledWith(
         expect.objectContaining({
           infected: false,
           viruses: [],

@@ -13,6 +13,9 @@ export interface FileContent {
 }
 
 export interface PipelineContext {
+  /** The unique database record identifier (typically a generated UUID). */
+  recordId: string;
+
   /** Core file information. Mutable. */
   file: FileInfo;
 
@@ -42,4 +45,14 @@ export interface PipelineContext {
 
   /** Plugin scratchpad. Not persisted. Mutable. Includes file content (buffer/tempPath) from framework. */
   utilities?: Record<string, unknown> & { fileContent?: FileContent };
+}
+
+/** Framework-mediated Write API for Plugins */
+export interface PluginApi {
+  /** Emit metadata under the plugin's own namespace. Scoped automatically. */
+  emitMetadata(patch: Record<string, unknown>): void;
+  /** Emit processing results (transcription, thumbnails) under plugin's namespace. */
+  emitProcessing(patch: Record<string, unknown>): void;
+  /** Propose updates to global trusted metadata. ONLY for 'trusted' plugins. */
+  proposeTrusted(patch: TrustedMetadata): void;
 }

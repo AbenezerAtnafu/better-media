@@ -1,8 +1,18 @@
 import crypto from "node:crypto";
+import type { PluginManifest } from "@better-media/core";
 import { validationPlugin } from "./index";
 import { memoryStorage } from "@better-media/adapter-storage-memory";
 import { memoryDatabase } from "@better-media/adapter-db";
 import { createBetterMedia } from "better-media";
+
+/** Manifest for test-only spy plugins (required by buildPluginRegistry). */
+const TEST_SPY_MANIFEST: PluginManifest = {
+  id: "test-spy-plugin",
+  version: "1.0.0",
+  trustLevel: "untrusted",
+  capabilities: ["file.read", "metadata.write.own", "processing.write.own"],
+  namespace: "spy",
+};
 
 // Minimal JPEG header (valid for magic byte detection)
 const MINIMAL_JPEG = Buffer.from([
@@ -208,6 +218,7 @@ describe("validationPlugin - extract metadata", () => {
 
     const spyPlugin = {
       name: "spy",
+      runtimeManifest: TEST_SPY_MANIFEST,
       apply(runtime: {
         hooks: {
           "upload:complete": {
@@ -259,6 +270,7 @@ describe("validationPlugin - extract metadata", () => {
 
     const spyPlugin = {
       name: "spy",
+      runtimeManifest: TEST_SPY_MANIFEST,
       apply(runtime: {
         hooks: {
           "upload:complete": {
@@ -306,6 +318,7 @@ describe("validationPlugin - extract metadata", () => {
 
     const spyPlugin = {
       name: "spy",
+      runtimeManifest: TEST_SPY_MANIFEST,
       apply(runtime: {
         hooks: {
           "upload:complete": {
@@ -355,6 +368,7 @@ describe("validationPlugin - extract metadata", () => {
 
     const spyPlugin = {
       name: "spy",
+      runtimeManifest: TEST_SPY_MANIFEST,
       apply(runtime: {
         hooks: {
           "upload:complete": {
@@ -435,15 +449,15 @@ describe("validationPlugin - file not found", () => {
     const tooBigContent = Buffer.concat([MINIMAL_JPEG, Buffer.alloc(100)]);
     await storage.put("too-big-db.jpg", tooBigContent);
 
-    await expect(media.upload.complete("too-big-db.jpg", {})).rejects.toMatchObject({
-      name: "ValidationError",
-    });
+    const failure = await media.upload.complete("too-big-db.jpg", {}).catch((err) => err);
+    const recordId = failure.recordId;
 
     const record = (await database.findOne({
-      model: "validation_results",
-      where: [{ field: "id", value: "better-media:validation:too-big-db.jpg" }],
+      model: "media_validation_results",
+      where: [{ field: "mediaId", value: recordId }],
     })) as Record<string, unknown>;
     expect(record).toBeDefined();
+    expect(record?.mediaId).toBe(recordId);
     expect(record?.valid).toBe(false);
     expect(Array.isArray(record?.errors)).toBe(true);
     expect((record?.errors as { message: string }[])[0]?.message).toContain("exceeds maximum");

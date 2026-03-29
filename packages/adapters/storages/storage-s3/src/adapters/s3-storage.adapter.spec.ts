@@ -135,12 +135,16 @@ describe("S3StorageAdapter", () => {
     });
   });
 
-  describe("createPresignedPutUrl", () => {
-    it("should return a presigned URL for PUT operations", async () => {
+  describe("createPresignedUpload", () => {
+    it("should return a presigned URL for PUT operations by default", async () => {
       (getSignedUrl as jest.Mock).mockResolvedValueOnce("https://signed-put.example.com");
 
-      const url = await adapter.createPresignedPutUrl("upload-key.txt");
-      expect(url).toBe("https://signed-put.example.com");
+      const result = await adapter.createPresignedUpload("upload-key.txt", {
+        contentType: "text/plain",
+      });
+      expect(result.method).toBe("PUT");
+      expect(result.url).toBe("https://signed-put.example.com");
+      expect(result.headers).toHaveProperty("Content-Type", "text/plain");
       expect(getSignedUrl).toHaveBeenCalledWith(expect.anything(), expect.any(PutObjectCommand), {
         expiresIn: 3600,
       });

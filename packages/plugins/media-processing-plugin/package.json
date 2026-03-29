@@ -1,6 +1,6 @@
 {
   "name": "@better-media/plugin-media-processing",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Media processing plugin for Better Media pipeline",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -22,13 +22,19 @@
   "dependencies": {
     "@better-media/core": "workspace:*"
   },
-  "peerDependencies": {
-    "sharp": "^0.34.5",
-    "fluent-ffmpeg": "^2.1.3",
-    "ffmpeg-static": "^5.2.0"
-  },
   "keywords": [],
-  "author": "",
+  "author": "Abenezer Atnafu",
   "license": "MIT",
-  "packageManager": "pnpm@10.25.0"
+  "packageManager": "pnpm@10.25.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbenezerAtnafu/better-media.git"
+  },
+  "homepage": "https://better-media.dev",
+  "bugs": {
+    "url": "https://github.com/AbenezerAtnafu/better-media/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

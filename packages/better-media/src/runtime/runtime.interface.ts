@@ -1,4 +1,8 @@
-import type { GetUrlOptions, PresignedPutUrlOptions } from "@better-media/core";
+import type {
+  GetUrlOptions,
+  PresignedUploadOptions,
+  PresignedUploadResult,
+} from "@better-media/core";
 import type { BackgroundJobPayload } from "../core/lifecycle-engine";
 
 import type { Readable } from "node:stream";
@@ -13,13 +17,13 @@ export type MediaMetadata = {
   filename?: string;
   mimeType?: string;
   size?: number;
+  context?: Record<string, unknown>; // userId, tenantId, requestId (for idempotency)
   [key: string]: unknown;
 };
 
 export type IngestInput = {
   file: MediaFileInput;
   metadata?: MediaMetadata;
-  context?: Record<string, unknown>; // userId, tenantId, requestId (for idempotency)
   key?: string;
   /**
    * When `file` is a filesystem path, whether to delete that file after ingest completes.
@@ -30,6 +34,9 @@ export type IngestInput = {
 };
 
 export type MediaResult = {
+  /** The unique database record identifier (UUID). */
+  id: string;
+  /** The storage key (filename or path). */
   key: string;
   url?: string;
   metadata?: MediaMetadata;
@@ -56,13 +63,19 @@ export interface BetterMediaRuntime {
     ): Promise<MediaResult>;
 
     // Direct-to-Storage (Presigned URLs) Flow
-    presignedPutUrl(key: string, options?: PresignedPutUrlOptions): Promise<string>;
-    /** Called by the client *after* successfully uploading to the presigned URL */
-    complete(
+
+    /**
+     * Create a presigned upload for direct-to-storage upload.
+     * Supports both PUT (binary body) and POST (multipart form) with strict server-side validation.
+     * After the client uploads, call `complete()` to run the processing pipeline.
+     */
+    requestPresignedUpload(
       key: string,
-      metadata?: MediaMetadata,
-      context?: Record<string, unknown>
-    ): Promise<MediaResult>;
+      options: PresignedUploadOptions
+    ): Promise<PresignedUploadResult>;
+
+    /** Called by the client *after* successfully uploading to the presigned URL */
+    complete(key: string, metadata?: MediaMetadata): Promise<MediaResult>;
   };
 
   /** File operations */
