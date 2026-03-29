@@ -16,6 +16,11 @@
     "media": "./bin/media.mjs",
     "better-media": "./bin/media.mjs"
   },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
