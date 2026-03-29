@@ -7,7 +7,7 @@ import type {
   CountOptions,
   DatabaseAdapter,
   DatabaseTransactionAdapter,
-} from "@better-media/core";
+} from "./interfaces/adapter.interface";
 
 export type {
   WhereClause,
@@ -57,13 +57,16 @@ export type BmSchema = Record<string, ModelDefinition>;
 /**
  * Context passed to database hooks.
  */
-export interface HookContext {
+export interface DatabaseHookContext {
   model: string;
   adapter: DatabaseAdapter;
   transaction?: DatabaseTransactionAdapter;
 }
 
-export type HookHandler<T = unknown, R = unknown> = (data: T, context: HookContext) => Promise<R>;
+export type HookHandler<T = unknown, R = unknown> = (
+  data: T,
+  context: DatabaseHookContext
+) => Promise<R>;
 
 export interface DbHooks {
   before?: {

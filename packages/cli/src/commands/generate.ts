@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import path from "node:path";
 import process from "node:process";
-import { getAdapter, type SqlDialect } from "better-media";
+import { getAdapter, type SqlDialect } from "@better-media/core";
 import { loadProjectConfig } from "../project-config";
 import { generateSchema } from "../generators";
 

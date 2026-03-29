@@ -3,7 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
-import type { GetAdapterOptions } from "better-media";
+import type { GetAdapterOptions } from "@better-media/core";
 import ts from "typescript";
 
 export type AdapterHint = "kysely" | "prisma" | "drizzle" | "unknown";
