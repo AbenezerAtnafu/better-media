@@ -1,6 +1,6 @@
 {
   "name": "better-media-example-nextjs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Next.js example integrating Better Media framework",
   "scripts": {
