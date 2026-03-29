@@ -3,7 +3,7 @@ import type { PluginManifest } from "@better-media/core";
 import { validationPlugin } from "./index";
 import { memoryStorage } from "@better-media/adapter-storage-memory";
 import { memoryDatabase } from "@better-media/adapter-db";
-import { createBetterMedia } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
 
 /** Manifest for test-only spy plugins (required by buildPluginRegistry). */
 const TEST_SPY_MANIFEST: PluginManifest = {

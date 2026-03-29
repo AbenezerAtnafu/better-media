@@ -5,7 +5,7 @@ import { useState } from "react";
 
 export function Hero() {
   const [copied, setCopied] = useState(false);
-  const command = "npm i better-media";
+  const command = "npm i @better-media/framework";
 
   const handleCopy = async () => {
     try {
@@ -27,7 +27,7 @@ export function Hero() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-accent shadow-[0_0_8px_rgba(59,130,246,0.8)]"></span>
             </span>
             <span className="text-[10px] font-bold tracking-[0.25em] uppercase text-brand-accent font-mono">
-              Protocol v0.10.0
+              Protocol v0.1.0
             </span>
           </div>
 
@@ -105,7 +105,7 @@ export function Hero() {
                   <span className="text-purple-400">import</span> {"{ "}
                   <span className="text-blue-400">createBetterMedia</span> {"} "}
                   <span className="text-purple-400">from</span>{" "}
-                  <span className="text-emerald-400">"better-media"</span>;
+                  <span className="text-emerald-400">"@better-media/framework"</span>;
                 </div>
               </div>
               <div className="flex gap-6">

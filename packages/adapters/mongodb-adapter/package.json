@@ -25,7 +25,7 @@
   ],
   "dependencies": {
     "@better-media/core": "workspace:*",
-    "better-media": "workspace:*"
+    "@better-media/framework": "workspace:*"
   },
   "peerDependencies": {
     "mongodb": "^6.8.0"

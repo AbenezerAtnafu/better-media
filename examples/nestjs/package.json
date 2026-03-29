@@ -23,7 +23,7 @@
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
-    "better-media": "workspace:*",
+    "@better-media/framework": "workspace:*",
     "@better-media/adapter-storage-filesystem": "workspace:*",
     "@better-media/adapter-db": "workspace:*",
     "@better-media/plugin-validation": "workspace:*",

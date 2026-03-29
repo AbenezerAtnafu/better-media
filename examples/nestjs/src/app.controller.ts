@@ -13,7 +13,10 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 import { BETTER_MEDIA } from './better-media.module';
-import { BetterMediaRuntime, type MediaMetadata } from 'better-media';
+import {
+  BetterMediaRuntime,
+  type MediaMetadata,
+} from '@better-media/framework';
 
 @Controller()
 export class AppController {

@@ -1,4 +1,4 @@
-// Types and schemas are now exported from "better-media" directly.
+// Types and schemas are now exported from "@better-media/framework" directly.
 export * from "./adapters/memory/memory-db.adapter";
 export * from "./adapters/kysely/kysely-db.adapter";
 // MongoDB implementation lives in @better-media/mongodb-adapter; re-exported here for convenience.

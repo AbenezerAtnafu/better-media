@@ -1,5 +1,5 @@
 {
-  "name": "better-media",
+  "name": "@better-media/framework",
   "version": "0.1.0",
   "description": "Better Media - media pipeline framework runtime",
   "main": "./dist/index.js",

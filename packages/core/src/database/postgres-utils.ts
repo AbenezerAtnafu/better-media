@@ -33,7 +33,7 @@ export function toDatabaseAdapter(
     if (postgresFactory) return postgresFactory(database);
     throw new Error(
       "[BetterMedia] Postgres pool detected but no adapter factory provided. " +
-        "This typically means you should use the main better-media package."
+        "This typically means you should use the main @better-media/framework package."
     );
   }
   return database as DatabaseAdapter;

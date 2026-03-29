@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { createBetterMedia } from 'better-media';
+import { createBetterMedia } from '@better-media/framework';
 import { FileSystemStorageAdapter } from '@better-media/adapter-storage-filesystem';
 import { memoryDatabase } from '@better-media/adapter-db';
 import { validationPlugin } from '@better-media/plugin-validation';
