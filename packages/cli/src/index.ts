@@ -32,6 +32,7 @@ program
           adapterHint: loaded.adapterHint,
           dialect: loaded.config.dialect,
           schemaOutput: loaded.config.schemaOutput,
+          migrationsDir: loaded.config.migrationsDir,
         },
         null,
         2

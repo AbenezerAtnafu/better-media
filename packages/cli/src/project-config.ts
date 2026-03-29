@@ -11,6 +11,7 @@ export type AdapterHint = "kysely" | "prisma" | "drizzle" | "unknown";
 export type ProjectConfig = GetAdapterOptions & {
   dialect?: string;
   schemaOutput?: string;
+  migrationsDir?: string;
 };
 
 export type LoadedProjectConfig = {
@@ -67,7 +68,6 @@ async function requireTsModule(absPath: string): Promise<unknown> {
   const require = createRequire(import.meta.url);
 
   try {
-     
     const tsNode = require("ts-node") as {
       register: (opts?: {
         transpileOnly?: boolean;
@@ -82,7 +82,6 @@ async function requireTsModule(absPath: string): Promise<unknown> {
     // ignore (we'll surface a clearer error below if require fails)
   }
 
-   
   const mod = require(absPath) as unknown;
   return normalizeModuleExport(mod);
 }
@@ -143,7 +142,7 @@ export async function loadProjectConfig(options?: {
   if (!configPath) {
     for (const candidate of CONFIG_CANDIDATES) {
       const abs = path.join(cwd, candidate);
-       
+
       if (await fileExists(abs)) {
         configPath = abs;
         break;
@@ -196,6 +195,8 @@ export async function loadProjectConfig(options?: {
   const dialect = typeof cfg.dialect === "string" ? (cfg.dialect as string) : undefined;
   const schemaOutput =
     typeof cfg.schemaOutput === "string" ? (cfg.schemaOutput as string) : undefined;
+  const migrationsDir =
+    typeof cfg.migrationsDir === "string" ? (cfg.migrationsDir as string) : undefined;
 
   return {
     configPath,
@@ -205,6 +206,7 @@ export async function loadProjectConfig(options?: {
       createDatabase: cfg.createDatabase as ProjectConfig["createDatabase"],
       dialect,
       schemaOutput,
+      migrationsDir,
     },
   };
 }

@@ -3,10 +3,13 @@ import fs from "fs-extra";
 import chalk from "chalk";
 import {
   schema,
-  generateCreateSchemaSql,
   getMigrations,
+  MigrationPlanner,
+  compileMigrationOperationsSql,
   type SqlDialect,
   type MigrationOptions,
+  type TableMetadata,
+  applyOperationsToMetadata,
 } from "better-media";
 import type { DatabaseAdapter } from "@better-media/core";
 
@@ -36,30 +39,101 @@ type MigrateFn = (args: {
   dialect?: SqlDialect;
 }) => Promise<void>;
 
+function resolveMigrationsDir(cwd: string, outPath: string, options: unknown): string {
+  const opts = options as { migrationsDir?: string } | undefined;
+  if (opts?.migrationsDir && typeof opts.migrationsDir === "string") {
+    return path.resolve(cwd, opts.migrationsDir);
+  }
+  return path.dirname(outPath);
+}
+
+/** Subfolders named with numeric timestamps (ms) contain `migration.sql` + `snapshot.json` per run. */
+const TIMESTAMP_DIR = /^\d{10,20}$/;
+
+async function findLatestTimestampRunDir(migrationsDir: string): Promise<string | undefined> {
+  if (!(await fs.pathExists(migrationsDir))) return undefined;
+  const entries = await fs.readdir(migrationsDir, { withFileTypes: true });
+  const names = entries
+    .filter((e) => e.isDirectory() && TIMESTAMP_DIR.test(e.name))
+    .map((e) => e.name)
+    .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+  return names.length ? path.join(migrationsDir, names[0]) : undefined;
+}
+
+async function resolveSnapshotReadPath(migrationsDir: string): Promise<string | undefined> {
+  const latestRun = await findLatestTimestampRunDir(migrationsDir);
+  const nested = latestRun ? path.join(latestRun, "snapshot.json") : undefined;
+  if (nested && (await fs.pathExists(nested))) return nested;
+  const legacyRoot = path.join(migrationsDir, "snapshot.json");
+  if (await fs.pathExists(legacyRoot)) return legacyRoot;
+  return undefined;
+}
+
 const builtInGenerators: Record<string, GenerateFn> = {
-  async kysely({ cwd, outPath, dialect, adapter }) {
-    await fs.ensureDir(path.dirname(outPath));
-    let sql: string;
-    try {
-      const planned = await getMigrations(adapter, { dialect });
-      sql = planned.compileMigrations();
-    } catch {
-      sql = generateCreateSchemaSql({ schema, dialect });
+  async kysely({ cwd, outPath, dialect, adapter, options }) {
+    const migrationsDir = resolveMigrationsDir(cwd, outPath, options);
+    await fs.ensureDir(migrationsDir);
+
+    let currentTables: TableMetadata[] = [];
+    let snapshotLoaded = false;
+
+    const snapshotReadPath = await resolveSnapshotReadPath(migrationsDir);
+    if (snapshotReadPath) {
+      try {
+        currentTables = await fs.readJson(snapshotReadPath);
+        snapshotLoaded = true;
+      } catch {
+        console.warn(
+          chalk.yellow(
+            `[media] Failed to load snapshot at ${snapshotReadPath}, falling back to DB introspection.`
+          )
+        );
+      }
     }
-    await fs.writeFile(outPath, sql, "utf8");
-    console.log(chalk.green(`[media] Generated schema at ${path.relative(cwd, outPath)}`));
+
+    if (!snapshotLoaded) {
+      if (typeof (adapter as { __getMetadata?: unknown }).__getMetadata === "function") {
+        currentTables = await (
+          adapter as unknown as { __getMetadata: () => Promise<TableMetadata[]> }
+        ).__getMetadata();
+      }
+    }
+
+    const planner = new MigrationPlanner(dialect);
+    const plannedOperations = planner.plan(schema, currentTables);
+
+    if (plannedOperations.length === 0) {
+      console.log(
+        chalk.blue(`[media] No changes detected. Database/Snapshot is already up to date.`)
+      );
+      return;
+    }
+
+    const sql = compileMigrationOperationsSql({ operations: plannedOperations, dialect });
+
+    const nextMetadata = applyOperationsToMetadata(currentTables, plannedOperations, dialect);
+    const runTs = Date.now();
+    const runDir = path.join(migrationsDir, String(runTs));
+    await fs.ensureDir(runDir);
+
+    const snapshotWritePath = path.join(runDir, "snapshot.json");
+    await fs.writeJson(snapshotWritePath, nextMetadata, { spaces: 2 });
+
+    const migrationFile = path.join(runDir, "migration.sql");
+    await fs.writeFile(migrationFile, sql, "utf8");
+    console.log(chalk.green(`[media] Generated migration at ${path.relative(cwd, migrationFile)}`));
   },
   async postgres(args) {
     await builtInGenerators.kysely(args);
   },
   async prisma() {
     throw new Error(
-      '[media] Prisma schema generator is not implemented yet. Run "npx media@latest generate" with Kysely, then apply via Prisma migrate/push.'
+      '[media] Prisma schema generator is not implemented yet. Run "npx better-media generate" with Kysely, then apply via Prisma migrate/push.'
     );
   },
   async drizzle() {
     throw new Error(
-      '[media] Drizzle schema generator is not implemented yet. Run "npx media@latest generate" with Kysely, then apply via Drizzle migrate/push.'
+      '[media] Drizzle schema generator is not implemented yet. Run "npx better-media generate" with Kysely, then apply via Drizzle migrate/push.'
     );
   },
 };
@@ -84,12 +158,12 @@ const builtInMigrators: Record<string, MigrateFn> = {
   },
   async prisma() {
     throw new Error(
-      '[media] The migrate command only works with the built-in Kysely adapter. For Prisma, run "npx media@latest generate" and apply with Prisma migrate/push.'
+      '[media] The migrate command only works with the built-in Kysely adapter. For Prisma, run "npx better-media generate" and apply with Prisma migrate/push.'
     );
   },
   async drizzle() {
     throw new Error(
-      '[media] The migrate command only works with the built-in Kysely adapter. For Drizzle, run "npx media@latest generate" and apply with Drizzle migrate/push.'
+      '[media] The migrate command only works with the built-in Kysely adapter. For Drizzle, run "npx better-media generate" and apply with Drizzle migrate/push.'
     );
   },
 };

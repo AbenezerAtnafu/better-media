@@ -7,6 +7,7 @@ export type GetAdapterOptions = {
   createDatabase?: () => Promise<DatabaseAdapter | PgPoolLike> | DatabaseAdapter | PgPoolLike;
   dialect?: string;
   schemaOutput?: string;
+  migrationsDir?: string;
 };
 
 export async function getAdapter(options: GetAdapterOptions): Promise<DatabaseAdapter> {

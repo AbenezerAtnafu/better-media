@@ -18,5 +18,5 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     Step,
     TypeTable,
     ...components,
-  };
+  } as MDXComponents;
 }

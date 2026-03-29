@@ -43,7 +43,11 @@ const dialectMap: Record<FieldType, Record<SqlDialect, string>> = {
 export function getColumnType(field: FieldDefinition, dialect: SqlDialect): string {
   // Overrides for specific cases
   if (field.primaryKey && field.type === "string") {
+    if (dialect === "postgres") return "uuid";
     return dialect === "mysql" || dialect === "mssql" ? "varchar(36)" : "text";
+  }
+  if (field.references && field.type === "string" && dialect === "postgres") {
+    return "uuid";
   }
 
   const types = dialectMap[field.type];
@@ -129,18 +133,46 @@ export class MigrationPlanner {
         }
       }
 
-      // Check for missing indexes
-      if (model.indexes) {
-        for (const index of model.indexes) {
-          const indexName = `idx_${tableName}_${index.fields.join("_")}`;
-          // This is a simple check; a more robust one would introspect indexes too
-          // For now, we assume if the table is new, indexes are created with it.
-          // In "diff" mode, we might want to check if the index exists.
-          console.log(indexName);
-        }
-      }
+      // Missing indexes: not yet diffed against DB metadata (createIndex ops TBD).
     }
 
     return operations;
   }
+}
+
+/**
+ * Applies a list of migration operations to an existing metadata state to project
+ * what the database will look like after the migration.
+ */
+export function applyOperationsToMetadata(
+  currentMetadata: TableMetadata[],
+  operations: MigrationOperation[],
+  dialect: SqlDialect
+): TableMetadata[] {
+  const metadata = JSON.parse(JSON.stringify(currentMetadata)) as TableMetadata[];
+
+  for (const op of operations) {
+    if (op.type === "createTable") {
+      const columns = Object.entries(op.definition.fields).map(([name, field]) => ({
+        name,
+        dataType: getColumnType(field, dialect),
+        isNullable: !field.required && !field.primaryKey,
+        isUnique: field.unique || field.primaryKey,
+      }));
+      metadata.push({ name: op.table, columns });
+    } else if (op.type === "addColumn") {
+      const table = metadata.find((t) => t.name === op.table);
+      if (table) {
+        table.columns.push({
+          name: op.field,
+          dataType: getColumnType(op.definition, dialect),
+          isNullable: !op.definition.required,
+          isUnique: !!op.definition.unique,
+        });
+      }
+    }
+    // Handle other operation types (like createIndex) if metadata starts tracking them
+  }
+
+  return metadata;
 }

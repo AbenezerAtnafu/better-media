@@ -5,8 +5,9 @@ import { getAdapter, type SqlDialect } from "better-media";
 import { loadProjectConfig } from "../project-config";
 import { generateSchema } from "../generators";
 
+/** Default path whose directory is the migrations root (filename unused for output). */
 function getDefaultSchemaOutput(): string {
-  return `better-media-migrations/${Date.now()}-schema.sql`;
+  return "better-media-migrations/migration.sql";
 }
 
 export function registerGenerateCommand(program: Command): void {
@@ -15,13 +16,12 @@ export function registerGenerateCommand(program: Command): void {
     .description("Generate Better Media database schema for the configured adapter")
     .option("-C, --cwd <path>", "Working directory to resolve config from", process.cwd())
     .option("--config <path>", "Path to media config file")
-    .option("--out <path>", "Output path for generated schema file")
     .option(
       "--dialect <dialect>",
       "SQL dialect (postgres|mysql|sqlite|mssql). Defaults from adapter/config.",
       undefined
     )
-    .action(async (opts: { cwd: string; config?: string; out?: string; dialect?: SqlDialect }) => {
+    .action(async (opts: { cwd: string; config?: string; dialect?: SqlDialect }) => {
       const cwd = path.resolve(opts.cwd);
       const loaded = await loadProjectConfig({ cwd, configPath: opts.config });
       const adapter = await getAdapter(loaded.config);
@@ -37,10 +37,7 @@ export function registerGenerateCommand(program: Command): void {
         dialectFromAdapter ??
         "postgres";
 
-      const outPath = path.resolve(
-        cwd,
-        opts.out ?? loaded.config.schemaOutput ?? getDefaultSchemaOutput()
-      );
+      const outPath = path.resolve(cwd, loaded.config.schemaOutput ?? getDefaultSchemaOutput());
       await generateSchema({
         cwd,
         adapter,

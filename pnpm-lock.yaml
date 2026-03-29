@@ -407,9 +407,6 @@ importers:
 
   packages/cli:
     dependencies:
-      '@better-media/adapter-db':
-        specifier: workspace:*
-        version: link:../adapters/db
       '@better-media/core':
         specifier: workspace:*
         version: link:../core

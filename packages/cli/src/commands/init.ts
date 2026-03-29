@@ -31,7 +31,7 @@ export const mediaOptions = {
       process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/better_media",
   }),
   dialect: "postgres",
-  schemaOutput: "better-media/schema.sql",
+  migrationsDir: "better-media",
 };
 
 export default mediaOptions;
