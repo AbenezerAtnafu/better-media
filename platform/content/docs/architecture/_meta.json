@@ -1,0 +1,7 @@
+{
+  "index": "Architecture",
+  "api": "API",
+  "cli": "CLI",
+  "plugins": "Plugins",
+  "database": "Database"
+}

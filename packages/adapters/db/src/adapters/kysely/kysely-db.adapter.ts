@@ -14,13 +14,13 @@ import type {
   FieldDefinition,
   BmSchema,
   DbHooks,
-  HookContext,
+  DatabaseHookContext,
   ModelDefinition,
   MigrationOperation,
   SqlDialect,
   TableMetadata,
-} from "better-media";
-import { serializeData, deserializeData, runHooks, getColumnType } from "better-media";
+} from "@better-media/core";
+import { serializeData, deserializeData, runHooks, getColumnType } from "@better-media/core";
 import type { KyselyDbConfig } from "./kysely-db-config.interface";
 
 export interface KyselyDbOptions {
@@ -73,7 +73,7 @@ export class KyselyDbAdapter implements DatabaseAdapter {
     return this.schema[model];
   }
 
-  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): HookContext {
+  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): DatabaseHookContext {
     return {
       model,
       adapter: this,
@@ -347,7 +347,18 @@ export class KyselyDbAdapter implements DatabaseAdapter {
   /** @internal Used by runMigrations — not part of the public DatabaseAdapter contract. */
   async __getMetadata(): Promise<TableMetadata[]> {
     const tables = await this.db.introspection.getTables();
-    return tables.map((table) => ({
+    const dialect = this.__getDialect();
+
+    let filtered = tables;
+    if (dialect === "postgres") {
+      const currentSchema = await this.getPostgresSchema();
+      filtered = tables.filter((table) => {
+        const schema = (table as unknown as { schema?: string }).schema;
+        return !schema || schema === currentSchema;
+      });
+    }
+
+    return filtered.map((table) => ({
       name: table.name,
       columns: table.columns.map((col) => ({
         name: col.name,
@@ -355,6 +366,25 @@ export class KyselyDbAdapter implements DatabaseAdapter {
         isNullable: col.isNullable ?? true,
       })),
     }));
+  }
+
+  private async getPostgresSchema(): Promise<string> {
+    try {
+      const result = await sql<{
+        search_path?: string;
+        searchPath?: string;
+      }>`SHOW search_path`.execute(this.db);
+      const searchPath = result.rows[0]?.search_path ?? result.rows[0]?.searchPath;
+      if (!searchPath) return "public";
+      const schemas = searchPath
+        .split(",")
+        .map((s) => s.trim())
+        .map((s) => s.replace(/^["']|["']$/g, ""))
+        .filter((s) => !s.startsWith("$") && !s.startsWith("\\$"));
+      return schemas[0] || "public";
+    } catch {
+      return "public";
+    }
   }
 
   /** @internal Used by runMigrations to auto-detect the SQL dialect. */
@@ -439,30 +469,6 @@ export class KyselyDbAdapter implements DatabaseAdapter {
         builder = builder.unique();
       }
       await builder.execute();
-    }
-  }
-
-  /**
-   * @deprecated Use runMigrations() instead.
-   */
-  async __createTable(
-    model: string,
-    definition: ModelDefinition,
-    options: { mode: "safe" | "diff" | "force" }
-  ): Promise<void> {
-    if (options.mode === "force") {
-      await this.db.schema.dropTable(model).ifExists().execute();
-    }
-
-    if (options.mode === "diff") {
-      const metadata = await this.__getMetadata();
-      const planner = new (await import("better-media")).MigrationPlanner(this.__getDialect());
-      const operations = planner.plan({ [model]: definition }, metadata);
-      for (const op of operations) {
-        await this.__executeMigration(op);
-      }
-    } else {
-      await this.__executeMigration({ type: "createTable", table: model, definition });
     }
   }
 }

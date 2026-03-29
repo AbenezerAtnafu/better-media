@@ -13,11 +13,11 @@ import type {
   BmSchema,
   FieldType,
   ModelDefinition,
-  HookContext,
+  DatabaseHookContext,
   TableMetadata,
   MigrationOperation,
-} from "better-media";
-import { runHooks, serializeData, deserializeData } from "better-media";
+} from "@better-media/core";
+import { runHooks, serializeData, deserializeData } from "@better-media/core";
 
 export interface MemoryDbOptions {
   schema?: BmSchema;
@@ -54,7 +54,7 @@ export class MemoryDbAdapter implements DatabaseAdapter {
     return this.schema?.[model];
   }
 
-  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): HookContext {
+  private getHookContext(model: string, trx?: DatabaseTransactionAdapter): DatabaseHookContext {
     return {
       model,
       adapter: this,
@@ -352,19 +352,5 @@ export class MemoryDbAdapter implements DatabaseAdapter {
       this.getTable(operation.table);
     }
     // Other operations are implicitly handled by the schemaless nature of MemoryDbAdapter
-  }
-
-  /**
-   * @deprecated Use __executeMigration instead.
-   */
-  async __initTable(
-    model: string,
-    definition: ModelDefinition,
-    options: { mode: "safe" | "diff" | "force" }
-  ): Promise<void> {
-    if (options.mode === "force") {
-      this.store.delete(model);
-    }
-    this.getTable(model);
   }
 }

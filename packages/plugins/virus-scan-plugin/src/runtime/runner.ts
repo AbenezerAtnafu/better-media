@@ -1,9 +1,13 @@
-import type { PipelineContext, ValidationResult, DatabaseAdapter } from "@better-media/core";
+import { randomUUID } from "node:crypto";
+import type {
+  PipelineContext,
+  ValidationResult,
+  DatabaseAdapter,
+  PluginApi,
+} from "@better-media/core";
 import type { VirusScanPluginOptions } from "../interfaces/options.interface";
 import type { VirusScanner } from "../interfaces/scanner.interface";
 import type { ScanRecord } from "../interfaces/scan-result.interface";
-
-const SCAN_DB_KEY_PREFIX = "better-media:virus-scan:";
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -28,17 +32,35 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
-/**
- * Record scan result to the database adapter.
- */
-interface LegacyDatabaseAdapter {
-  put(key: string, data: unknown): Promise<void>;
-}
+async function recordScanResult(database: DatabaseAdapter, record: ScanRecord): Promise<void> {
+  const model = "media_virus_scan_results";
+  const status = record.infected ? "infected" : "clean";
 
-function recordScanResult(database: DatabaseAdapter, record: ScanRecord): Promise<void> {
-  const key = `${SCAN_DB_KEY_PREFIX}${record.fileKey}`;
-  const data: Record<string, unknown> = { ...record };
-  return (database as unknown as LegacyDatabaseAdapter).put(key, data);
+  const data = {
+    mediaId: record.recordId,
+    status,
+    threats: record.viruses,
+    scanner: record.scannerName,
+    createdAt: record.scannedAt,
+  };
+
+  const existing = await database.findOne({
+    model,
+    where: [{ field: "mediaId", value: record.recordId }],
+  });
+
+  if (existing) {
+    await database.update({
+      model,
+      where: [{ field: "id", value: existing.id }],
+      update: data,
+    });
+  } else {
+    await database.create({
+      model,
+      data: { id: randomUUID(), ...data },
+    });
+  }
 }
 
 /**
@@ -81,6 +103,7 @@ async function scanWithRetry(
  */
 export async function runVirusScan(
   context: PipelineContext,
+  api: PluginApi,
   scanner: VirusScanner,
   opts: VirusScanPluginOptions
 ): Promise<void | ValidationResult> {
@@ -127,6 +150,7 @@ export async function runVirusScan(
 
   // Persist scan result to DB
   const record: ScanRecord = {
+    recordId: context.recordId,
     fileKey,
     infected,
     viruses,
@@ -136,8 +160,8 @@ export async function runVirusScan(
   };
   await recordScanResult(database, record);
 
-  // Write scan metadata to plugin metadata (not trusted, which has a fixed shape in core)
-  context.metadata["virusScan"] = { infected, viruses, scannedAt };
+  // Write scan metadata to plugin metadata via PluginApi
+  api.emitMetadata({ infected, viruses, scannedAt });
 
   if (!infected) return;
 

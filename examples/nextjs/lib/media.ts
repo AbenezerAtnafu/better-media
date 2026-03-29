@@ -14,7 +14,7 @@ let mediaInstance: BetterMediaRuntime | null = null;
 /**
  * Better Media instance (lazy-loaded).
  * Mirrors Better Auth: config in lib/, accessed via getter so heavy deps
- * (e.g. fluent-ffmpeg) are loaded at runtime, not bundled by Next.js.
+ * are loaded at runtime, not bundled by Next.js.
  */
 export async function getMedia(): Promise<BetterMediaRuntime> {
   if (mediaInstance) return mediaInstance;

@@ -1,0 +1,284 @@
+{
+  "info": {
+    "name": "Better Media Examples",
+    "description": "Collection to test Better Media library integration examples (Express, NestJS).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Express Example",
+      "item": [
+        {
+          "name": "Multipart Upload",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{expressBaseUrl}}/upload/multipart"
+            },
+            "description": "Upload a file using standard multipart/form-data via Multer. (Select a file in the Body tab)"
+          },
+          "response": []
+        },
+        {
+          "name": "Binary Upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              },
+              {
+                "key": "x-file-key",
+                "value": "test-binary-file.jpg"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {}
+            },
+            "url": {
+              "raw": "{{expressBaseUrl}}/upload/binary"
+            },
+            "description": "Upload raw binary data with a custom file key and content-type header. (Select a file in the Body tab)"
+          },
+          "response": []
+        },
+        {
+          "name": "1. Request Presigned URL (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.success && response.url) {",
+                  "    pm.collectionVariables.set(\"presignedUrl\", response.url);",
+                  "    if (response.headers) {",
+                  "        pm.collectionVariables.set(\"presignedHeaders\", JSON.stringify(response.headers));",
+                  "    }",
+                  "    pm.collectionVariables.set(\"fileKey\", response.fileKey);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fileKey\": \"test-upload-{{$timestamp}}.jpg\",\n    \"contentType\": \"image/jpeg\",\n    \"method\": \"PUT\",\n    \"maxSizeBytes\": 1048576\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{expressBaseUrl}}/upload/presign"
+            },
+            "description": "Step 1 of the direct-to-S3 flow. Generates a signed PUT URL."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Perform PUT Upload",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              },
+              {
+                "key": "Content-Length",
+                "value": "1048576"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {}
+            },
+            "url": {
+              "raw": "{{presignedUrl}}"
+            },
+            "description": "Step 2: Upload the binary file directly to S3 using the generated PUT URL."
+          },
+          "response": []
+        },
+        {
+          "name": "1b. Request Presigned POST",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.success && response.url) {",
+                  "    pm.collectionVariables.set(\"postUrl\", response.url);",
+                  "    pm.collectionVariables.set(\"postFields\", JSON.stringify(response.fields));",
+                  "    pm.collectionVariables.set(\"fileKey\", response.fileKey);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fileKey\": \"test-post-{{$timestamp}}.jpg\",\n    \"contentType\": \"image/jpeg\",\n    \"method\": \"POST\",\n    \"maxSizeBytes\": 1048576\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{expressBaseUrl}}/upload/presign"
+            },
+            "description": "Alternative Step 1: Generate an S3 Presigned POST policy."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Complete Upload",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fileKey\": \"{{fileKey}}\",\n    \"metadata\": {\n        \"client\": \"postman\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{expressBaseUrl}}/upload/complete"
+            },
+            "description": "Step 3: Notify the server that the upload is complete to trigger processing."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "NestJS Example",
+      "item": [
+        {
+          "name": "Multipart Upload",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{nestBaseUrl}}/upload/multipart"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Binary Upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {}
+            },
+            "url": {
+              "raw": "{{nestBaseUrl}}/upload/binary"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request Presigned Upload",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fileKey\": \"nest-upload-{{$timestamp}}.jpg\",\n    \"contentType\": \"image/jpeg\",\n    \"method\": \"PUT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{nestBaseUrl}}/upload/presign"
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "expressBaseUrl",
+      "value": "http://localhost:6000",
+      "type": "string"
+    },
+    {
+      "key": "nestBaseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "presignedUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "postUrl",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fileKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "presignedHeaders",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "postFields",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

@@ -10,6 +10,7 @@ export interface ScanResult {
 
 /** Persisted scan record written to the database adapter. */
 export interface ScanRecord {
+  recordId: string;
   fileKey: string;
   infected: boolean;
   viruses: string[];

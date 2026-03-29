@@ -2,7 +2,7 @@
 
 Modular media pipeline framework for intake, validation, processing, and storage.
 
-[**View Documentation**](docs/README.md)
+[**View Website App**](platform/README.md)
 
 ## Architecture
 
@@ -141,6 +141,24 @@ pnpm build
 | `pnpm test`      | Run tests                         |
 | `pnpm format`    | Format with Prettier              |
 | `pnpm changeset` | Create a changeset for versioning |
+
+## Testing with Postman
+
+A Postman collection is provided in the root directory to help you test the examples:
+
+- [better-media.postman_collection.json](./better-media.postman_collection.json)
+
+The collection includes:
+
+- **Multipart Uploads**: Test Multer-based ingest.
+- **Binary Uploads**: Test raw buffer ingest.
+- **Unified Presigned Uploads**: Full flow for both PUT and POST methods (Step-by-step).
+
+To use it:
+
+1. Import the JSON file into Postman.
+2. Start an example (e.g., `cd examples/express && pnpm dev`).
+3. Use the collection variables to switch between Express (Port 6000) and NestJS (Port 3000).
 
 ## Adding a Plugin
 

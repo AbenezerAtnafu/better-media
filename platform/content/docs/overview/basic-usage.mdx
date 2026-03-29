@@ -1,0 +1,34 @@
+---
+title: Basic Usage
+description: The smallest practical Better Media setup.
+---
+
+The following is the smallest practical Better Media setup.
+
+```ts
+import { createBetterMedia } from "better-media";
+import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
+import { KyselyDatabaseAdapter } from "@better-media/adapter-db";
+import { validationPlugin } from "@better-media/plugin-validation";
+
+// 1. Initialise the framework
+const media = createBetterMedia({
+  storage: new FileSystemStorageAdapter({ baseDir: "./uploads" }),
+  database: new KyselyDatabaseAdapter(db), // db is your Kysely instance
+  plugins: [validationPlugin({ maxSize: "10mb" })],
+});
+
+// 2. Upload a file
+const result = await media.upload({
+  file: readFileSync("my-image.jpg"), // Buffer or Stream
+  fileName: "my-image.jpg",
+});
+
+console.log("Stored as:", result.fileKey);
+```
+
+## Key Components
+
+1.  **Storage**: Controls where the physical binary files are stored.
+2.  **Database**: Controls where metadata and relationships are saved.
+3.  **Plugins**: Intercept and process files during the ingest lifecycle.

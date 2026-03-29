@@ -98,22 +98,32 @@ export class AppController {
 
   @Post('upload/presign')
   async uploadPresign(
-    @Body() body: { fileKey?: string; contentType?: string },
+    @Body()
+    body: {
+      fileKey?: string;
+      contentType?: string;
+      method?: 'PUT' | 'POST';
+      maxSizeBytes?: number;
+    },
   ) {
     try {
       const fileKey = body.fileKey || `file-${Date.now()}`;
       const contentType = body.contentType || 'application/octet-stream';
 
-      const uploadUrl = await this.media.upload.presignedPutUrl(fileKey, {
+      const result = await this.media.upload.requestPresignedUpload(fileKey, {
+        method: body.method ?? 'PUT',
         contentType,
+        maxSizeBytes: body.maxSizeBytes,
       });
 
       return {
         success: true,
         fileKey,
-        uploadUrl,
+        ...result,
         message:
-          'Use this URL to upload the file directly via an HTTP PUT request.',
+          result.method === 'PUT'
+            ? 'Use this URL to upload the file directly via an HTTP PUT request with the specified headers.'
+            : 'Use this URL and form fields to upload via a multipart/form-data POST request.',
       };
     } catch (err) {
       throw new InternalServerErrorException(
