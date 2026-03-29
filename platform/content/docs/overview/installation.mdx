@@ -3,11 +3,44 @@ title: Installation
 description: Installation and environment setup guidance.
 ---
 
-This page will cover the recommended installation flow.
+To get started with Better Media, you need the core package and at least one storage adapter.
 
-Planned topics:
+## Quick Install
 
-- package installation
-- peer dependency expectations
-- choosing storage and database adapters
-- local development prerequisites
+Choose your package manager and install the core library:
+
+```bash
+# Using pnpm (recommended)
+pnpm add better-media @better-media/core
+
+# Using npm
+npm install better-media @better-media/core
+```
+
+## Recommended Setup
+
+A typical production setup requires a storage adapter (e.g., S3) and a database adapter (e.g., Kysely for PostgreSQL).
+
+```bash
+pnpm add @better-media/adapter-storage-s3 @better-media/adapter-db
+```
+
+## Peer Dependencies
+
+Better Media relies on certain peer dependencies depending on the adapters you choose:
+
+- **S3 Storage**: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`
+- **PostgreSQL/SQL**: `kysely`, `pg` (or your preferred driver)
+- **Image Processing**: `sharp`
+
+## Local Development
+
+For local development, we recommend using the **Filesystem** or **In-Memory** adapters to avoid external infrastructure dependencies.
+
+```ts
+import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
+
+const storage = new FileSystemStorageAdapter({
+  baseDir: "./uploads",
+});
+```

@@ -1,6 +1,19 @@
 {
   "name": "@better-media/cli",
   "version": "1.0.0",
+  "private": false,
+  "author": "Abenezer Atnafu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbenezerAtnafu/better-media.git"
+  },
+  "homepage": "https://better-media.dev",
+  "bugs": {
+    "url": "https://github.com/AbenezerAtnafu/better-media/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "CLI for Better Media framework",
   "main": "dist/index.js",
   "bin": {

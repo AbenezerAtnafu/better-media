@@ -1,6 +1,6 @@
 {
   "name": "@better-media/adapter-storage-filesystem",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Filesystem storage adapter for Better Media",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -28,7 +28,18 @@
     "filesystem",
     "adapter"
   ],
-  "author": "",
+  "author": "Abenezer Atnafu",
   "license": "MIT",
-  "packageManager": "pnpm@10.25.0"
+  "packageManager": "pnpm@10.25.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbenezerAtnafu/better-media.git"
+  },
+  "homepage": "https://better-media.dev",
+  "bugs": {
+    "url": "https://github.com/AbenezerAtnafu/better-media/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
