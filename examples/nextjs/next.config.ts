@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   serverExternalPackages: ["sharp"],
   transpilePackages: [
-    "better-media",
+    "@better-media/framework",
     "@better-media/core",
     "@better-media/adapter-db",
     "@better-media/adapter-jobs",

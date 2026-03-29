@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { createBetterMedia } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
 import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 import { validationPlugin } from "@better-media/plugin-validation";
 import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";

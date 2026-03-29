@@ -5,7 +5,7 @@ const steps = [
     number: "01",
     title: "Install",
     description: "Add Better Media, then bring in the adapters and plugins your app needs.",
-    code: "npm i better-media",
+    code: "npm i @better-media/framework",
   },
   {
     number: "02",

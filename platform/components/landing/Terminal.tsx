@@ -22,7 +22,7 @@ export function Terminal() {
                 <span className="text-purple-400">import</span> {"{ "}
                 <span className="text-blue-400">createBetterMedia</span> {"} "}
                 <span className="text-purple-400">from</span>{" "}
-                <span className="text-emerald-400">"better-media"</span>;
+                <span className="text-emerald-400">"@better-media/framework"</span>;
               </div>
             </div>
             <div className="flex gap-4">
@@ -31,7 +31,7 @@ export function Terminal() {
                 <span className="text-purple-400">import</span> {"{ "}
                 <span className="text-blue-400">s3</span> {"} "}
                 <span className="text-purple-400">from</span>{" "}
-                <span className="text-emerald-400">"@better-media/s3"</span>;
+                <span className="text-emerald-400">"@better-media/adapter-storage-s3"</span>;
               </div>
             </div>
             <div className="flex gap-4 h-4">

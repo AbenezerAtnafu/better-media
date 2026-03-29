@@ -12,14 +12,14 @@ Modular media pipeline framework for intake, validation, processing, and storage
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | **Core**      | `@better-media/core`                                                                                                                                                                                              | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.   |
 | **Adapters**  | `@better-media/adapter-storage-memory`, `@better-media/adapter-storage-filesystem`, `@better-media/adapter-storage-s3`, `@better-media/adapter-db`, `@better-media/mongodb-adapter`, `@better-media/adapter-jobs` | Implement core contracts (MemoryStorageAdapter, FileSystemStorageAdapter, S3StorageAdapter, etc).    |
-| **Framework** | `better-media`                                                                                                                                                                                                    | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations. |
+| **Framework** | `@better-media/framework`                                                                                                                                                                                         | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations. |
 
 ## Monorepo Structure
 
 ```
 packages/
 ├── core/              # @better-media/core - Contracts (interfaces, types)
-├── better-media/      # better-media - Framework entry, lifecycle engine
+├── better-media/      # @better-media/framework - Framework entry, lifecycle engine
 ├── plugins/
 │   ├── validation-plugin/     # @better-media/plugin-validation
 │   ├── virus-scan-plugin/     # @better-media/plugin-virus-scan

@@ -18,7 +18,7 @@
     "@better-media/plugin-media-processing": "workspace:*",
     "@better-media/plugin-validation": "workspace:*",
     "@better-media/plugin-virus-scan": "workspace:*",
-    "better-media": "workspace:*",
+    "@better-media/framework": "workspace:*",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

@@ -1,4 +1,4 @@
-# better-media
+# @better-media/framework
 
 The core runtime orchestration engine for Better Media pipelines.
 
@@ -17,13 +17,13 @@ This package provides the `createBetterMedia` factory and the core execution log
 ## Installation
 
 ```bash
-pnpm add better-media @better-media/core
+pnpm add @better-media/framework
 ```
 
 ## Basic Usage
 
 ```ts
-import { createBetterMedia } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
 import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
 import { KyselyDatabaseAdapter } from "@better-media/adapter-db";
 import { validationPlugin } from "@better-media/plugin-validation";

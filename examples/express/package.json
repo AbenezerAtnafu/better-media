@@ -19,7 +19,7 @@
     "@better-media/plugin-media-processing": "workspace:*",
     "@better-media/plugin-validation": "workspace:*",
     "@better-media/plugin-virus-scan": "workspace:*",
-    "better-media": "workspace:*",
+    "@better-media/framework": "workspace:*",
     "express": "^4.21.0",
     "multer": "^2.1.1",
     "pg": "^8.16.3"

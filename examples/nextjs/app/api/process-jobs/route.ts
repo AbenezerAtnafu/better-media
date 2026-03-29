@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getQueuedJobs, clearQueuedJobs } from "@/lib/tracking-job-adapter";
-import type { BackgroundJobPayload } from "better-media";
+import type { BackgroundJobPayload } from "@better-media/framework";
 
 /** POST: Process queued background jobs (simulates worker) */
 export async function POST() {
