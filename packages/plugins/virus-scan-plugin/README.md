@@ -31,4 +31,4 @@ const media = createBetterMedia({
 });
 ```
 
-See [better-media.dev/docs/plugins/virus-scan](https://better-media.dev/docs/plugins/virus-scan) for all strategies and options.
+See [better-media-platform.vercel.app/docs/plugins/virus-scan](https://better-media-platform.vercel.app/docs/plugins/virus-scan) for all strategies and options.

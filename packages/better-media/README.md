@@ -46,4 +46,4 @@ console.log("Uploaded file key:", result.fileKey);
 
 ## Documentation
 
-Full documentation is available at [better-media.dev](https://better-media.dev).
+Full documentation is available at [better-media-platform.vercel.app](https://better-media-platform.vercel.app/).

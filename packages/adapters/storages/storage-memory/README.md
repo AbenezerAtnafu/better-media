@@ -14,4 +14,4 @@ import { In-MemoryStorageAdapter } from "@better-media/adapter-storage-memory";
 const storage = new In-MemoryStorageAdapter();
 ```
 
-Visit [better-media.dev/docs/adapters/storage-memory](https://better-media.dev/docs/adapters/storage-memory) for details.
+Visit [better-media-platform.vercel.app/docs/adapters/storage-memory](https://better-media-platform.vercel.app/docs/adapters/storage-memory) for details.

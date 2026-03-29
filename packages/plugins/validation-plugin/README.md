@@ -29,4 +29,4 @@ const media = createBetterMedia({
 });
 ```
 
-For more, visit [better-media.dev/docs/plugins/validation](https://better-media.dev/docs/plugins/validation).
+For more, visit [better-media-platform.vercel.app/docs/plugins/validation](https://better-media-platform.vercel.app/docs/plugins/validation).

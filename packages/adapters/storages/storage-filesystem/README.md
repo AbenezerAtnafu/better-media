@@ -25,4 +25,4 @@ const storage = new FileSystemStorageAdapter({
 });
 ```
 
-For more, visit [better-media.dev/docs/adapters/storage-filesystem](https://better-media.dev/docs/adapters/storage-filesystem).
+For more, visit [better-media-platform.vercel.app/docs/adapters/storage-filesystem](https://better-media-platform.vercel.app/docs/adapters/storage-filesystem).

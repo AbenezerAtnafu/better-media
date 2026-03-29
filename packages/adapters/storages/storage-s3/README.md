@@ -21,4 +21,4 @@ const storage = new S3StorageAdapter({
 });
 ```
 
-See [better-media.dev/docs/adapters/storage-s3](https://better-media.dev/docs/adapters/storage-s3) for more details.
+See [better-media-platform.vercel.app/docs/adapters/storage-s3](https://better-media-platform.vercel.app/docs/adapters/storage-s3) for more details.

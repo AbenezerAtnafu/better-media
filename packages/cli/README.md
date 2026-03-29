@@ -24,4 +24,4 @@ npx media init
 npx media generate --target drizzle --out src/db/schema.ts
 ```
 
-Visit [better-media.dev/docs/cli](https://better-media.dev/docs/cli) for all flags and options.
+Visit [better-media-platform.vercel.app/docs/cli](https://better-media-platform.vercel.app/docs/cli) for all flags and options.

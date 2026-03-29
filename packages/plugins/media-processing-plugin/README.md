@@ -32,4 +32,4 @@ const media = createBetterMedia({
 });
 ```
 
-See the [better-media.dev/docs/plugins/media-processing](https://better-media.dev/docs/plugins/media-processing) for more configuration options.
+See the [better-media-platform.vercel.app/docs/plugins/media-processing](https://better-media-platform.vercel.app/docs/plugins/media-processing) for more configuration options.

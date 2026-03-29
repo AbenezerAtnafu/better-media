@@ -41,7 +41,7 @@
     "type": "git",
     "url": "git+https://github.com/AbenezerAtnafu/better-media.git"
   },
-  "homepage": "https://better-media.dev",
+  "homepage": "https://better-media-platform.vercel.app/",
   "bugs": {
     "url": "https://github.com/AbenezerAtnafu/better-media/issues"
   },

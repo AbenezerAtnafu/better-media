@@ -18,4 +18,4 @@ const db = new Kysely({ dialect: new PostgresDialect({ pool }) });
 const database = new KyselyDatabaseAdapter(db);
 ```
 
-For more, visit [better-media.dev/docs/adapters/db](https://better-media.dev/docs/adapters/db).
+For more, visit [better-media-platform.vercel.app/docs/adapters/db](https://better-media-platform.vercel.app/docs/adapters/db).
