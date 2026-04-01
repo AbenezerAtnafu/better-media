@@ -22,10 +22,27 @@ function buildFileInfo(
 ): PipelineContext["file"] {
   const mime = metadata.contentType ?? metadata.mimeType ?? metadata["content-type"];
   const size = typeof metadata.size === "number" ? metadata.size : undefined;
-  const originalName = (metadata.originalName as string) ?? (metadata.originalname as string);
+  const originalName =
+    (metadata.originalName as string) ??
+    (metadata.originalname as string) ??
+    (() => {
+      try {
+        const url = new URL(fileKey);
+        return path.basename(url.pathname);
+      } catch {
+        return undefined;
+      }
+    })();
   const ext = originalName
     ? path.extname(originalName).toLowerCase()
-    : path.extname(fileKey).toLowerCase();
+    : (() => {
+        try {
+          const url = new URL(fileKey);
+          return path.extname(url.pathname).toLowerCase();
+        } catch {
+          return path.extname(fileKey).toLowerCase();
+        }
+      })();
 
   return {
     key: fileKey,
@@ -37,12 +54,15 @@ function buildFileInfo(
   };
 }
 
-function buildStorageLocation(fileKey: string): PipelineContext["storageLocation"] {
+function buildStorageLocation(
+  fileKey: string,
+  referenceUrl?: string
+): PipelineContext["storageLocation"] {
   return {
     key: fileKey,
     bucket: undefined,
     region: undefined,
-    url: undefined,
+    url: referenceUrl,
   };
 }
 
@@ -90,7 +110,7 @@ export class PipelineExecutor {
     const context: PipelineContext = {
       recordId,
       file: buildFileInfo(fileKey, meta),
-      storageLocation: buildStorageLocation(fileKey),
+      storageLocation: buildStorageLocation(fileKey, appContext.referenceUrl as string),
       processing: {},
       metadata: { ...meta, ...appContext }, // Merge for plugins to read backwards-compatibly
       trusted: trustedFromDb ?? {},

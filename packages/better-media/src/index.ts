@@ -29,11 +29,13 @@ function createNoopJobAdapter(): JobAdapter {
 
 type NormalizedFile = {
   /** File bytes ready for storage.put — always a Buffer. */
-  data: Buffer;
+  data?: Buffer;
   metadata: MediaMetadata;
   /** True when path-based ingest should unlink the source (default deleteAfterUpload). */
   shouldDeleteSource: boolean;
   sourcePath?: string;
+  isReference?: boolean;
+  referenceUrl?: string;
 };
 
 async function normalizeInput(
@@ -81,7 +83,7 @@ async function normalizeInput(
     data = Buffer.concat(chunks);
   } else if ("url" in file && file.url) {
     if (file.mode === "reference") {
-      throw new Error("URL reference mode is not fully implemented yet.");
+      return { metadata, shouldDeleteSource: false, isReference: true, referenceUrl: file.url };
     }
     const response = await fetch(file.url);
     if (!response.ok) throw new Error(`Failed to fetch URL: ${response.statusText}`);
@@ -160,17 +162,27 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
       async ingest(input: IngestInput): Promise<MediaResult> {
         const normalized = await normalizeInput(input, fileHandling);
         const recordId = randomUUID();
-        const finalKey = input.key ?? normalized.metadata.filename ?? recordId;
+        const finalKey =
+          input.key ??
+          normalized.metadata.filename ??
+          (normalized.isReference ? normalized.referenceUrl : undefined) ??
+          recordId;
 
         try {
-          await storage.put(finalKey, normalized.data);
+          if (normalized.isReference && normalized.referenceUrl) {
+            // In reference mode, we store the URL in the metadata and context but skip storage.put
+            normalized.metadata.referenceUrl = normalized.referenceUrl;
+          } else if (normalized.data) {
+            await storage.put(finalKey, normalized.data);
+          } else {
+            throw new Error("Ingest failed: No data and not a reference.");
+          }
+
           // Pass metadata and context separately to the executor to persist once at the end
-          await runPipeline(
-            recordId,
-            finalKey,
-            normalized.metadata,
-            (normalized.metadata.context as Record<string, unknown>) ?? {}
-          );
+          await runPipeline(recordId, finalKey, normalized.metadata, {
+            ...((normalized.metadata.context as Record<string, unknown>) ?? {}),
+            referenceUrl: normalized.referenceUrl,
+          });
 
           return {
             id: recordId,

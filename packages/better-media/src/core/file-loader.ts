@@ -159,6 +159,12 @@ export async function loadFileIntoContext(
 
   const fileContent: NonNullable<PipelineContext["utilities"]>["fileContent"] = {};
 
+  // If it's a reference URL, it's not in our storage. Skip loading.
+  if (context.storageLocation.url && context.storageLocation.url === context.file.key) {
+    context.utilities!.fileContent = fileContent;
+    return;
+  }
+
   let useStream = false;
   if (
     maxBufferBytes != null &&
