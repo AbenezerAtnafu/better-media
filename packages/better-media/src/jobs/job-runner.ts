@@ -14,6 +14,7 @@ import {
   cleanupTempFile,
   type FileHandlingConfig,
 } from "../core/file-loader";
+import { createSecureContext } from "../core/secure-context";
 
 function syncTrustedToFile(context: PipelineContext): void {
   const { trusted, file } = context;
@@ -107,11 +108,6 @@ export async function runBackgroundJob(
     // Use the manifest from the registry exclusively to prevent trust escalation
     const manifest = handler.manifest;
 
-    // TODO: Ideally createSecureContext should be in a shared utility.
-    // For now, we'll implement it or use it if exported from LifecycleEngine.
-    // Let's assume we need to implement it here for now or I should have exported it.
-    // I will export it from LifecycleEngine.
-    const { createSecureContext } = await import("../core/lifecycle-engine");
     const { proxy, api } = createSecureContext(
       context,
       pluginName,
