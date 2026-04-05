@@ -1,5 +1,19 @@
 # better-media-example-nextjs
 
+## 1.0.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @better-media/core@0.2.0
+  - @better-media/adapter-db@0.2.0
+  - @better-media/adapter-jobs@0.2.0
+  - @better-media/adapter-storage-memory@0.2.0
+  - @better-media/framework@0.2.0
+  - @better-media/plugin-media-processing@0.2.0
+  - @better-media/plugin-validation@0.2.0
+  - @better-media/plugin-virus-scan@0.2.0
+
 ## 1.0.1
 
 ### Patch Changes
