@@ -2,6 +2,7 @@ import { Hero } from "@/components/landing/Hero";
 import { Features } from "@/components/landing/Features";
 import { Architecture } from "@/components/landing/Architecture";
 import { Infrastructure } from "@/components/landing/Infrastructure";
+import { FrameworkSupport } from "@/components/landing/FrameworkSupport";
 import { PluginsGallery } from "@/components/landing/PluginsGallery";
 import { QuickStart } from "@/components/landing/QuickStart";
 import { Contributors } from "@/components/landing/Contributors";
@@ -19,6 +20,7 @@ export default function HomePage() {
         <Features />
         <Architecture />
         <Infrastructure />
+        <FrameworkSupport />
         <PluginsGallery />
         <Contributors />
       </main>

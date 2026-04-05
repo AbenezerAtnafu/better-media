@@ -48,7 +48,7 @@ app.post("/upload/multipart", upload.single("file"), async (req, res) => {
     res.json({
       success: true,
       ...result,
-      url: `http://localhost:${PORT}/uploads/${result.key}`,
+      url: (result as { url?: string }).url ?? `http://localhost:${PORT}/uploads/${result.key}`,
       message: "File ingested from Multer and processed successfully.",
     });
   } catch (err) {
@@ -83,7 +83,7 @@ app.post("/upload/binary", express.raw({ type: "*/*", limit: "10mb" }), async (r
     res.json({
       success: true,
       ...result,
-      url: `http://localhost:${PORT}/uploads/${result.key}`,
+      url: (result as { url?: string }).url ?? `http://localhost:${PORT}/uploads/${result.key}`,
       message: "Buffer directly ingested and processed successfully.",
     });
   } catch (err) {
