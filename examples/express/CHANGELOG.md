@@ -1,5 +1,12 @@
 # better-media-example-express
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [8c4d4e1]
+  - @better-media/adapter-storage-s3@0.3.0
+
 ## 1.0.2
 
 ### Patch Changes

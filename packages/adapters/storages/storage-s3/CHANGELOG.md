@@ -1,5 +1,11 @@
 # @better-media/adapter-storage-s3
 
+## 0.3.0
+
+### Minor Changes
+
+- 8c4d4e1: expand storage API with file management and system utilities, and add framework support section to landing page
+
 ## 0.2.0
 
 ### Minor Changes
