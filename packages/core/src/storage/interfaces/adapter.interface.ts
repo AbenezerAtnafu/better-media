@@ -87,6 +87,38 @@ export interface PresignedUploadResult {
   headers?: Record<string, string>;
 }
 
+/**
+ * Basic metadata for a stored object.
+ */
+export interface StorageObject {
+  /** The unique key/path for the object. */
+  key: string;
+  /** File size in bytes. */
+  size: number;
+  /** Last modified date. */
+  lastModified?: Date;
+  /** Object ETag (usually an MD5 hash). */
+  etag?: string;
+  /** Content type of the object. */
+  contentType?: string;
+  /** Custom metadata attached to the object. */
+  metadata?: Record<string, string>;
+}
+
+export interface ListResult {
+  /** The list of objects found. */
+  items: StorageObject[];
+  /** Token to use for retrieving the next page of results. */
+  nextToken?: string;
+}
+
+export interface ListOptions {
+  /** Maximum number of items to return. */
+  limit?: number;
+  /** Token to continue a previous listing. */
+  continuationToken?: string;
+}
+
 export interface StorageAdapter {
   get(key: string): Promise<Buffer | null>;
   put(key: string, value: Buffer): Promise<void>;
@@ -123,6 +155,31 @@ export interface StorageAdapter {
     key: string,
     options: PresignedUploadOptions
   ): Promise<PresignedUploadResult>;
+
+  /**
+   * Optional: delete multiple objects at once for efficiency.
+   */
+  deleteMany?(keys: string[]): Promise<void>;
+
+  /**
+   * Optional: move an object to a new location.
+   */
+  move?(source: string, destination: string): Promise<void>;
+
+  /**
+   * Optional: copy an object to a new location.
+   */
+  copy?(source: string, destination: string): Promise<void>;
+
+  /**
+   * Optional: list objects under a specific prefix.
+   */
+  list?(prefix: string, options?: ListOptions): Promise<ListResult>;
+
+  /**
+   * Optional: check if the storage connection is healthy.
+   */
+  checkConnection?(): Promise<boolean>;
 
   /**
    * Remove all stored keys. Optional; mainly for testing/dev (e.g. memory adapter).
