@@ -1,6 +1,72 @@
 ---
 title: S3 Compatible
-description: S3-compatible storage adapters such as AWS S3 and MinIO.
+description: S3-compatible storage adapters such as AWS S3, MinIO, and Cloudflare R2.
 ---
 
-This page will cover the S3 storage adapter, including AWS S3, MinIO, and similar compatible providers.
+This guide covers the S3 storage adapter, which provides support for AWS S3 and other S3-compatible object storage providers like [MinIO](https://min.io/), [DigitalOcean Spaces](https://www.digitalocean.com/products/spaces), and [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/).
+
+## Installation
+
+```bash
+pnpm add @better-media/adapter-storage-s3
+```
+
+## Configuration
+
+To use the `S3StorageAdapter`, provide the necessary configuration upon instantiation. The adapter natively supports dynamic bucket resolution and custom endpoints for full compatibility with alternative S3 providers.
+
+```typescript
+import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
+
+const storage = new S3StorageAdapter({
+  // Required: AWS region or custom provider region
+  region: "us-east-1",
+  
+  // Required: Credentials
+  accessKeyId: process.env.S3_ACCESS_KEY_ID,
+  secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+  
+  // Required: Bucket name, or a function resolving the bucket dynamically per key
+  bucket: process.env.S3_BUCKET_NAME,
+  
+  // Optional: Custom endpoint (required for MinIO, R2, etc.)
+  endpoint: process.env.S3_ENDPOINT, // e.g., "http://localhost:9000" for MinIO
+  
+  // Optional: Force path-style URLs (useful for MinIO and local testing)
+  forcePathStyle: true,
+});
+```
+
+### Dynamic Buckets
+
+If you need to store files in different buckets based on dynamic properties (e.g., separating images and videos, or multi-tenant buckets), you can pass a resolver function to the `bucket` option:
+
+```typescript
+const storage = new S3StorageAdapter({
+  // ...other config
+  bucket: (key: string) => {
+    if (key.startsWith("videos/")) return "my-videos-bucket";
+    return "my-default-bucket";
+  }
+});
+```
+
+## Advanced Operations
+
+The adapter implements both standard CRUD storage operations and advanced functionality natively optimized for S3:
+
+- **Multipart Uploads**: High-performance, chunked uploading for massive files. The adapter provides `createMultiPart`, `putItemMultiPart`, `completeMultipart`, and `abortMultipart` natively.
+- **Bulk Operations**: Perform efficient structural modifications with `deleteMany`, `deleteDir`, `moveItems`, and directory-level enumeration.
+- **Presigned Exfil & Ingest**: Securely upload or download files directly from the browser using temporary signed URLs, completely bypassing backend memory limits:
+  - Supports **POST** (form-based upload enforcing strict size limits and metadata conditions)
+  - Supports **PUT** (simple binary direct upload)
+- **Bucket-Level Controls**: Apply bucket lifecycle rules, CORS configurations, and disable ACLs programmably without external CLI tools.
+
+## Supported Presigned URL Methods
+
+When utilizing `createPresignedUpload`, the underlying behavior dynamically adjusts based on the chosen method:
+
+- **POST**: Best for browser-based, HTML-form uploads. The adapter generates AWS policy conditions directly into the signed URL to restrict file sizes and `Content-Type` strictly from S3's edge.
+- **PUT**: Best for server-to-server or programmatic binary uploads. Generates exact metadata and size headers matching the expected request.
+
+For more information on the core contract, refer to the [Storage Architecture](/docs/storage).

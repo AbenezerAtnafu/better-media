@@ -44,6 +44,9 @@ export type {
   PresignedUploadMethod,
   PresignedUploadOptions,
   PresignedUploadResult,
+  StorageObject,
+  ListResult,
+  ListOptions,
 } from "./storage/index";
 export type {
   DatabaseAdapter,
