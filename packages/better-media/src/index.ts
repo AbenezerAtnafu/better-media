@@ -252,6 +252,56 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
           database.delete({ model: "media", where: [{ field: "id", value: id }] }),
         ]);
       },
+      async deleteMany(ids: string[]) {
+        if (!ids.length) return;
+        const records = await Promise.all(ids.map((id) => this.get(id)));
+        const storageKeys = records.map((r, i) => (r?.storageKey as string) ?? ids[i]);
+
+        if (typeof storage.deleteMany === "function") {
+          await storage.deleteMany(storageKeys);
+        } else {
+          await Promise.all(storageKeys.map((k) => storage.delete(k)));
+        }
+
+        await database.deleteMany({
+          model: "media",
+          where: [{ field: "id", operator: "in", value: ids }],
+        });
+      },
+      async move(id: string, destinationKey: string) {
+        const record = await this.get(id);
+        if (!record) throw new Error(`Media record not found: ${id}`);
+        const sourceKey = (record.storageKey as string) ?? id;
+
+        if (typeof storage.move === "function") {
+          await storage.move(sourceKey, destinationKey);
+        } else {
+          throw new Error("Move operation not supported by configured storage adapter.");
+        }
+
+        const updated = await database.update({
+          model: "media",
+          where: [{ field: "id", value: id }],
+          update: { storageKey: destinationKey },
+        });
+        return updated as import("./runtime/runtime.interface").FileRecord;
+      },
+      async copy(id: string, destinationKey: string) {
+        const record = await this.get(id);
+        if (!record) throw new Error(`Media record not found: ${id}`);
+        const sourceKey = (record.storageKey as string) ?? id;
+
+        if (typeof storage.copy === "function") {
+          await storage.copy(sourceKey, destinationKey);
+        } else {
+          throw new Error("Copy operation not supported by configured storage adapter.");
+        }
+
+        const newRecordId = randomUUID();
+        const copyData = { ...record, id: newRecordId, storageKey: destinationKey };
+        const created = await database.create({ model: "media", data: copyData });
+        return created as import("./runtime/runtime.interface").FileRecord;
+      },
       async getUrl(id: string, options?: { expiresIn?: number }) {
         const record = await this.get(id);
         const storageKey = (record?.storageKey as string) ?? id;
@@ -263,11 +313,57 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
         }
         return fn.call(storage, storageKey, options);
       },
+      async getSize(id: string) {
+        const record = await this.get(id);
+        if (!record) return null;
+        const storageKey = (record.storageKey as string) ?? id;
+        if (typeof storage.getSize === "function") {
+          return storage.getSize(storageKey);
+        }
+        return null;
+      },
+      async exists(id: string) {
+        const record = await this.get(id);
+        if (!record) return false;
+        const storageKey = (record.storageKey as string) ?? id;
+        return storage.exists(storageKey);
+      },
+      async download(id: string) {
+        const record = await this.get(id);
+        if (!record) return null;
+        const storageKey = (record.storageKey as string) ?? id;
+        return storage.get(storageKey);
+      },
+      async stream(id: string) {
+        const record = await this.get(id);
+        if (!record) return null;
+        const storageKey = (record.storageKey as string) ?? id;
+        if (typeof storage.getStream === "function") {
+          return storage.getStream(storageKey);
+        }
+        return null;
+      },
       async reprocess(id: string, metadata: Record<string, unknown> = {}) {
         const record = await this.get(id);
         if (!record) throw new Error(`Media record not found: ${id}`);
         const storageKey = (record.storageKey as string) ?? id;
         return runPipeline(id, storageKey, metadata);
+      },
+    },
+    system: {
+      async checkConnection() {
+        if (typeof storage.checkConnection === "function") {
+          return storage.checkConnection();
+        }
+        return true;
+      },
+      async clearStorage() {
+        if (typeof storage.clear === "function") {
+          await storage.clear();
+        } else {
+          throw new Error("Clear operation not supported by configured storage adapter.");
+        }
+        await database.deleteMany({ model: "media", where: [] });
       },
     },
     async runBackgroundJob(payload: BackgroundJobPayload) {

@@ -62,8 +62,6 @@ export interface BetterMediaRuntime {
       input?: Omit<IngestInput, "file"> & { mode?: "import" | "reference" }
     ): Promise<MediaResult>;
 
-    // Direct-to-Storage (Presigned URLs) Flow
-
     /**
      * Create a presigned upload for direct-to-storage upload.
      * Supports both PUT (binary body) and POST (multipart form) with strict server-side validation.
@@ -82,8 +80,25 @@ export interface BetterMediaRuntime {
   files: {
     get(fileKey: string): Promise<FileRecord | null>;
     delete(fileKey: string): Promise<void>;
+    deleteMany(fileKeys: string[]): Promise<void>;
+    move(fileKey: string, destinationKey: string): Promise<FileRecord>;
+    copy(fileKey: string, destinationKey: string): Promise<FileRecord>;
     getUrl(fileKey: string, options?: GetUrlOptions): Promise<string>;
+    getSize(fileKey: string): Promise<number | null>;
+    exists(fileKey: string): Promise<boolean>;
+    /** Download the raw binary bytes of the file directly from storage into memory. */
+    download(fileKey: string): Promise<Buffer | null>;
+    /** Download the file as a stream directly from storage. Returns null if missing or adapter lacks support. */
+    stream(fileKey: string): Promise<ReadableStream | null>;
     reprocess(fileKey: string, metadata?: Metadata): Promise<void>;
+  };
+
+  /** System and administration utilities */
+  system: {
+    /** Check the health of the underlying storage connection */
+    checkConnection(): Promise<boolean>;
+    /** Dev-only logic: Hard wipes both the storage bucket and DB records */
+    clearStorage(): Promise<void>;
   };
 
   /** Execute background job (call from worker). */

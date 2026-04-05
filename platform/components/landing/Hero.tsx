@@ -33,17 +33,12 @@ export function Hero() {
           </div>
 
           <div className="space-y-6">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-headline leading-[1.1] tracking-[-0.03em] text-white opacity-0 animate-slide-up [animation-delay:100ms] [animation-fill-mode:forwards]">
+            <h1 className="text-5xl md:text-7xl font-black font-headline leading-[1.1] tracking-tight text-gradient mb-8 opacity-0 animate-slide-up [animation-delay:100ms] [animation-fill-mode:forwards]">
               Media handling
               <br />
-              <span className="text-slate-500 font-medium">
-                shouldn't be this{" "}
-                <span className="font-mono font-medium text-brand-accent text-gradient lg:text-[3.75rem]">
-                  hard.
-                </span>
-              </span>
+              shouldn't be this hard.
             </h1>
-            <p className="text-base md:text-lg text-slate-400 max-w-md font-normal font-body leading-relaxed opacity-0 animate-slide-up [animation-delay:200ms] [animation-fill-mode:forwards]">
+            <p className="text-lg text-slate-400 max-w-2xl font-body leading-relaxed mb-12 opacity-0 animate-slide-up [animation-delay:200ms] [animation-fill-mode:forwards]">
               Upload, transform, and serve files with a clean API and pluggable adapters for any
               storage or database.
             </p>
