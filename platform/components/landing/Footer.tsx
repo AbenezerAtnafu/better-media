@@ -22,7 +22,7 @@ export function Footer() {
               secure by design.
             </p>
             <div className="text-[10px] text-zinc-600 font-mono">
-              © 2024 BETTER MEDIA PROJECT. MIT LICENSE.
+              © 2026 BETTER MEDIA PROJECT. MIT LICENSE.
             </div>
           </div>
           <div>
