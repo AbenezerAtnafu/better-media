@@ -26,7 +26,7 @@ export function Architecture() {
   ];
 
   return (
-    <section className="py-24 border-y border-white/5 relative overflow-hidden">
+    <section className="py-16 md:py-20 border-y border-white/5 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-6">
         <Reveal className="text-center max-w-2xl mx-auto">
           <span className="inline-flex items-center rounded-md border border-brand-accent/20 bg-brand-accent/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-brand-accent font-mono">

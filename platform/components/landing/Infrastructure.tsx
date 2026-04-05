@@ -14,7 +14,7 @@ export function Infrastructure() {
   ];
 
   return (
-    <section className="max-w-7xl mx-auto px-6 py-24">
+    <section className="max-w-7xl mx-auto px-6 py-16 md:py-20">
       <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-10 lg:gap-16 items-start">
         <Reveal>
           <div className="max-w-xl">

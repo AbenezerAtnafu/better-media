@@ -16,16 +16,16 @@ const frameworks = [
 
 export function FrameworkSupport() {
   return (
-    <section className="max-w-7xl mx-auto px-6 lg:px-8 py-24 lg:py-40 relative z-10">
+    <section className="max-w-7xl mx-auto px-6 lg:px-8 py-16 md:py-20 relative z-10">
       <div className="grid lg:grid-cols-2 gap-16 items-center">
         <Reveal className="space-y-6">
+          <span className="inline-flex items-center rounded-md border border-brand-accent/20 bg-brand-accent/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-brand-accent font-mono">
+            Frameworks
+          </span>
           <h2 className="text-3xl md:text-4xl font-bold font-headline tracking-tight text-white mb-2">
             Framework Agnostic Support
           </h2>
-          <p className="text-brand-accent font-medium font-body text-lg">
-            Integrate Better Media with your existing stack — no lock-in, no friction.
-          </p>
-          <p className="text-slate-400 leading-relaxed font-body">
+          <p className="mt-4 text-slate-400 font-medium leading-relaxed">
             Better Media is built to work across the most popular Node.js frameworks and beyond.
             Whether you're building APIs, microservices, or full-stack applications, integration is
             simple and consistent.

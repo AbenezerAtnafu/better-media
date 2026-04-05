@@ -33,7 +33,7 @@ export function Hero() {
           </div>
 
           <div className="space-y-6">
-            <h1 className="text-5xl md:text-7xl font-black font-headline leading-[1.1] tracking-tight text-gradient mb-8 opacity-0 animate-slide-up [animation-delay:100ms] [animation-fill-mode:forwards]">
+            <h1 className="text-5xl md:text-7xl font-black font-headline leading-[1.1] tracking-tight bg-gradient-to-br from-white from-50% to-[#71717a] to-100% bg-clip-text text-transparent mb-8 opacity-0 animate-slide-up [animation-delay:100ms] [animation-fill-mode:forwards]">
               Media handling
               <br />
               shouldn't be this hard.

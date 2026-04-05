@@ -47,7 +47,7 @@ export function PluginsGallery() {
   };
 
   return (
-    <section className="py-24 relative overflow-hidden">
+    <section className="py-16 md:py-20 relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12">
           <Reveal className="max-w-xl">
