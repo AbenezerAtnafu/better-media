@@ -84,7 +84,7 @@ export async function Contributors() {
   const remainingContributors = Math.max(0, totalContributorsCount - 4);
 
   return (
-    <section className="max-w-3xl mx-auto px-6 py-24 text-center">
+    <section className="max-w-3xl mx-auto px-6 py-16 md:py-20 text-center">
       <h2 className="text-4xl font-bold font-headline mb-4 tracking-[-0.03em] leading-[1.1] text-white">
         Better together.
       </h2>
