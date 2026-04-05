@@ -18,9 +18,9 @@ export default function HomePage() {
         <Hero />
         <QuickStart />
         <Features />
+        <FrameworkSupport />
         <Architecture />
         <Infrastructure />
-        <FrameworkSupport />
         <PluginsGallery />
         <Contributors />
       </main>
