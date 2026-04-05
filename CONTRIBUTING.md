@@ -54,4 +54,8 @@ This project is a monorepo managed with [pnpm](https://pnpm.io/) and [Turborepo]
 - **Formatting**: We use Prettier. Run `pnpm format` to fix any formatting issues.
 - **Architecture**: Always respect the Core / Adapter / Framework separation. Do not add infrastructure dependencies to `@better-media/core`.
 
+## Releasing
+
+If you are a maintainer preparing a release, please see the [Release Workflow](./RELEASING.md) guide.
+
 Thank you for contributing!
