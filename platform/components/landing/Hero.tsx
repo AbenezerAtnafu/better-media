@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import corePackage from "../../../packages/core/package.json";
 
 export function Hero() {
   const [copied, setCopied] = useState(false);
@@ -27,7 +28,7 @@ export function Hero() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-accent shadow-[0_0_8px_rgba(59,130,246,0.8)]"></span>
             </span>
             <span className="text-[10px] font-bold tracking-[0.25em] uppercase text-brand-accent font-mono">
-              Protocol v0.1.0
+              Protocol v{corePackage.version}
             </span>
           </div>
 
