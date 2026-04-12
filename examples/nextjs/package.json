@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-media/adapter-db": "workspace:*",
+    "@better-media/adapter-db-memory": "workspace:*",
     "@better-media/adapter-jobs": "workspace:*",
     "@better-media/adapter-storage-memory": "workspace:*",
     "@better-media/core": "workspace:*",

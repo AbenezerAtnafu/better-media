@@ -1,7 +1,7 @@
 {
-  "name": "@better-media/plugin-validation",
+  "name": "@better-media/adapter-db-memory",
   "version": "0.2.0",
-  "description": "Validation plugin for Better Media pipeline",
+  "description": "In-memory database adapter for Better Media (development/testing)",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -24,17 +24,20 @@
     "README.md"
   ],
   "dependencies": {
-    "@better-media/core": "workspace:*",
-    "file-type": "^19.6.0",
-    "image-size": "^1.1.1"
+    "@better-media/core": "workspace:*"
   },
   "devDependencies": {
-    "@better-media/adapter-db-memory": "workspace:*",
-    "@better-media/adapter-storage-memory": "workspace:*",
-    "@types/jest": "^29.5.14",
-    "@better-media/framework": "workspace:*"
+    "@types/jest": "^29.5.11",
+    "@types/node": "^22.10.0",
+    "jest": "^30.2.0",
+    "typescript": "^5.9.3"
   },
-  "keywords": [],
+  "keywords": [
+    "better-media",
+    "database",
+    "memory",
+    "adapter"
+  ],
   "author": "Abenezer Atnafu",
   "license": "MIT",
   "packageManager": "pnpm@10.25.0",

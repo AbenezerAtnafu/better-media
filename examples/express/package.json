@@ -12,7 +12,6 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@better-media/adapter-db": "workspace:*",
     "@better-media/adapter-storage-filesystem": "workspace:*",
     "@better-media/adapter-storage-memory": "workspace:*",
     "@better-media/adapter-storage-s3": "workspace:*",
