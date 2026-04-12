@@ -3,6 +3,7 @@ packages:
   - "packages/plugins/*"
   - "packages/adapters/*"
   - "packages/adapters/storages/*"
+  - "packages/adapters/databases/*"
   - "apps/*"
   - "examples/*"
   - "platform"

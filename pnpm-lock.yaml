@@ -56,9 +56,6 @@ importers:
 
   examples/express:
     dependencies:
-      '@better-media/adapter-db':
-        specifier: workspace:*
-        version: link:../../packages/adapters/db
       '@better-media/adapter-storage-filesystem':
         specifier: workspace:*
         version: link:../../packages/adapters/storages/storage-filesystem
@@ -111,9 +108,9 @@ importers:
 
   examples/nestjs:
     dependencies:
-      '@better-media/adapter-db':
+      '@better-media/adapter-db-memory':
         specifier: workspace:*
-        version: link:../../packages/adapters/db
+        version: link:../../packages/adapters/databases/db-memory
       '@better-media/adapter-storage-filesystem':
         specifier: workspace:*
         version: link:../../packages/adapters/storages/storage-filesystem
@@ -214,9 +211,9 @@ importers:
 
   examples/nextjs:
     dependencies:
-      '@better-media/adapter-db':
+      '@better-media/adapter-db-memory':
         specifier: workspace:*
-        version: link:../../packages/adapters/db
+        version: link:../../packages/adapters/databases/db-memory
       '@better-media/adapter-jobs':
         specifier: workspace:*
         version: link:../../packages/adapters/jobs
@@ -261,48 +258,61 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/adapters/db:
+  packages/adapters/databases/db-kysely:
     dependencies:
       '@better-media/core':
         specifier: workspace:*
-        version: link:../../core
-      '@better-media/framework':
-        specifier: workspace:*
-        version: link:../../better-media
-      '@better-media/mongodb-adapter':
-        specifier: workspace:*
-        version: link:../mongodb-adapter
+        version: link:../../../core
+      kysely:
+        specifier: ^0.27.0 || ^0.28.0
+        version: 0.28.14
     devDependencies:
-      '@types/mongodb':
-        specifier: ^4.0.7
-        version: 4.0.7
+      '@types/jest':
+        specifier: ^29.5.11
+        version: 29.5.14
       '@types/node':
         specifier: ^22.10.0
         version: 22.19.15
       '@types/pg':
         specifier: ^8.11.10
         version: 8.20.0
-      kysely:
-        specifier: ^0.28.14
-        version: 0.28.14
+      jest:
+        specifier: ^30.2.0
+        version: 30.3.0(@types/node@22.19.15)(ts-node@10.9.2(@types/node@22.19.15)(typescript@5.9.3))
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/adapters/databases/db-memory:
+    dependencies:
+      '@better-media/core':
+        specifier: workspace:*
+        version: link:../../../core
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.11
+        version: 29.5.14
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.15
+      jest:
+        specifier: ^30.2.0
+        version: 30.3.0(@types/node@22.19.15)(ts-node@10.9.2(@types/node@22.19.15)(typescript@5.9.3))
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/adapters/databases/mongodb-adapter:
+    dependencies:
+      '@better-media/core':
+        specifier: workspace:*
+        version: link:../../../core
+      '@better-media/framework':
+        specifier: workspace:*
+        version: link:../../../better-media
       mongodb:
         specifier: ^6.8.0
         version: 6.21.0
-
-  packages/adapters/jobs:
-    dependencies:
-      '@better-media/core':
-        specifier: workspace:*
-        version: link:../../core
-
-  packages/adapters/mongodb-adapter:
-    dependencies:
-      '@better-media/core':
-        specifier: workspace:*
-        version: link:../../core
-      '@better-media/framework':
-        specifier: workspace:*
-        version: link:../../better-media
     devDependencies:
       '@types/jest':
         specifier: ^29.5.11
@@ -316,15 +326,18 @@ importers:
       jest:
         specifier: ^30.2.0
         version: 30.3.0(@types/node@22.19.15)(ts-node@10.9.2(@types/node@22.19.15)(typescript@5.9.3))
-      mongodb:
-        specifier: ^6.8.0
-        version: 6.21.0
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(jiti@1.21.7)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/adapters/jobs:
+    dependencies:
+      '@better-media/core':
+        specifier: workspace:*
+        version: link:../../core
 
   packages/adapters/storages/storage-filesystem:
     dependencies:
@@ -442,9 +455,9 @@ importers:
         specifier: ^1.1.1
         version: 1.2.1
     devDependencies:
-      '@better-media/adapter-db':
+      '@better-media/adapter-db-memory':
         specifier: workspace:*
-        version: link:../../adapters/db
+        version: link:../../adapters/databases/db-memory
       '@better-media/adapter-storage-memory':
         specifier: workspace:*
         version: link:../../adapters/storages/storage-memory
@@ -8097,7 +8110,7 @@ snapshots:
   '@jest/console@29.7.0':
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       chalk: 4.1.2
       jest-message-util: 29.7.0
       jest-util: 29.7.0
@@ -8119,14 +8132,14 @@ snapshots:
       '@jest/test-result': 29.7.0
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       ansi-escapes: 4.3.2
       chalk: 4.1.2
       ci-info: 3.9.0
       exit: 0.1.2
       graceful-fs: 4.2.11
       jest-changed-files: 29.7.0
-      jest-config: 29.7.0(@types/node@20.19.37)(ts-node@10.9.2(@types/node@20.19.37)(typescript@5.9.3))
+      jest-config: 29.7.0(@types/node@22.19.15)(ts-node@10.9.2(@types/node@20.19.37)(typescript@5.9.3))
       jest-haste-map: 29.7.0
       jest-message-util: 29.7.0
       jest-regex-util: 29.6.3
@@ -8188,7 +8201,7 @@ snapshots:
     dependencies:
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       jest-mock: 29.7.0
 
   '@jest/environment@30.3.0':
@@ -8224,7 +8237,7 @@ snapshots:
     dependencies:
       '@jest/types': 29.6.3
       '@sinonjs/fake-timers': 10.3.0
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       jest-message-util: 29.7.0
       jest-mock: 29.7.0
       jest-util: 29.7.0
@@ -8271,7 +8284,7 @@ snapshots:
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
       '@jridgewell/trace-mapping': 0.3.31
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       chalk: 4.1.2
       collect-v8-coverage: 1.0.3
       exit: 0.1.2
@@ -8419,7 +8432,7 @@ snapshots:
       '@jest/schemas': 29.6.3
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       '@types/yargs': 17.0.35
       chalk: 4.1.2
 
@@ -9648,7 +9661,7 @@ snapshots:
 
   '@types/graceful-fs@4.1.9':
     dependencies:
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
 
   '@types/hast@3.0.4':
     dependencies:
@@ -9757,7 +9770,7 @@ snapshots:
     dependencies:
       '@types/cookiejar': 2.1.5
       '@types/methods': 1.1.4
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       form-data: 4.0.5
 
   '@types/supertest@6.0.3':
@@ -11662,7 +11675,7 @@ snapshots:
       '@jest/expect': 29.7.0
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       chalk: 4.1.2
       co: 4.6.0
       dedent: 1.7.2
@@ -11777,6 +11790,37 @@ snapshots:
       - babel-plugin-macros
       - supports-color
 
+  jest-config@29.7.0(@types/node@22.19.15)(ts-node@10.9.2(@types/node@20.19.37)(typescript@5.9.3)):
+    dependencies:
+      '@babel/core': 7.29.0
+      '@jest/test-sequencer': 29.7.0
+      '@jest/types': 29.6.3
+      babel-jest: 29.7.0(@babel/core@7.29.0)
+      chalk: 4.1.2
+      ci-info: 3.9.0
+      deepmerge: 4.3.1
+      glob: 7.2.3
+      graceful-fs: 4.2.11
+      jest-circus: 29.7.0
+      jest-environment-node: 29.7.0
+      jest-get-type: 29.6.3
+      jest-regex-util: 29.6.3
+      jest-resolve: 29.7.0
+      jest-runner: 29.7.0
+      jest-util: 29.7.0
+      jest-validate: 29.7.0
+      micromatch: 4.0.8
+      parse-json: 5.2.0
+      pretty-format: 29.7.0
+      slash: 3.0.0
+      strip-json-comments: 3.1.1
+    optionalDependencies:
+      '@types/node': 22.19.15
+      ts-node: 10.9.2(@types/node@20.19.37)(typescript@5.9.3)
+    transitivePeerDependencies:
+      - babel-plugin-macros
+      - supports-color
+
   jest-config@30.3.0(@types/node@22.19.15)(ts-node@10.9.2(@types/node@22.19.15)(typescript@5.9.3)):
     dependencies:
       '@babel/core': 7.29.0
@@ -11852,7 +11896,7 @@ snapshots:
       '@jest/environment': 29.7.0
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       jest-mock: 29.7.0
       jest-util: 29.7.0
 
@@ -11872,7 +11916,7 @@ snapshots:
     dependencies:
       '@jest/types': 29.6.3
       '@types/graceful-fs': 4.1.9
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       anymatch: 3.1.3
       fb-watchman: 2.0.2
       graceful-fs: 4.2.11
@@ -11950,7 +11994,7 @@ snapshots:
   jest-mock@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       jest-util: 29.7.0
 
   jest-mock@30.3.0:
@@ -12015,7 +12059,7 @@ snapshots:
       '@jest/test-result': 29.7.0
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       chalk: 4.1.2
       emittery: 0.13.1
       graceful-fs: 4.2.11
@@ -12070,7 +12114,7 @@ snapshots:
       '@jest/test-result': 29.7.0
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       chalk: 4.1.2
       cjs-module-lexer: 1.4.3
       collect-v8-coverage: 1.0.3
@@ -12169,7 +12213,7 @@ snapshots:
   jest-util@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       chalk: 4.1.2
       ci-info: 3.9.0
       graceful-fs: 4.2.11
@@ -12206,7 +12250,7 @@ snapshots:
     dependencies:
       '@jest/test-result': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       ansi-escapes: 4.3.2
       chalk: 4.1.2
       emittery: 0.13.1
@@ -12226,13 +12270,13 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
   jest-worker@29.7.0:
     dependencies:
-      '@types/node': 20.19.37
+      '@types/node': 22.19.15
       jest-util: 29.7.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
