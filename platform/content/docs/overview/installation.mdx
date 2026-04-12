@@ -22,7 +22,7 @@ npm install better-media @better-media/core
 A typical production setup requires a storage adapter (e.g., S3) and a database adapter (e.g., Kysely for PostgreSQL).
 
 ```bash
-pnpm add @better-media/adapter-storage-s3 @better-media/adapter-db
+pnpm add @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
 ```
 
 ## Peer Dependencies
@@ -36,6 +36,10 @@ Better Media relies on certain peer dependencies depending on the adapters you c
 ## Local Development
 
 For local development, we recommend using the **Filesystem** or **In-Memory** adapters to avoid external infrastructure dependencies.
+
+```bash
+pnpm add @better-media/adapter-db-memory
+```
 
 ```ts
 import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";

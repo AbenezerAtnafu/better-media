@@ -8,11 +8,11 @@ Modular media pipeline framework for intake, validation, processing, and storage
 
 **Core defines contracts. Adapters implement infrastructure. Framework orchestrates.**
 
-| Layer         | Package(s)                                                                                                                                                                                                        | Responsibility                                                                                       |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Core**      | `@better-media/core`                                                                                                                                                                                              | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.   |
-| **Adapters**  | `@better-media/adapter-storage-memory`, `@better-media/adapter-storage-filesystem`, `@better-media/adapter-storage-s3`, `@better-media/adapter-db`, `@better-media/mongodb-adapter`, `@better-media/adapter-jobs` | Implement core contracts (MemoryStorageAdapter, FileSystemStorageAdapter, S3StorageAdapter, etc).    |
-| **Framework** | `@better-media/framework`                                                                                                                                                                                         | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations. |
+| Layer         | Package(s)                                                                                                                                                                                                                                                  | Responsibility                                                                                       |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Core**      | `@better-media/core`                                                                                                                                                                                                                                        | Interfaces only (StorageAdapter, DatabaseAdapter, JobAdapter, PipelinePlugin). No implementations.   |
+| **Adapters**  | `@better-media/adapter-storage-memory`, `@better-media/adapter-storage-filesystem`, `@better-media/adapter-storage-s3`, `@better-media/adapter-db-memory`, `@better-media/adapter-db-kysely`, `@better-media/mongodb-adapter`, `@better-media/adapter-jobs` | Implement core contracts (MemoryStorageAdapter, FileSystemStorageAdapter, S3StorageAdapter, etc).    |
+| **Framework** | `@better-media/framework`                                                                                                                                                                                                                                   | Orchestrate: wire adapters + plugins, run lifecycle. No infrastructure contracts or implementations. |
 
 ## Monorepo Structure
 
@@ -25,12 +25,15 @@ packages/
 │   ├── virus-scan-plugin/     # @better-media/plugin-virus-scan
 │   └── media-processing-plugin/  # @better-media/plugin-media-processing
 └── adapters/
-    ├── storage-memory/     # @better-media/adapter-storage-memory - In-memory (dev/test)
-    ├── storage-filesystem/ # @better-media/adapter-storage-filesystem - Disk storage
-    ├── storage-s3/         # @better-media/adapter-storage-s3 - S3 / MinIO
-    ├── db/                 # @better-media/adapter-db - SQL/Kysely database implementations
-    ├── mongodb-adapter/    # @better-media/mongodb-adapter - MongoDB implementation
-    └── jobs/               # @better-media/adapter-jobs - Job queue
+    ├── storages/
+    │   ├── storage-memory/       # @better-media/adapter-storage-memory
+    │   ├── storage-filesystem/   # @better-media/adapter-storage-filesystem
+    │   └── storage-s3/           # @better-media/adapter-storage-s3
+    ├── databases/
+    │   ├── db-memory/            # @better-media/adapter-db-memory
+    │   ├── db-kysely/            # @better-media/adapter-db-kysely
+    │   └── mongodb-adapter/      # @better-media/mongodb-adapter
+    └── jobs/                     # @better-media/adapter-jobs
 ```
 
 ## Plugin System

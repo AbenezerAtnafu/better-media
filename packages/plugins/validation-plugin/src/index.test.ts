@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import type { PluginManifest } from "@better-media/core";
 import { validationPlugin } from "./index";
 import { memoryStorage } from "@better-media/adapter-storage-memory";
-import { memoryDatabase } from "@better-media/adapter-db";
+import { memoryDatabase } from "@better-media/adapter-db-memory";
 import { createBetterMedia } from "@better-media/framework";
 
 /** Manifest for test-only spy plugins (required by buildPluginRegistry). */

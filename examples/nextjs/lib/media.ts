@@ -1,6 +1,6 @@
 import { createBetterMedia } from "@better-media/framework";
 import { memoryStorage } from "@better-media/adapter-storage-memory";
-import { memoryDatabase } from "@better-media/adapter-db";
+import { memoryDatabase } from "@better-media/adapter-db-memory";
 import { validationPlugin } from "@better-media/plugin-validation";
 import { ClamScanner, virusScanPlugin } from "@better-media/plugin-virus-scan";
 import { trackingJobAdapter } from "./tracking-job-adapter";

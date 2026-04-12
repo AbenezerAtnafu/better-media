@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@better-media/framework",
     "@better-media/core",
-    "@better-media/adapter-db",
+    "@better-media/adapter-db-memory",
     "@better-media/adapter-jobs",
     "@better-media/adapter-storage-memory",
     "@better-media/plugin-validation",

@@ -25,13 +25,13 @@ pnpm add @better-media/framework
 ```ts
 import { createBetterMedia } from "@better-media/framework";
 import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
-import { KyselyDatabaseAdapter } from "@better-media/adapter-db";
+import { memoryDatabase } from "@better-media/adapter-db-memory";
 import { validationPlugin } from "@better-media/plugin-validation";
 
 // 1. Configure the runtime
 const media = createBetterMedia({
   storage: new S3StorageAdapter(s3Config),
-  database: new KyselyDatabaseAdapter(dbConfig),
+  database: memoryDatabase(),
   plugins: [validationPlugin({ maxSize: "10mb", allowedMimeTypes: ["image/jpeg", "image/png"] })],
 });
 

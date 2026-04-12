@@ -1,7 +1,7 @@
 {
-  "name": "@better-media/mongodb-adapter",
-  "version": "0.1.2",
-  "description": "MongoDB database adapter for Better Media",
+  "name": "@better-media/adapter-db-kysely",
+  "version": "0.2.0",
+  "description": "Kysely SQL database adapter for Better Media",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -25,25 +25,21 @@
   ],
   "dependencies": {
     "@better-media/core": "workspace:*",
-    "@better-media/framework": "workspace:*"
-  },
-  "peerDependencies": {
-    "mongodb": "^6.8.0"
+    "kysely": "^0.27.0 || ^0.28.0"
   },
   "devDependencies": {
-    "@types/mongodb": "^4.0.7",
-    "mongodb": "^6.8.0",
+    "@types/jest": "^29.5.11",
+    "@types/pg": "^8.11.10",
     "@types/node": "^22.10.0",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
     "jest": "^30.2.0",
-    "@types/jest": "^29.5.11"
+    "typescript": "^5.9.3"
   },
   "keywords": [
     "better-media",
-    "mongodb",
-    "adapter",
-    "database"
+    "database",
+    "kysely",
+    "sql",
+    "adapter"
   ],
   "author": "Abenezer Atnafu",
   "license": "MIT",

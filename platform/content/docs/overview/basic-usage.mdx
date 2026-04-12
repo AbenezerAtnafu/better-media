@@ -8,13 +8,13 @@ The following is the smallest practical Better Media setup.
 ```ts
 import { createBetterMedia } from "better-media";
 import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
-import { KyselyDatabaseAdapter } from "@better-media/adapter-db";
+import { memoryDatabase } from "@better-media/adapter-db-memory";
 import { validationPlugin } from "@better-media/plugin-validation";
 
 // 1. Initialise the framework
 const media = createBetterMedia({
   storage: new FileSystemStorageAdapter({ baseDir: "./uploads" }),
-  database: new KyselyDatabaseAdapter(db), // db is your Kysely instance
+  database: memoryDatabase(),
   plugins: [validationPlugin({ maxSize: "10mb" })],
 });
 
