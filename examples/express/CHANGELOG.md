@@ -1,5 +1,17 @@
 # better-media-example-express
 
+## 1.0.4
+
+### Patch Changes
+
+- @better-media/plugin-validation@0.3.0
+- @better-media/framework@0.3.0
+- @better-media/plugin-virus-scan@0.3.0
+- @better-media/plugin-media-processing@0.3.0
+- @better-media/adapter-storage-memory@0.3.0
+- @better-media/adapter-storage-filesystem@0.1.3
+- @better-media/adapter-storage-s3@0.3.1
+
 ## 1.0.3
 
 ### Patch Changes

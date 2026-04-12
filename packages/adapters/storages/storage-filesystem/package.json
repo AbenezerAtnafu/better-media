@@ -1,6 +1,6 @@
 {
   "name": "@better-media/adapter-storage-filesystem",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Filesystem storage adapter for Better Media",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

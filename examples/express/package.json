@@ -1,6 +1,6 @@
 {
   "name": "better-media-example-express",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "Express example integrating Better Media framework",
   "type": "module",

@@ -1,5 +1,16 @@
 # nestjs
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [4bbb587]
+  - @better-media/adapter-db-memory@0.3.0
+  - @better-media/plugin-validation@0.3.0
+  - @better-media/framework@0.3.0
+  - @better-media/plugin-media-processing@0.3.0
+  - @better-media/adapter-storage-filesystem@0.1.3
+
 ## 0.0.3
 
 ### Patch Changes

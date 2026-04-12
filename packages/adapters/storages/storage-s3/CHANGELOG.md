@@ -1,5 +1,11 @@
 # @better-media/adapter-storage-s3
 
+## 0.3.1
+
+### Patch Changes
+
+- @better-media/core@0.3.0
+
 ## 0.3.0
 
 ### Minor Changes
