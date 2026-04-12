@@ -1,5 +1,13 @@
 # @better-media/framework
 
+## 0.3.0
+
+### Patch Changes
+
+- @better-media/core@0.3.0
+- @better-media/cli@0.3.0
+- @better-media/adapter-jobs@0.3.0
+
 ## 0.2.0
 
 ### Patch Changes

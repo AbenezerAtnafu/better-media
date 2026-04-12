@@ -1,6 +1,6 @@
 {
   "name": "@better-media/adapter-db-kysely",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Kysely SQL database adapter for Better Media",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

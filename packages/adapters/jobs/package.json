@@ -1,6 +1,6 @@
 {
   "name": "@better-media/adapter-jobs",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Job adapter implementations for Better Media (in-memory, Redis, etc.)",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
