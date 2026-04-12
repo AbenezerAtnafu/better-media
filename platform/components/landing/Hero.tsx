@@ -119,7 +119,7 @@ export function Hero() {
                   <span className="text-purple-400">import</span> {"{ "}
                   <span className="text-blue-400">memoryDatabase</span> {"} "}
                   <span className="text-purple-400">from</span>{" "}
-                  <span className="text-emerald-400">"@better-media/adapter-db"</span>;
+                  <span className="text-emerald-400">"@better-media/adapter-db-memory"</span>;
                 </div>
               </div>
               <div className="flex gap-6">

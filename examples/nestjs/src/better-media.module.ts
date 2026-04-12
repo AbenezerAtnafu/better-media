@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { createBetterMedia } from '@better-media/framework';
 import { FileSystemStorageAdapter } from '@better-media/adapter-storage-filesystem';
-import { memoryDatabase } from '@better-media/adapter-db';
+import { memoryDatabase } from '@better-media/adapter-db-memory';
 import { validationPlugin } from '@better-media/plugin-validation';
 import { mediaProcessingPlugin } from '@better-media/plugin-media-processing';
 

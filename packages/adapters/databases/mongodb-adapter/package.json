@@ -1,7 +1,7 @@
 {
-  "name": "@better-media/adapter-db",
-  "version": "0.2.0",
-  "description": "Database adapter interfaces and implementations for Better Media",
+  "name": "@better-media/mongodb-adapter",
+  "version": "0.1.2",
+  "description": "MongoDB database adapter for Better Media",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -10,16 +10,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
-    },
-    "./kysely": {
-      "types": "./dist/adapters/kysely/index.d.ts",
-      "import": "./dist/adapters/kysely/index.mjs",
-      "require": "./dist/adapters/kysely/index.js"
-    },
-    "./mongodb": {
-      "types": "./dist/adapters/mongodb/index.d.ts",
-      "import": "./dist/adapters/mongodb/index.mjs",
-      "require": "./dist/adapters/mongodb/index.js"
     }
   },
   "scripts": {
@@ -36,28 +26,23 @@
   "dependencies": {
     "@better-media/core": "workspace:*",
     "@better-media/framework": "workspace:*",
-    "@better-media/mongodb-adapter": "workspace:*"
-  },
-  "peerDependencies": {
-    "kysely": "^0.27.0 || ^0.28.0",
     "mongodb": "^6.8.0"
-  },
-  "peerDependenciesMeta": {
-    "kysely": {
-      "optional": true
-    },
-    "mongodb": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@types/mongodb": "^4.0.7",
-    "@types/pg": "^8.11.10",
-    "kysely": "^0.28.14",
     "mongodb": "^6.8.0",
-    "@types/node": "^22.10.0"
+    "@types/node": "^22.10.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "jest": "^30.2.0",
+    "@types/jest": "^29.5.11"
   },
-  "keywords": [],
+  "keywords": [
+    "better-media",
+    "mongodb",
+    "adapter",
+    "database"
+  ],
   "author": "Abenezer Atnafu",
   "license": "MIT",
   "packageManager": "pnpm@10.25.0",

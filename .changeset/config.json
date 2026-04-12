@@ -11,7 +11,9 @@
       "@better-media/plugin-virus-scan",
       "@better-media/plugin-media-processing",
       "@better-media/adapter-storage-memory",
-      "@better-media/adapter-db",
+      "@better-media/adapter-db-memory",
+      "@better-media/adapter-db-kysely",
+      "@better-media/mongodb-adapter",
       "@better-media/adapter-jobs"
     ]
   ],
