@@ -3,11 +3,59 @@ title: Overview
 description: Start here for the core idea behind Better Media and the path through the docs.
 ---
 
-This section is the main introduction to Better Media.
+Better Media is a unified framework designed to bring your entire media ecosystem into one predictable interface. Instead of manually stitching together storage clients, database records, background jobs, and validation logic for every new project, Better Media provides a centralized foundation for handling the full lifecycle of your files.
 
-It will grow into the first-stop path for understanding:
+<Callout title="Setup Fatigue" type="warn">
+  As developers, we often find ourselves setting up the same infrastructure repeatedly whenever a project needs to handle media:
+  - Configuring multipart form parsers and S3 clients.
+  - Designing database schemas for file metadata.
+  - Setting up cleanup logic and folder structures.
+  - Integrating background workers (resizing, transcoding).
+</Callout>
 
-- what Better Media is
-- why you would use it
-- how to install it
-- how to get a first working setup running quickly
+## What Better Media Solves
+
+Better Media puts everything in one place. It acts as a single "home" for your media logic.
+
+<Cards>
+  <Card
+    title="Centralized Config"
+    description="Define your storage, database, and job settings once. No more scattered logic."
+  />
+  <Card
+    title="Eliminate Boilerplate"
+    description="Use high-level APIs for ingest and processing without worrying about the infrastructure."
+  />
+  <Card
+    title="Extreme Flexibility"
+    description="Swap implementations (e.g., Local to S3) easily without rewriting your application code."
+  />
+</Cards>
+
+## Key Benefits
+
+- **Unified Interface**: A single, type-safe API for the entire media lifecycle.
+- **Developer Efficiency**: Spend less time on infrastructure and more time building core features.
+- **Resilient by Default**: Built-in support for background jobs and secure upload flows.
+
+## Next Steps
+
+<Steps>
+  <Step>
+    ### Installation
+    Get Better Media running in your project in minutes.
+    [View Installation](./installation)
+  </Step>
+  <Step>
+    ### Basic Usage
+    Learn how to ingest your first file and save it to storage.
+    [View Basic Usage](./basic-usage)
+  </Step>
+  <Step>
+    ### Explore Adapters
+    Connect to S3, Postgres, Redis, and more.
+    [View Adapters](../storage/overview)
+  </Step>
+</Steps>
+
+

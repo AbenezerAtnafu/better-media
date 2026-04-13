@@ -5,24 +5,43 @@ description: Explain the value proposition, tradeoffs, and when Better Media is 
 
 Modern media pipelines are often a mess of multipart forms, custom S3 clients, and ad-hoc processing scripts. Better Media provides a **unified, type-safe architecture** to handle media ingest.
 
+<Cards>
+  <Card
+    title="Infrastructure Agnostic"
+    description="Decouple logic from storage providers. Switch between Local, S3, or MinIO with ease."
+  />
+  <Card
+    title="Secure by Default"
+    description="Standardized virus scanning and MIME-type validation built-in."
+  />
+  <Card
+    title="Background Processing"
+    description="Effortlessly offload heavy tasks like transcoding via the integrated job system."
+  />
+</Cards>
+
 ## Problems Solved
 
-- **Ad-hoc Storage Logic**: Switch between local disk, S3, or MinIO by changing a single adapter.
-- **Security Gaps**: Built-in plugins for MIME-type validation and virus scanning prevent malicious uploads.
-- **Blocked Threads**: Move heavy processing like video transcoding or image optimization to background workers with a job adapter.
-- **Metadata Fragmentation**: Unified storage of media metadata alongside your files.
-
-## Modular Architecture
-
-The framework is built on three pillars:
-
-1.  **Core Contracts**: Zero-dependency interfaces.
-2.  **Pluggable Adapters**: Infrastructure implementations (Storage, DB, Jobs).
-3.  **Lifecycle Plugins**: Business logic (Validation, Processing, Scanning).
+<Accordions>
+  <Accordion title="Ad-hoc Storage Logic">
+    Stop writing repetitive AWS SDK or Multer logic. Better Media abstracts the storage layer so you can focus on your business logic.
+  </Accordion>
+  <Accordion title="Blocked Event Loop">
+    Processing large files in the main thread kills performance. Better Media uses its job adapter to move heavy work to background workers.
+  </Accordion>
+  <Accordion title="Metadata Fragmentation">
+    Better Media provides a unified way to store and retrieve media metadata regardless of where the file is physically stored.
+  </Accordion>
+</Accordions>
 
 ## When to Use Better Media
 
 - You have varied storage needs (e.g., local dev vs. S3 production).
 - You need to process media files (resizing, transcoding) reliably.
 - You require security checks like virus scanning or deep MIME inspection.
-- You want a consistent API for presigned URLs regardless of the storage provider.
+- You want a consistent API for presigned URLs across different providers.
+
+<Callout title="Unified Workflow" type="info">
+  Better Media isn't just a library; it's a foundation for building consistent, enterprise-grade media pipelines across your entire organization.
+</Callout>
+
