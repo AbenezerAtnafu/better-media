@@ -26,6 +26,20 @@
   "dependencies": {
     "@better-media/core": "workspace:*"
   },
+  "peerDependencies": {
+    "sharp": ">=0.33.0"
+  },
+  "peerDependenciesMeta": {
+    "sharp": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@better-media/adapter-db-memory": "workspace:*",
+    "@better-media/adapter-storage-memory": "workspace:*",
+    "@types/jest": "^29.5.14",
+    "sharp": "^0.34.5"
+  },
   "keywords": [],
   "author": "Abenezer Atnafu",
   "license": "MIT",

@@ -1,31 +1,47 @@
 import { createBetterMedia } from "@better-media/framework";
-import { memoryStorage } from "@better-media/adapter-storage-memory";
 import { memoryDatabase } from "@better-media/adapter-db-memory";
 import { validationPlugin } from "@better-media/plugin-validation";
-import { ClamScanner, virusScanPlugin } from "@better-media/plugin-virus-scan";
-import { trackingJobAdapter } from "./tracking-job-adapter";
+import { virusScanPlugin } from "@better-media/plugin-virus-scan";
+import type { VirusScanner } from "@better-media/plugin-virus-scan";
+import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
 import type { BetterMediaRuntime } from "@better-media/framework";
+import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
 
-const storage = memoryStorage();
+const storage = new S3StorageAdapter({
+  region: process.env.AWS_REGION ?? "us-east-1",
+  bucket: process.env.AWS_BUCKET ?? "express-test-bucket",
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "minioadmin",
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "minioadmin",
+  endpoint: process.env.AWS_ENDPOINT ?? "http://localhost:9000",
+  forcePathStyle: true,
+});
 const database = memoryDatabase();
+
+/** No-op scanner so the example runs without ClamAV; swap for `ClamScanner` in production. */
+const noopVirusScanner: VirusScanner = {
+  name: "noop",
+  init: async () => {},
+  scanBuffer: async () => ({ infected: false, viruses: [] }),
+  scanFile: async () => ({ infected: false, viruses: [] }),
+};
 
 let mediaInstance: BetterMediaRuntime | null = null;
 
 /**
- * Better Media instance (lazy-loaded).
- * Mirrors Better Auth: config in lib/, accessed via getter so heavy deps
- * are loaded at runtime, not bundled by Next.js.
+ * Better Media singleton for the Next.js app.
+ * `sharp` is a dependency of this example so image thumbnails work in `process:run` jobs.
+ *
+ * `validation:run` and `scan:run` are **sync-only** hooks in the framework; `executionMode` must be
+ * `"sync"` or you get override warnings. Only `process:run` (e.g. media processing) may use `"background"`.
  */
-export async function getMedia(): Promise<BetterMediaRuntime> {
+export function getMedia(): BetterMediaRuntime {
   if (mediaInstance) return mediaInstance;
-  const { mediaProcessingPlugin } = await import("@better-media/plugin-media-processing");
   mediaInstance = createBetterMedia({
     storage,
     database,
-    jobs: trackingJobAdapter(),
     plugins: [
       validationPlugin({
-        executionMode: "background",
+        executionMode: "sync",
         allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
         allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
         useMagicBytes: true,
@@ -38,27 +54,21 @@ export async function getMedia(): Promise<BetterMediaRuntime> {
         onFailure: "abort",
       }),
       virusScanPlugin({
-        scanner: new ClamScanner({
-          clamdscan: {
-            host: "localhost",
-            port: 3310,
-            timeout: 10000,
-          },
-          debugMode: true,
-          removeInfected: false,
-        }),
-        executionMode: "background",
-        onFailure: "custom",
-        onFailureCallback: async (fileKey: string, viruses: string[]) => {
-          console.error(`[virus-scan] Threat in "${fileKey}": ${viruses.join(", ")}`);
-          return { valid: false, message: `Upload rejected: malware detected` };
-        },
-        scanTimeoutMs: 30_000,
+        scanner: noopVirusScanner,
+        executionMode: "sync",
+        onFailure: "continue",
       }),
-      mediaProcessingPlugin({ executionMode: "background" }),
+      mediaProcessingPlugin({
+        executionMode: "background",
+        derivativePrefix: "versions",
+        thumbnailPresets: [
+          { name: "sm", width: 160, format: "webp", quality: 82 },
+          { name: "md", width: 480, format: "webp", quality: 85 },
+        ],
+      }),
     ],
   });
   return mediaInstance;
 }
 
-export { storage };
+export { storage, database };
