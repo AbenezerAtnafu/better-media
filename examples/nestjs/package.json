@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
-    "@nestjs/core": "^10.0.0",
+    "@nestjs/core": "^11.1.18",
     "@nestjs/platform-express": "^10.0.0",
     "@better-media/framework": "workspace:*",
     "@better-media/adapter-storage-filesystem": "workspace:*",
