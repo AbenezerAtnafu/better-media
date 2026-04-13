@@ -36,7 +36,8 @@
   "pnpm": {
     "overrides": {
       "eslint": "^9.39.4",
-      "handlebars": "^4.7.9"
+      "handlebars": "^4.7.9",
+      "multer": "^2.1.1"
     }
   },
   "devDependencies": {
