@@ -19,10 +19,12 @@ export default async function Page({ params }: DocsPageProps) {
 
   return (
     <DocsPage toc={page.data.exports.toc} full={false}>
-      <DocsBody>
-        <h1>{page.data.title}</h1>
+      <DocsBody className="prose-headings:font-headline prose-headings:tracking-tight prose-headings:font-bold prose-code:font-mono prose-pre:font-mono">
+        <h1 className="font-headline text-4xl font-black tracking-tight text-foreground md:text-5xl">
+          {page.data.title}
+        </h1>
         {page.data.description && (
-          <p className="text-fd-muted-foreground mt-2 mb-8 text-lg leading-relaxed">
+          <p className="mt-2 mb-8 text-lg font-normal leading-relaxed text-muted-foreground">
             {page.data.description}
           </p>
         )}

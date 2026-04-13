@@ -33,8 +33,14 @@ export default function Layout({ children }: { children: ReactNode }) {
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         />
       </head>
-      <body>
-        <RootProvider>{children}</RootProvider>
+      <body className="min-h-dvh font-sans antialiased">
+        <RootProvider
+          theme={{
+            defaultTheme: "dark",
+          }}
+        >
+          {children}
+        </RootProvider>
         <Analytics />
         <SpeedInsights />
       </body>

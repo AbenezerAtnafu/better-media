@@ -56,3 +56,76 @@
     "GRAD" 0,
     "opsz" 24;
 }
+
+/* Docs + Fumadocs dark theme: align with landing (black canvas, slate type, blue accent) */
+.dark {
+  --background: 0 0% 0%;
+  --foreground: 214 32% 91%;
+  --muted: 240 6% 10%;
+  --muted-foreground: 215 16% 52%;
+  --popover: 240 6% 6%;
+  --popover-foreground: 214 32% 91%;
+  --card: 240 6% 6%;
+  --card-foreground: 214 32% 91%;
+  --border: 240 6% 14%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 6% 12%;
+  --secondary-foreground: 214 32% 91%;
+  --accent: 217 45% 16%;
+  --accent-foreground: 214 32% 91%;
+  --ring: 217 91% 60%;
+}
+
+.dark body {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.1) 0, transparent 60%),
+    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.05) 0, transparent 60%);
+  background-attachment: fixed;
+}
+
+.dark #nd-sidebar {
+  background-color: rgb(0 0 0 / 0.72);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-right: 1px solid rgb(255 255 255 / 0.06);
+}
+
+.dark .prose :where(h1, h2, h3, h4) {
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.dark .prose :where(code):not(:where(pre *)) {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.dark .prose :where(pre, pre code) {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+
+/* Docs main flex row: subtle grid like landing */
+.docs-canvas {
+  position: relative;
+}
+
+.docs-canvas::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: radial-gradient(rgb(255 255 255 / 0.05) 1px, transparent 0);
+  background-size: 40px 40px;
+}
+
+.docs-canvas > * {
+  position: relative;
+  z-index: 1;
+}
