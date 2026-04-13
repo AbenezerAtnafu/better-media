@@ -21,6 +21,7 @@ function syncTrustedToFile(context: PipelineContext): void {
   if (trusted.file?.mimeType != null) file.mimeType = trusted.file.mimeType;
   if (trusted.file?.size != null) file.size = trusted.file.size;
   if (trusted.file?.originalName != null) file.originalName = trusted.file.originalName;
+  if (trusted.file?.extension != null) file.extension = trusted.file.extension;
   if (trusted.checksums) file.checksums = { ...file.checksums, ...trusted.checksums };
 }
 
@@ -119,7 +120,9 @@ export async function runBackgroundJob(
     await handler.fn(proxy, api);
 
     if (context.trusted.file ?? context.trusted.checksums) {
-      await saveTrustedToDb(database, recordId, file.key, context.trusted);
+      await saveTrustedToDb(database, recordId, file.key, context.trusted, {
+        extension: context.file.extension,
+      });
     }
   } finally {
     await cleanupTempFile(context);

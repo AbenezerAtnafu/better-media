@@ -71,6 +71,7 @@ function syncTrustedToFile(context: PipelineContext): void {
   if (trusted.file?.mimeType != null) file.mimeType = trusted.file.mimeType;
   if (trusted.file?.size != null) file.size = trusted.file.size;
   if (trusted.file?.originalName != null) file.originalName = trusted.file.originalName;
+  if (trusted.file?.extension != null) file.extension = trusted.file.extension;
   if (trusted.checksums) file.checksums = { ...file.checksums, ...trusted.checksums };
 }
 
@@ -133,6 +134,7 @@ export class PipelineExecutor {
         filename: context.file.originalName,
         mimeType: context.file.mimeType,
         size: context.file.size,
+        extension: context.file.extension,
         context: appContext,
       });
 
@@ -148,6 +150,7 @@ export class PipelineExecutor {
         filename: context.file.originalName,
         mimeType: context.file.mimeType,
         size: context.file.size,
+        extension: context.file.extension,
         context: appContext,
       });
     } finally {

@@ -38,9 +38,11 @@ export async function loadTrustedFromDb(
       mimeType: record.mimeType ?? undefined,
       size: record.size ?? undefined,
       originalName: record.filename ?? undefined,
+      extension: record.extension ?? undefined,
     },
     checksums: {
       sha256: record.checksum ?? undefined,
+      md5: record.checksumMd5 ?? undefined,
     },
     media: {
       width: record.width ?? undefined,
@@ -72,6 +74,7 @@ export async function saveTrustedToDb(
     filename?: string;
     mimeType?: string;
     size?: number;
+    extension?: string;
     context?: Record<string, unknown>;
   }
 ): Promise<void> {
@@ -87,7 +90,11 @@ export async function saveTrustedToDb(
   if (trusted.file?.originalName !== undefined) updatePayload.filename = trusted.file.originalName;
   else if (initialArgs?.filename !== undefined) updatePayload.filename = initialArgs.filename;
 
+  if (trusted.file?.extension !== undefined) updatePayload.extension = trusted.file.extension;
+  else if (initialArgs?.extension !== undefined) updatePayload.extension = initialArgs.extension;
+
   if (trusted.checksums?.sha256 !== undefined) updatePayload.checksum = trusted.checksums.sha256;
+  if (trusted.checksums?.md5 !== undefined) updatePayload.checksumMd5 = trusted.checksums.md5;
   if (trusted.media?.width !== undefined) updatePayload.width = trusted.media.width;
   if (trusted.media?.height !== undefined) updatePayload.height = trusted.media.height;
   if (trusted.media?.duration !== undefined) updatePayload.duration = trusted.media.duration;
