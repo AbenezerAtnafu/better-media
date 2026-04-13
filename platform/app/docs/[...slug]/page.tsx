@@ -3,8 +3,13 @@ import type { Metadata } from "next";
 import { DocsPage, DocsBody } from "fumadocs-ui/page";
 import { notFound } from "next/navigation";
 
-export default async function Page({ params }: { params: { slug?: string[] } }) {
-  const page = getPage(params.slug);
+type DocsPageProps = {
+  params: Promise<{ slug?: string[] }>;
+};
+
+export default async function Page({ params }: DocsPageProps) {
+  const { slug } = await params;
+  const page = getPage(slug);
 
   if (page == null) {
     notFound();
@@ -33,8 +38,9 @@ export async function generateStaticParams() {
   }));
 }
 
-export function generateMetadata({ params }: { params: { slug?: string[] } }): Metadata {
-  const page = getPage(params.slug);
+export async function generateMetadata({ params }: DocsPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const page = getPage(slug);
 
   if (page == null) notFound();
 
