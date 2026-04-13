@@ -74,6 +74,9 @@ export default function Layout({ children }: { children: ReactNode }) {
     <DocsLayout
       tree={orderRootSections(pageTree)}
       {...baseOptions}
+      containerProps={{
+        className: "docs-canvas min-h-body",
+      }}
       sidebar={{ defaultOpenLevel: 0, collapsible: true }}
     >
       {children}
