@@ -109,9 +109,12 @@
   font-size: 0.8125rem;
 }
 
-/* Docs main flex row: subtle grid like landing */
+/* Docs main flex row: subtle grid like landing.
+   Do not set position: relative on all flex children — that overrides Fumadocs TOC
+   `position: sticky` (right sidebar would scroll with the article). */
 .docs-canvas {
   position: relative;
+  isolation: isolate;
 }
 
 .docs-canvas::before {
@@ -119,13 +122,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   opacity: 0.35;
   background-image: radial-gradient(rgb(255 255 255 / 0.05) 1px, transparent 0);
   background-size: 40px 40px;
-}
-
-.docs-canvas > * {
-  position: relative;
-  z-index: 1;
 }
