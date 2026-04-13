@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     "@better-media/adapter-storage-memory",
     "@better-media/plugin-validation",
     "@better-media/plugin-virus-scan",
+    "@better-media/plugin-media-processing",
   ],
 };
 

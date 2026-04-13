@@ -2,11 +2,15 @@ import type { PipelinePlugin, MediaRuntime, PipelineContext, PluginApi } from "@
 import type { MediaProcessingPluginOptions } from "./interfaces/options.interface";
 import { runMediaProcessing } from "./runtime/runner";
 
-export type { MediaProcessingPluginOptions } from "./interfaces/options.interface";
+export type {
+  MediaProcessingPluginOptions,
+  ThumbnailPreset,
+  ThumbnailResizeFit,
+} from "./interfaces/options.interface";
+export { DEFAULT_ALLOWED_IMAGE_MIME_TYPES } from "./interfaces/options.interface";
 
 /**
- * Media processing plugin for the Better Media pipeline (stub).
- * Currently logs on `process:run`; thumbnail/metadata handling is not implemented.
+ * Media processing plugin: image thumbnails (optional peer `sharp`), `emitProcessing`, `media_versions` rows.
  */
 export function mediaProcessingPlugin(opts: MediaProcessingPluginOptions = {}): PipelinePlugin {
   const executionMode = opts.executionMode ?? "background";
