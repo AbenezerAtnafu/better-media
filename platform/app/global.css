@@ -1,9 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
 
-/* Standard Tailwind/Fumadocs Base */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4 + Fumadocs 16: core first, then theme CSS (expects Tailwind layers) */
+@import "tailwindcss";
+@config "../tailwind.config.js";
+@import "fumadocs-ui/style.css";
 
 .landing-page-theme {
   background-color: #000000;
@@ -126,4 +126,22 @@
   opacity: 0.35;
   background-image: radial-gradient(rgb(255 255 255 / 0.05) 1px, transparent 0);
   background-size: 40px 40px;
+}
+
+/* Right-hand table of contents: clearer vertical guide (Fumadocs “clerk”-style built-in is `tableOfContent={{ style: "clerk" }}` on `DocsPage` in fumadocs-ui ≥ 14; we enhance the default v12 rail here) */
+@media (min-width: 1024px) {
+  .dark [data-toc] .border-s-2 {
+    border-color: hsl(var(--primary) / 0.28) !important;
+    border-radius: 6px 0 0 6px;
+  }
+
+  .dark [data-toc] .absolute.start-0.w-0\.5 {
+    width: 3px;
+    border-radius: 9999px;
+    box-shadow: 0 0 10px hsl(var(--primary) / 0.35);
+  }
+
+  .dark [data-toc] a[href^="#"] {
+    border-radius: 0.25rem;
+  }
 }
