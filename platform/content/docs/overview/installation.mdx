@@ -5,27 +5,53 @@ description: Installation and environment setup guidance.
 
 To get started with Better Media, you need the core package and at least one storage adapter.
 
-## Quick Install
+**Pick your package manager** in the tabs below. The same choice is shared with the [CLI](/docs/architecture/cli) page in this site so you do not have to switch twice.
 
-Choose your package manager and install the core library:
+## Quick install
 
+Install the core library and `@better-media/core`:
+
+<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']} persist>
+  <Tab value="pnpm">
 ```bash
-# Using pnpm (recommended)
 pnpm add better-media @better-media/core
-
-# Using npm
+```
+  </Tab>
+  <Tab value="npx">
+```bash
 npm install better-media @better-media/core
 ```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add better-media @better-media/core
+```
+  </Tab>
+</Tabs>
 
-## Recommended Setup
+## Recommended setup
 
-A typical production setup requires a storage adapter (e.g., S3) and a database adapter (e.g., Kysely for PostgreSQL).
+A typical production setup requires a storage adapter (e.g. S3) and a database adapter (e.g. Kysely for PostgreSQL).
 
+<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']}>
+  <Tab value="pnpm">
 ```bash
 pnpm add @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
 ```
+  </Tab>
+  <Tab value="npx">
+```bash
+npm install @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
+```
+  </Tab>
+</Tabs>
 
-## Peer Dependencies
+## Peer dependencies
 
 Better Media relies on certain peer dependencies depending on the adapters you choose:
 
@@ -33,15 +59,29 @@ Better Media relies on certain peer dependencies depending on the adapters you c
 - **PostgreSQL/SQL**: `kysely`, `pg` (or your preferred driver)
 - **Image Processing**: `sharp`
 
-## Local Development
+## Local development
 
-For local development, we recommend using the **Filesystem** or **In-Memory** adapters to avoid external infrastructure dependencies.
+For local development, we recommend the **Filesystem** and **In-Memory** database adapters so you can run without external services.
 
+<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']}>
+  <Tab value="pnpm">
 ```bash
-pnpm add @better-media/adapter-db-memory
+pnpm add @better-media/adapter-storage-filesystem @better-media/adapter-db-memory
 ```
+  </Tab>
+  <Tab value="npx">
+```bash
+npm install @better-media/adapter-storage-filesystem @better-media/adapter-db-memory
+```
+  </Tab>
+  <Tab value="yarn">
+```bash
+yarn add @better-media/adapter-storage-filesystem @better-media/adapter-db-memory
+```
+  </Tab>
+</Tabs>
 
-```ts
+```ts title="lib/storage.ts"
 import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 
 const storage = new FileSystemStorageAdapter({

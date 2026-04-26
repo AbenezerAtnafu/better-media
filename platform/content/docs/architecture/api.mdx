@@ -11,14 +11,18 @@ Think of it as one **initialized instance** on the server, with **grouped method
 
 Import the factory from the `better-media` package and pass a single configuration object. The framework wires **storage**, **database**, **plugins**, and (optionally) **jobs** and **file handling** policy, then returns the runtime.
 
-```ts
+```ts title="lib/media.ts"
 import { createBetterMedia } from "better-media";
+import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
+import { memoryDatabase } from "@better-media/adapter-db-memory";
+import { validationPlugin } from "@better-media/plugin-validation";
 
-const media = createBetterMedia({
-  storage, // StorageAdapter
-  database, // DatabaseAdapter or supported Postgres pool
-  plugins, // PipelinePlugin[] in execution order
-  jobs, // optional JobAdapter (background work)
+export const media = createBetterMedia({
+  storage: new FileSystemStorageAdapter({ baseDir: "./uploads" }),
+  database: memoryDatabase(),
+  plugins: [validationPlugin({ maxSize: "10mb" })],
+  // jobs: yourJobAdapter,  // optional: custom queue; defaults may apply for background plugins
+  // fileHandling: { maxBufferBytes: 50_000_000 },
 });
 ```
 
@@ -39,6 +43,63 @@ The return value of `createBetterMedia` is a **`BetterMediaRuntime`**. It groups
 
 There is no HTTP server inside the framework: your **app** (Express, Nest, Next route handlers, etc.) calls these methods with plain objects, Buffers, and streams. The important shapes are **`IngestInput`**, **metadata objects**, and **plugin context**, not how the request was parsed.
 
+### Example: hand off a Multer temp file (Express)
+
+```ts title="routes/upload.express.ts"
+import type { Request, Response } from "express";
+import { media } from "../lib/media";
+
+// Assume `req.file` comes from `multer` (path points at a temp file; ingest can delete it after use).
+export async function postUpload(req: Request, res: Response) {
+  if (!req.file) {
+    res.status(400).json({ error: "No file" });
+    return;
+  }
+
+  const result = await media.upload.ingest({
+    file: { path: req.file.path },
+    metadata: {
+      filename: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+    },
+  });
+
+  res.json({ id: result.id, key: result.key, status: result.status });
+}
+```
+
+### Example: raw `Buffer` in a Next.js route
+
+```ts title="app/api/upload/route.ts"
+import { media } from "@/lib/media";
+import { ValidationError } from "better-media";
+import { type NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  const file = await request.arrayBuffer();
+  const filename =
+    request.headers.get("x-filename") ?? `upload-${Date.now()}`;
+  const mimeType = request.headers.get("content-type") ?? "application/octet-stream";
+
+  try {
+    const result = await media.upload.fromBuffer(Buffer.from(file), {
+      metadata: {
+        filename,
+        mimeType,
+        context: { requestId: request.headers.get("x-request-id") },
+      },
+    });
+    return NextResponse.json({ id: result.id, key: result.key, status: result.status });
+  } catch (e) {
+    if (e instanceof ValidationError) {
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
+    throw e;
+  }
+}
+```
+
 ## `media.upload`
 
 ### `ingest` and file inputs
@@ -58,6 +119,19 @@ There is no HTTP server inside the framework: your **app** (Express, Nest, Next 
 
 - `fromBuffer` / `fromStream` / `fromPath` / `fromUrl`
 
+```ts title="lib/ingest-once.ts"
+import { media } from "./media";
+
+// Same as ingest({ file: { buffer }, metadata: { ... } })
+const result = await media.upload.fromBuffer(someBuffer, {
+  key: "avatars/team-photo.jpg",
+  metadata: {
+    filename: "team-photo.jpg",
+    mimeType: "image/jpeg",
+  },
+});
+```
+
 Successful completion returns a **`MediaResult`**: at minimum `id` (media record id), `key` (storage key), `status`, and `metadata` as applicable.
 
 ### Presigned upload flow
@@ -70,6 +144,25 @@ If the storage adapter supports it:
 
 `complete` is keyed by **storage key** (`key`), not necessarily the same as the media `id` returned from **`ingest`**, depending on your schema and how you look up records.
 
+```ts title="lib/presigned-upload.ts"
+import { media } from "./media";
+
+// 1) Server: give the client a way to upload bytes without proxying the file through your app.
+//    `options` is adapter-specific (S3: method, content type, field policy, expiry, etc.).
+const presign = await media.upload.requestPresignedUpload("user/123/avatar.png", {
+  // e.g. contentType: "image/png" — see your storage adapter
+});
+
+// 2) Client: PUT/POST the file to `presign.url` (or follow adapter instructions).
+
+// 3) After the object exists in storage, run the pipeline on the server.
+const result = await media.upload.complete("user/123/avatar.png", {
+  filename: "avatar.png",
+  mimeType: "image/png",
+  context: { userId: "123" },
+});
+```
+
 ## `media.files`
 
 These methods work against the **media record** stored in your database. For most operations, the first argument is the **media record id** (the `id` field on `MediaResult`), which the implementation uses to look up `storageKey` and delegate to the storage adapter.
@@ -81,17 +174,48 @@ These methods work against the **media record** stored in your database. For mos
 
 If an adapter does not support an optional capability (e.g. `getUrl` without a signer), the runtime throws a clear error rather than returning a partial result.
 
+```ts title="lib/media-operations.ts"
+import { media } from "./media";
+
+// `recordId` is the `id` from ingest / complete
+async function publicUrlFor(recordId: string) {
+  return media.files.getUrl(recordId, { expiresIn: 3600 });
+}
+
+async function removeFromEverywhere(recordId: string) {
+  await media.files.delete(recordId);
+}
+
+async function rebuildDerivatives(recordId: string) {
+  await media.files.reprocess(recordId, { /* optional new metadata for plugins */ });
+}
+```
+
 ## `media.system`
 
 - **`checkConnection()`** — validates storage when the adapter exposes a connection check; otherwise can resolve optimistically.
 - **`clearStorage()`** — destructive: clears storage when supported and removes media rows. Intended for **development** or controlled admin flows, not routine production use.
 
+```ts title="scripts/healthcheck-media.ts"
+import { media } from "../lib/media";
+
+const ok = await media.system.checkConnection();
+console.log(ok ? "Storage reachable" : "Storage check failed");
+// await media.system.clearStorage(); // dev only — wipes storage + DB media rows
+```
+
 ## Background jobs: `runBackgroundJob`
 
 If plugins enqueue background work, your **worker** (or the default in-process driver, depending on `jobs` configuration) must execute payloads by calling:
 
-```ts
-await media.runBackgroundJob(payload);
+```ts title="worker/media-jobs.ts"
+import { media } from "../lib/media";
+import type { BackgroundJobPayload } from "better-media";
+
+// Called from your queue / worker with the same payload the framework enqueued
+export async function runJob(payload: BackgroundJobPayload) {
+  await media.runBackgroundJob(payload);
+}
 ```
 
 `payload` matches the **`BackgroundJobPayload`** type exported from the package. This keeps a single place—your constructed `media` instance—that knows the plugin registry, storage, database, and file-handling limits.
@@ -101,20 +225,9 @@ await media.runBackgroundJob(payload);
 - Validation and pipeline failures are surfaced in a way you can catch with normal `try/catch` in async handlers.
 - The package exports **`ValidationError`** (from the pipeline/executor) for cases where you want a typed check.
 
-```ts
-import { ValidationError } from "better-media";
+The **`app/api/upload/route.ts`** example above already shows **`ValidationError` → 400**; use the same pattern in Express, Nest, or other frameworks—map known errors to status codes, rethrow or log the rest.
 
-try {
-  await media.upload.ingest({ file: { buffer }, metadata: { filename: "a.jpg" } });
-} catch (e) {
-  if (e instanceof ValidationError) {
-    // handle validation / pipeline rejection
-  }
-  throw e;
-}
-```
-
-In your HTTP layer, narrow the error, map it to a status code and body, or rethrow; keep domain errors distinct from transport concerns.
+In your HTTP layer, keep domain errors distinct from transport concerns: validation and plugin rejections are usually `4xx`, unexpected failures are `5xx` or rethrown to your error middleware.
 
 ## Types and re-exports
 
