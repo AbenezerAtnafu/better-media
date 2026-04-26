@@ -1,6 +1,6 @@
 ---
 title: API
-description: The public surface of the framework: createBetterMedia, the runtime object, and how to call it from your server.
+description: "The public surface of the framework: createBetterMedia, the runtime object, and how to call it from your server."
 ---
 
 When you call `createBetterMedia`, you get a **runtime** object. That object is the main integration surface: every workflow—ingest, direct uploads, file lookups, and background jobs—goes through it. Optional plugins and adapters extend behavior, but your application code should talk to the runtime, not to adapters directly, except when constructing configuration.
