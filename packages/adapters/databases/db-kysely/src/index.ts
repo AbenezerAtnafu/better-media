@@ -74,7 +74,6 @@ function ensureKyselyInstance(
     };
   }
 
-  // Handle Kysely Dialect directly if passed (as better-auth supports other relational databases)
   if (
     dbConnection &&
     typeof dbConnection.createAdapter === "function" &&

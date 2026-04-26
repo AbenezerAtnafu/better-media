@@ -1,12 +1,141 @@
 ---
 title: CLI
-description: Explain the role of the CLI in setup, generation, and migrations.
+description: The media CLI for config bootstrap, SQL migration generation, and applying schema to the database.
 ---
 
-This page will describe the CLI architecture and workflows.
+Better Media ships a small **CLI** (`media`, also available as `better-media` when installed from the `better-media` package) to bootstrap config, **generate** migration SQL from the built-in schema, and **migrate** the database when your adapter supports it.
 
-It should eventually cover:
+The CLI lives in `@better-media/cli` and is the default binary for the `better-media` metapackage; your app only needs a **project config file** the commands can load.
 
-- initialization
-- schema or migration generation
-- operational commands
+## Installation
+
+Add the framework (which includes the CLI binary) or the CLI package directly:
+
+```bash
+pnpm add better-media
+# or
+pnpm add -D @better-media/cli
+```
+
+Run with `pnpm exec`, `npx`, or a package script:
+
+```bash
+pnpm exec media --help
+```
+
+## Config discovery
+
+Commands that need your database adapter resolve a config file from the current working directory (or `--cwd`), unless you pass **`--config <path>`** explicitly.
+
+The loader looks for, in order:
+
+- `media.config.ts`
+- `media.config.js`
+- `better-media.config.ts`
+- `better-media.config.js`
+
+The file must **export an object** with at least the fields expected by `getAdapter` in `@better-media/core` (e.g. `database`, and optionally `dialect`, `schemaOutput`, `migrationsDir`).
+
+**TypeScript configs** are supported via `ts-node` (install it in your app) or a fallback transpile path. If loading fails, follow the error message or switch to a `.js` config.
+
+## `init`
+
+Scaffolds a starter **`media.config.ts`** or **`media.config.js`** in the project root. The template uses a **PostgreSQL** `pg` `Pool` and sets `dialect: "postgres"` and `migrationsDir: "better-media"`. Framework is detected from `package.json` (Express vs NestJS vs generic) for messaging only; the file shape is the same.
+
+```bash
+pnpm exec media init
+```
+
+### Options
+
+| Option | Description |
+| ------ | ----------- |
+| `-C, --cwd <path>` | Working directory (default: current directory). |
+| `-f, --force` | Overwrite an existing `media.config.*` if present. |
+
+If `pg` is not in your dependencies, the command prints a hint to install it.
+
+## `generate`
+
+Generates **Better Media database migrations** (SQL and snapshot metadata) for the configured adapter. Resolution uses your config file, then **`getAdapter`** to obtain a `DatabaseAdapter`.
+
+For the **Kysely-style** path, the CLI plans operations from the canonical **`schema`** in core, compares to the latest **snapshot** or **database introspection** (when available), and writes a **timestamped** run directory under your migrations root containing `migration.sql` and `snapshot.json`. If there is nothing to apply, it prints that the database (or snapshot) is already up to date.
+
+```bash
+pnpm exec media generate
+```
+
+### Options
+
+| Option | Description |
+| ------ | ----------- |
+| `-C, --cwd <path>` | Working directory to resolve the config from. |
+| `--config <path>` | Path to the media config file. |
+| `--dialect <dialect>` | `postgres`, `mysql`, `sqlite`, or `mssql`. Falls back to config, then adapter, then **postgres**. |
+
+**Output location**: controlled by **`schemaOutput`** in config (default directory derived from `better-media-migrations/migration.sql`) and/or **`migrationsDir`** for the folder that holds timestamped runs.
+
+<Callout title="Prisma and Drizzle" type="info">
+  Built-in **Prisma** and **Drizzle** schema generators are not implemented yet; the tool may tell you to use **`generate`** with the Kysely flow and then apply changes with your ORM’s migrate/push. Custom adapters can implement **`createSchema`** to plug in their own generator.
+</Callout>
+
+## `migrate`
+
+**Applies** the planned migration to the database **when the adapter supports direct execution** (the built-in Kysely/Postgres path with `__getMetadata` and `__executeMigration`). For other adapters, use **`generate`** and run SQL or migrations through your own tooling.
+
+```bash
+pnpm exec media migrate
+```
+
+You will be prompted to confirm unless you pass **`--yes`**.
+
+### Options
+
+| Option | Description |
+| ------ | ----------- |
+| `-C, --cwd <path>` | Working directory. |
+| `--config <path>` | Path to the media config file. |
+| `--mode <mode>` | `safe`, `diff`, or **`force`** (default: **`diff`**). |
+| `-y, --yes` | Accept and run without an interactive prompt. |
+| `--dialect <dialect>` | Same dialect set as for `generate`. |
+
+If the adapter is **Prisma** or **Drizzle** and an error is thrown in a way the CLI treats as “use your ORM,” the process may exit without throwing (see the migrate command’s error handling). Prefer **`generate` + your ORM** when direct migrate is not supported.
+
+## `config`
+
+Validates that the project config **loads and resolves**, then prints a small **debug summary** (config path, adapter hint, `dialect`, `schemaOutput`, `migrationsDir`).
+
+```bash
+pnpm exec media config
+```
+
+### Options
+
+| Option | Description |
+| ------ | ----------- |
+| `-C, --cwd <path>` | Working directory. |
+| `--config <path>` | Explicit config path. |
+
+It is a lightweight **diagnostic** for config resolution; it does **not** print system information, package-manager versions, or a full environment report.
+
+## Common issues
+
+**No configuration file found**
+
+Add one of the expected filenames in the project root, or pass **`--config`**.
+
+**Cannot load `media.config.ts`**
+
+Install **`ts-node`** in the project, or use a **`.js`** config, or check that imports in the config resolve (avoid path aliases the standalone loader cannot resolve; prefer relative imports in the config when in doubt).
+
+**`migrate` / `generate` says the adapter is not supported**
+
+Use an adapter that implements the Kysely migration hooks, or rely on **`generate`** output and apply it manually. Custom adapters can implement **`createSchema`** (for `generate`) and the metadata/execute hooks (for `migrate`).
+
+**Wrong directory**
+
+Use **`-C` / `--cwd`** to point at the package root that contains `package.json` and the media config.
+
+## Relation to the framework
+
+The CLI does **orchestration only**: it loads config, gets an adapter, and calls into **`@better-media/core`** (schema, `MigrationPlanner`, `getMigrations`, etc.). It does not start an HTTP server or run upload pipelines—those stay in your app via **`createBetterMedia`**. See the [API](/docs/architecture/api) page for the runtime surface.
