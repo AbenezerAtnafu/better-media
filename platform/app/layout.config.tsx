@@ -1,6 +1,12 @@
 import { type BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
+const repo = "https://github.com/abenezeratnafu/better-media";
+
 export const baseOptions: BaseLayoutProps = {
+  githubUrl: repo,
+  themeSwitch: {
+    enabled: false,
+  },
   nav: {
     title: (
       <div className="flex flex-col gap-1">
@@ -24,21 +30,18 @@ export const baseOptions: BaseLayoutProps = {
         </div>
       </div>
     ),
+    url: "/",
+    transparentMode: "top",
   },
   links: [
     {
-      text: "Site",
+      text: "Home",
       url: "/",
     },
     {
       text: "Docs",
       url: "/docs",
       active: "nested-url",
-    },
-    {
-      text: "Source",
-      url: "https://github.com/abenezeratnafu/better-media",
-      external: true,
     },
   ],
 };

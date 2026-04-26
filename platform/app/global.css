@@ -57,7 +57,7 @@
     "opsz" 24;
 }
 
-/* Docs + Fumadocs dark theme: align with landing (black canvas, slate type, blue accent) */
+/* Docs + Fumadocs dark theme: align with landing (black canvas, slate type, blue primary) */
 .dark {
   --background: 0 0% 0%;
   --foreground: 214 32% 91%;
@@ -75,6 +75,21 @@
   --accent: 217 45% 16%;
   --accent-foreground: 214 32% 91%;
   --ring: 217 91% 60%;
+  /* Fumadocs UI (maps to `--color-fd-*` in preset) */
+  --color-fd-background: hsl(0 0% 0%);
+  --color-fd-foreground: hsl(214 32% 91%);
+  --color-fd-muted: hsl(240 6% 10%);
+  --color-fd-muted-foreground: hsl(215 16% 60%);
+  --color-fd-popover: hsl(0 0% 6%);
+  --color-fd-card: hsl(240 6% 6%);
+  --color-fd-border: hsl(240 6% 16%);
+  --color-fd-primary: hsl(217 91% 60%);
+  --color-fd-primary-foreground: hsl(0 0% 100%);
+  --color-fd-secondary: hsl(240 6% 12%);
+  --color-fd-secondary-foreground: hsl(214 32% 91%);
+  --color-fd-accent: hsla(217, 80%, 45%, 0.22);
+  --color-fd-accent-foreground: hsl(214 32% 92%);
+  --color-fd-ring: hsl(217 91% 60%);
 }
 
 .dark body {
@@ -90,7 +105,18 @@
   background-color: rgb(0 0 0 / 0.72);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  border-right: 1px solid rgb(255 255 255 / 0.06);
+  border-right: 1px solid rgb(255 255 255 / 0.08);
+  --color-fd-muted: hsl(240 5% 14%);
+  --color-fd-secondary: hsl(240 5% 12%);
+  --color-fd-muted-foreground: hsl(215 14% 62%);
+}
+
+/* Mobile docs subnav: match landing bar (glass, subtle border) */
+.dark #nd-subnav {
+  background-color: rgb(0 0 0 / 0.8) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-color: rgb(255 255 255 / 0.1) !important;
 }
 
 .dark .prose :where(h1, h2, h3, h4) {
