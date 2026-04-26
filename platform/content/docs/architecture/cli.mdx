@@ -9,9 +9,9 @@ The CLI lives in `@better-media/cli` and is the default binary for the `better-m
 
 ## Installation
 
-Add the framework (which includes the CLI binary) or the CLI package directly. **Pick your package manager** in the tab below—the same choice is kept for every command on this page.
+Add the framework (which includes the CLI binary) or the CLI package directly. **Pick your package manager** in the tab below—the same choice is kept for every command on this page, and it matches the [Installation](/docs/overview/installation) package manager tabs.
 
-<Tabs groupId="cli-package-manager" items={['pnpm', 'npx', 'yarn']} persist>
+<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']} persist>
   <Tab value="pnpm">
 ```bash
 pnpm add better-media
@@ -37,7 +37,7 @@ yarn add -D @better-media/cli
 
 Run the CLI with your package manager (after install, the `media` binary is on your path via `npx` / `yarn` / `pnpm exec`):
 
-<Tabs groupId="cli-package-manager" items={['pnpm', 'npx', 'yarn']}>
+<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']}>
   <Tab value="pnpm">
 ```bash
 pnpm exec media --help
@@ -74,7 +74,7 @@ The file must **export an object** with at least the fields expected by `getAdap
 
 Scaffolds a starter **`media.config.ts`** or **`media.config.js`** in the project root. The template uses a **PostgreSQL** `pg` `Pool` and sets `dialect: "postgres"` and `migrationsDir: "better-media"`. Framework is detected from `package.json` (Express vs NestJS vs generic) for messaging only; the file shape is the same.
 
-<Tabs groupId="cli-package-manager" items={['pnpm', 'npx', 'yarn']}>
+<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']}>
   <Tab value="pnpm">
 ```bash
 pnpm exec media init
@@ -107,7 +107,7 @@ Generates **Better Media database migrations** (SQL and snapshot metadata) for t
 
 For the **Kysely-style** path, the CLI plans operations from the canonical **`schema`** in core, compares to the latest **snapshot** or **database introspection** (when available), and writes a **timestamped** run directory under your migrations root containing `migration.sql` and `snapshot.json`. If there is nothing to apply, it prints that the database (or snapshot) is already up to date.
 
-<Tabs groupId="cli-package-manager" items={['pnpm', 'npx', 'yarn']}>
+<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']}>
   <Tab value="pnpm">
 ```bash
 pnpm exec media generate
@@ -143,7 +143,7 @@ yarn media generate
 
 **Applies** the planned migration to the database **when the adapter supports direct execution** (the built-in Kysely/Postgres path with `__getMetadata` and `__executeMigration`). For other adapters, use **`generate`** and run SQL or migrations through your own tooling.
 
-<Tabs groupId="cli-package-manager" items={['pnpm', 'npx', 'yarn']}>
+<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']}>
   <Tab value="pnpm">
 ```bash
 pnpm exec media migrate
@@ -179,7 +179,7 @@ If the adapter is **Prisma** or **Drizzle** and an error is thrown in a way the 
 
 Validates that the project config **loads and resolves**, then prints a small **debug summary** (config path, adapter hint, `dialect`, `schemaOutput`, `migrationsDir`).
 
-<Tabs groupId="cli-package-manager" items={['pnpm', 'npx', 'yarn']}>
+<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']}>
   <Tab value="pnpm">
 ```bash
 pnpm exec media config
