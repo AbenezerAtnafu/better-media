@@ -12,6 +12,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@better-media/adapter-jobs-bullmq": "workspace:*",
     "@better-media/adapter-storage-filesystem": "workspace:*",
     "@better-media/adapter-storage-memory": "workspace:*",
     "@better-media/adapter-storage-s3": "workspace:*",
@@ -19,6 +20,9 @@
     "@better-media/plugin-validation": "workspace:*",
     "@better-media/plugin-virus-scan": "workspace:*",
     "@better-media/framework": "workspace:*",
+    "@bull-board/api": "^6.0.0",
+    "@bull-board/express": "^6.0.0",
+    "bullmq": "^5.0.0",
     "express": "^4.21.0",
     "multer": "^2.1.1",
     "pg": "^8.16.3"
