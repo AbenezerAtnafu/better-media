@@ -18,6 +18,7 @@ import type { BackgroundJobPayload } from "./core/lifecycle-engine";
 import type { FileHandlingConfig } from "./core/file-loader";
 import { toDatabaseAdapter } from "./db/postgres";
 import type { PresignedUploadOptions } from "@better-media/core";
+import { safeEmit } from "./events/webhook-emitter";
 
 function createNoopJobAdapter(): JobAdapter {
   return {
@@ -179,17 +180,27 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
           }
 
           // Pass metadata and context separately to the executor to persist once at the end
-          await runPipeline(recordId, finalKey, normalized.metadata, {
-            ...((normalized.metadata.context as Record<string, unknown>) ?? {}),
-            referenceUrl: normalized.referenceUrl,
-          });
+          try {
+            await runPipeline(recordId, finalKey, normalized.metadata, {
+              ...((normalized.metadata.context as Record<string, unknown>) ?? {}),
+              referenceUrl: normalized.referenceUrl,
+            });
+          } catch (err) {
+            await safeEmit(config.events?.onError, err as Error, {
+              id: recordId,
+              key: finalKey,
+            });
+            throw err;
+          }
 
-          return {
+          const result: MediaResult = {
             id: recordId,
             key: finalKey,
             status: "processed",
             metadata: normalized.metadata,
           };
+          await safeEmit(config.events?.onUploadComplete, result);
+          return result;
         } finally {
           if (normalized.shouldDeleteSource && normalized.sourcePath) {
             await fs
@@ -226,18 +237,21 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
         });
         const recordId = (existing?.id as string) ?? randomUUID();
 
-        await runPipeline(
-          recordId,
-          key,
-          metadata,
-          (metadata.context as Record<string, unknown>) ?? {}
-        );
-        return {
-          id: recordId,
-          key,
-          status: "processed",
-          metadata,
-        };
+        try {
+          await runPipeline(
+            recordId,
+            key,
+            metadata,
+            (metadata.context as Record<string, unknown>) ?? {}
+          );
+        } catch (err) {
+          await safeEmit(config.events?.onError, err as Error, { id: recordId, key });
+          throw err;
+        }
+
+        const result: MediaResult = { id: recordId, key, status: "processed", metadata };
+        await safeEmit(config.events?.onUploadComplete, result);
+        return result;
       },
     },
     files: {
@@ -367,12 +381,31 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
       },
     },
     async runBackgroundJob(payload: BackgroundJobPayload) {
-      await runBackgroundJob(payload, registry, storage, database, jobAdapter, fileHandling);
+      try {
+        await runBackgroundJob(payload, registry, storage, database, jobAdapter, fileHandling);
+        await safeEmit(config.events?.onProcessingComplete, {
+          id: payload.recordId,
+          key: payload.file?.key ?? payload.storageLocation?.key ?? "",
+          pluginName: payload.pluginName,
+        });
+      } catch (err) {
+        await safeEmit(config.events?.onError, err as Error, {
+          id: payload.recordId,
+          key: payload.file?.key,
+        });
+        throw err;
+      }
     },
   };
 }
 
 export { ValidationError } from "./core/pipeline-executor";
+export { createWebhookEmitter } from "./events/webhook-emitter";
+export type {
+  BetterMediaEvents,
+  ProcessingCompleteEvent,
+  ErrorEvent,
+} from "./events/events.interface";
 export {
   PluginRegistry,
   buildPluginRegistry,

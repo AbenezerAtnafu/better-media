@@ -9,6 +9,7 @@ import type { BetterMediaSettings } from "./settings.interface";
 import type { FileHandlingConfig } from "../core/file-loader";
 import type { TrustedPluginPolicy } from "../plugins/plugin-registry";
 import type { PgPoolLike } from "../db/postgres";
+import type { BetterMediaEvents } from "../events/events.interface";
 
 /** Configuration for the Better Media framework */
 export interface BetterMediaConfig {
@@ -29,4 +30,6 @@ export interface BetterMediaConfig {
   fileHandling?: FileHandlingConfig;
   /** Optional policy gate for authorizing trusted plugins */
   trustedPolicy?: TrustedPluginPolicy;
+  /** Optional lifecycle event callbacks (upload complete, processing complete, errors). */
+  events?: BetterMediaEvents;
 }

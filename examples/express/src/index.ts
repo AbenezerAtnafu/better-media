@@ -1,6 +1,10 @@
 import express from "express";
 import multer from "multer";
 import os from "node:os";
+import { Queue } from "bullmq";
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { ExpressAdapter } from "@bull-board/express";
 
 import { media } from "../media.config";
 
@@ -8,6 +12,20 @@ const PORT = process.env.PORT ?? 6000;
 
 const app = express();
 app.use(express.json());
+
+// Bull Board queue monitoring — available at /admin/queues when Redis is configured
+if (process.env.REDIS_URL ?? process.env.REDIS_HOST) {
+  const connection = {
+    host: process.env.REDIS_HOST ?? "localhost",
+    port: Number(process.env.REDIS_PORT ?? 6379),
+  };
+  const monitorQueue = new Queue("better-media:background", { connection });
+  const serverAdapter = new ExpressAdapter();
+  serverAdapter.setBasePath("/admin/queues");
+  createBullBoard({ queues: [new BullMQAdapter(monitorQueue)], serverAdapter });
+  app.use("/admin/queues", serverAdapter.getRouter());
+  console.log(`[server] Bull Board available at http://localhost:${PORT}/admin/queues`);
+}
 
 const upload = multer({ dest: os.tmpdir() });
 
