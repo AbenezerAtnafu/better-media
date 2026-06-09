@@ -1,5 +1,16 @@
 # @better-media/adapter-db-kysely
 
+## 0.5.0
+
+### Minor Changes
+
+- 7885163: Production Foundation + GCS Storage
+
+### Patch Changes
+
+- Updated dependencies [7885163]
+  - @better-media/core@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes
