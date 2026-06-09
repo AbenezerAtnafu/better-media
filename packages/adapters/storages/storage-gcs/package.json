@@ -1,0 +1,51 @@
+{
+  "name": "@better-media/adapter-storage-gcs",
+  "version": "0.1.0",
+  "description": "Google Cloud Storage adapter for Better Media",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@better-media/core": "workspace:*",
+    "@google-cloud/storage": "^7.21.0"
+  },
+  "keywords": [
+    "better-media",
+    "storage",
+    "gcs",
+    "google-cloud",
+    "adapter"
+  ],
+  "author": "Abenezer Atnafu",
+  "license": "MIT",
+  "packageManager": "pnpm@10.25.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbenezerAtnafu/better-media.git"
+  },
+  "homepage": "https://better-media.dev/",
+  "bugs": {
+    "url": "https://github.com/AbenezerAtnafu/better-media/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
