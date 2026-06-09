@@ -5,12 +5,31 @@ import { RootProvider } from "fumadocs-ui/provider/next";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+const SITE_URL = "https://better-media.dev";
+const DESCRIPTION =
+  "File upload stack. One config. Full pipeline. Validate, scan, process, and store files with pluggable adapters for any storage or database.";
+
 export const metadata: Metadata = {
   title: {
     default: "Better Media",
     template: "%s | Better Media",
   },
-  description: "Landing page and documentation site for Better Media.",
+  description: DESCRIPTION,
+  metadataBase: new URL(SITE_URL),
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "Better Media",
+    title: "Better Media — File upload stack. One config. Full pipeline.",
+    description: DESCRIPTION,
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Better Media" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Better Media — File upload stack. One config. Full pipeline.",
+    description: DESCRIPTION,
+    images: ["/opengraph-image"],
+  },
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
