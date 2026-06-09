@@ -1,5 +1,11 @@
 # @better-media/core
 
+## 0.4.0
+
+### Minor Changes
+
+- 2797532: Schema & code fixes
+
 ## 0.3.0
 
 ## 0.2.0

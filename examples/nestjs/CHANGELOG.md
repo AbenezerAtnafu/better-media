@@ -1,5 +1,20 @@
 # nestjs
 
+## 0.1.0
+
+### Minor Changes
+
+- 2797532: Schema & code fixes
+
+### Patch Changes
+
+- Updated dependencies [2797532]
+  - @better-media/adapter-db-memory@0.4.0
+  - @better-media/adapter-storage-filesystem@0.2.0
+  - @better-media/framework@0.4.0
+  - @better-media/plugin-media-processing@0.4.0
+  - @better-media/plugin-validation@0.4.0
+
 ## 0.0.4
 
 ### Patch Changes
