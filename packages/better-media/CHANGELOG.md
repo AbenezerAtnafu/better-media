@@ -1,5 +1,18 @@
 # @better-media/framework
 
+## 0.5.0
+
+### Minor Changes
+
+- 7885163: Production Foundation + GCS Storage
+
+### Patch Changes
+
+- Updated dependencies [7885163]
+  - @better-media/adapter-jobs@0.5.0
+  - @better-media/cli@0.5.0
+  - @better-media/core@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes

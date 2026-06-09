@@ -1,5 +1,23 @@
 # better-media-example-express
 
+## 1.2.0
+
+### Minor Changes
+
+- 7885163: Production Foundation + GCS Storage
+
+### Patch Changes
+
+- Updated dependencies [7885163]
+  - @better-media/adapter-jobs-bullmq@0.3.0
+  - @better-media/adapter-storage-filesystem@0.3.0
+  - @better-media/adapter-storage-memory@0.5.0
+  - @better-media/adapter-storage-s3@0.5.0
+  - @better-media/framework@0.5.0
+  - @better-media/plugin-media-processing@0.5.0
+  - @better-media/plugin-validation@0.5.0
+  - @better-media/plugin-virus-scan@0.5.0
+
 ## 1.1.0
 
 ### Minor Changes
