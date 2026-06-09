@@ -1,12 +1,112 @@
 ---
-title: Plugins
-description: Explain how plugins participate in the Better Media lifecycle.
+title: Plugin Architecture
+description: How files move through the pipeline, when each plugin runs, and how to write a custom plugin.
 ---
 
-This page is reserved for the plugin architecture.
+Every file uploaded through Better Media passes through a fixed sequence of five phases. Built-in and custom plugins hook into these phases to validate, scan, and transform files.
 
-Expected topics:
+## Pipeline Phases
 
-- plugin phases and execution order
-- sync versus background execution
-- extension design guidelines
+```
+upload:init  →  validation:run  →  scan:run  →  process:run  →  upload:complete
+```
+
+| Phase | What happens | Built-in plugins |
+|---|---|---|
+| `upload:init` | File is written to storage. Initial DB record created. | — |
+| `validation:run` | File type, size, and content are verified. Can abort the upload. | Validation plugin |
+| `scan:run` | File is scanned for threats. Can abort the upload. | Virus scan plugin |
+| `process:run` | Derivatives are generated (thumbnails, compressed versions). | Media processing plugin |
+| `upload:complete` | Status updated to `ready`. Completion events fired. | — |
+
+## File Status
+
+The `status` field on a media record tracks where it is in the pipeline:
+
+| Status | Meaning |
+|---|---|
+| `pending` | Upload started, not yet processed. |
+| `processing` | Pipeline is running. |
+| `ready` | All phases passed. File is usable. |
+| `failed` | Validation or scan rejected the file. |
+| `quarantined` | Virus detected. |
+
+## Sync vs Background
+
+Each plugin runs in one of two modes:
+
+**Sync** — runs during the upload call. The upload response waits for it to finish. Can reject the file (validation and scan phases only).
+
+**Background** — the upload call returns immediately. Work is queued and runs in a worker process later. Use this for slow operations like image processing.
+
+```typescript
+validationPlugin({ executionMode: "sync" })      // blocks upload, can abort
+mediaProcessingPlugin({ executionMode: "background" }) // upload returns, thumbnails generated after
+```
+
+## Writing a Custom Plugin
+
+Plugins implement a simple `apply(runtime)` method and tap into whichever phase they need:
+
+```typescript
+import type { PipelinePlugin, MediaRuntime } from "@better-media/core";
+
+export class WatermarkPlugin implements PipelinePlugin {
+  readonly name = "watermark";
+  readonly runtimeManifest = {
+    id: "my-watermark-plugin",
+    version: "1.0.0",
+    namespace: "watermark",
+    trustLevel: "untrusted" as const,
+    capabilities: ["file.read", "metadata.write.own"] as const,
+  };
+  // id and namespace must be unique across all registered plugins
+
+  apply(runtime: MediaRuntime): void {
+    runtime.hooks["process:run"].tap(
+      "watermark",
+      async (context, api) => {
+        const buf = context.utilities?.fileContent?.buffer;
+        if (!buf) return;
+
+        const watermarked = await applyWatermark(buf);
+        await context.storage.put(context.file.key, watermarked);
+
+        api.emitMetadata({ watermarked: true });
+      },
+      { mode: "sync" }
+    );
+  }
+}
+```
+
+Register it alongside the built-in plugins:
+
+```typescript
+const media = createBetterMedia({
+  plugins: [
+    validationPlugin({ ... }),
+    new WatermarkPlugin(),
+  ],
+});
+```
+
+### Writing to the Pipeline
+
+Inside a handler, use the `api` argument — never mutate context directly.
+
+| Method | What it does |
+|---|---|
+| `api.emitMetadata({ key: value })` | Stores metadata under your plugin's namespace. Readable from `context.metadata`. |
+| `api.emitProcessing({ key: value })` | Stores processing outputs (e.g. derivative keys). Readable from `context.processing`. |
+
+### Reading the File
+
+The file bytes are available in `context.utilities?.fileContent`:
+
+```typescript
+const buf = context.utilities?.fileContent?.buffer;
+const tmp = context.utilities?.fileContent?.tempPath; // set for large files streamed to disk
+
+const bytes = buf ?? (tmp ? await fs.readFile(tmp) : null);
+```

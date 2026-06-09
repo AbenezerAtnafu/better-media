@@ -1,6 +1,123 @@
 ---
 title: MongoDB
-description: MongoDB adapter guidance and document database considerations.
+description: MongoDB adapter setup, collection naming, migrations, and when to choose the document path.
 ---
 
-This page will cover when MongoDB is a good fit and how it differs from the relational path.
+The MongoDB adapter maps Better Media's five tables to five collections in a single database.
+
+## Installation
+
+```bash
+pnpm add @better-media/adapter-databases/mongodb-adapter mongodb
+```
+
+## Configuration
+
+Pass a connected `MongoClient` and the target database name:
+
+```typescript
+import { MongoClient } from "mongodb";
+import { MongoDbAdapter } from "@better-media/adapter-databases/mongodb-adapter";
+import { schema } from "@better-media/core";
+
+const client = new MongoClient(process.env.MONGODB_URI!);
+await client.connect();
+
+const database = new MongoDbAdapter(client, {
+  config: { databaseName: "my-app" },
+  schema,
+});
+
+const media = createBetterMedia({ storage, database, plugins });
+```
+
+The adapter uses `client.db(databaseName)` internally. No other connection configuration is needed — pass the options you need directly to `MongoClient`.
+
+## Connection String Formats
+
+```bash
+# Local development
+MONGODB_URI=mongodb://localhost:27017
+
+# MongoDB Atlas
+MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/?retryWrites=true&w=majority
+
+# With auth and database
+MONGODB_URI=mongodb://user:password@host:27017/my-app?authSource=admin
+```
+
+## Collections
+
+Each Better Media table maps to a MongoDB collection with the same name:
+
+| Collection | Contents |
+|---|---|
+| `media` | Core media records |
+| `media_versions` | Derivative files (thumbnails, compressed variants) |
+| `media_jobs` | Background job records |
+| `media_validation_results` | Per-file validation outcomes |
+| `media_virus_scan_results` | Per-file scan results |
+
+## Migrations
+
+The MongoDB adapter does not use SQL migrations. Instead it creates collections and indexes on demand via `__initCollection`. Run schema setup on application startup:
+
+```typescript
+import { runMigrations } from "@better-media/core";
+
+await runMigrations(database, schema);
+```
+
+This is idempotent — it only creates collections and indexes that do not already exist. Existing data is never modified.
+
+## Indexes
+
+The adapter automatically creates indexes based on the schema definition:
+
+- **Unique fields** (e.g. `idempotencyKey`) — unique single-field index
+- **Foreign key fields** (e.g. `mediaId`) — non-unique index for fast lookups
+- **Compound indexes** from `schema[model].indexes` — e.g. `{ mediaId, versionNumber }` unique
+
+## Transactions
+
+MongoDB multi-document transactions require a replica set or Atlas cluster (standalone instances do not support sessions).
+
+```typescript
+await database.transaction(async (trx) => {
+  await trx.update({
+    model: "media",
+    where: [{ field: "id", value: recordId }],
+    update: { status: "quarantined" },
+  });
+  await trx.create({
+    model: "media_virus_scan_results",
+    data: { id: randomUUID(), mediaId: recordId, status: "infected", threats: [...] },
+  });
+});
+```
+
+If transactions are not available (standalone instance), wrap operations in your own error-handling logic instead.
+
+## Raw Commands
+
+`database.raw()` accepts a JSON command string and forwards it to `db.command()`:
+
+```typescript
+const result = await database.raw('{"ping": 1}');
+```
+
+For aggregation pipelines or complex queries, access the MongoDB collection directly through your `MongoClient` instance.
+
+## When to Choose MongoDB
+
+MongoDB is a good fit when:
+
+- Your application already runs MongoDB and adding a second database is undesirable
+- You store large, variable-shape metadata in the `media.metadata` JSON field and want to query it directly
+- You need horizontal sharding at scale
+
+Choose a SQL adapter if:
+
+- You need strong referential integrity and JOIN queries across your application tables
+- Your team is more comfortable with relational tooling
+- You want the CLI migration workflow (`generate` / `migrate` commands)

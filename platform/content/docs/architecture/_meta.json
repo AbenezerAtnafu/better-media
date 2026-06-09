@@ -2,6 +2,8 @@
   "index": "Architecture",
   "api": "API",
   "cli": "CLI",
+  "jobs": "Background Jobs",
+  "events": "Events & Webhooks",
   "plugins": "Plugins",
   "database": "Database"
 }

@@ -72,6 +72,7 @@ async function recordValidationResult(
     valid,
     pluginId,
     errors,
+    warnings: [] as unknown[],
     createdAt: new Date().toISOString(),
   };
 

@@ -26,9 +26,7 @@ export const media = createBetterMedia({
 });
 ```
 
-- **Top-level entry points**: `createBetterMedia` (and, for lower-level work, the types and helpers re-exported from the same package).
-- **Runtime configuration**: all integration choices live in that config object; there is no separate “client” for server-side use—the runtime is what you import in route handlers, jobs, and scripts.
-- **Pipeline boundary**: an ingest (or a presigned `complete`) runs the plugin lifecycle and persists metadata through the database adapter; HTTP servers typically translate requests into `IngestInput` and then call `media.upload.ingest` (or the helpers below).
+Import `media` in your route handlers, workers, and scripts — it's the single object your application code talks to.
 
 ## Runtime shape: namespaces on `media`
 

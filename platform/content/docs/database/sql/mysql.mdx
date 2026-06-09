@@ -1,6 +1,87 @@
 ---
 title: MySQL
-description: MySQL-specific guidance and compatibility notes.
+description: MySQL setup with the Kysely adapter, connection configuration, and compatibility notes.
 ---
 
-This page will cover how Better Media maps to MySQL environments.
+MySQL is supported through the Kysely adapter with `provider: "mysql"`. Use `mysql2` for the connection pool.
+
+## Installation
+
+```bash
+pnpm add @better-media/adapter-db-kysely kysely mysql2
+```
+
+## Configuration
+
+```typescript
+import { createPool } from "mysql2/promise";
+import { Kysely, MysqlDialect } from "kysely";
+import { KyselyDbAdapter } from "@better-media/adapter-db-kysely";
+import { schema } from "@better-media/core";
+
+const pool = createPool({
+  host: process.env.MYSQL_HOST ?? "localhost",
+  port: Number(process.env.MYSQL_PORT ?? 3306),
+  database: process.env.MYSQL_DATABASE,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  connectionLimit: 10,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : undefined,
+});
+
+const db = new Kysely({ dialect: new MysqlDialect({ pool }) });
+
+const database = new KyselyDbAdapter(db, {
+  config: { provider: "mysql" },
+  schema,
+});
+
+const media = createBetterMedia({ storage, database, plugins });
+```
+
+## Migrations
+
+```bash
+# Preview generated SQL
+npx better-media generate --dialect mysql
+
+# Apply migrations
+npx better-media migrate --yes
+```
+
+Or programmatically on startup:
+
+```typescript
+import { runMigrations } from "@better-media/core";
+await runMigrations(database, schema);
+```
+
+## Connection Strings
+
+```bash
+# Local development
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=mydb
+MYSQL_USER=root
+MYSQL_PASSWORD=secret
+
+# PlanetScale / hosted MySQL (SSL required)
+DATABASE_URL=mysql://user:pass@host/dbname?ssl={"rejectUnauthorized":true}
+```
+
+## Compatibility Notes
+
+**No `RETURNING` clause.** MySQL does not support `INSERT ... RETURNING`. Better Media handles this transparently.
+
+**JSON columns.** The `metadata`, `errors`, `threats`, `result`, and other `json`-typed fields in the schema are stored as MySQL `JSON` columns (MySQL 5.7.8+). Ensure your MySQL version supports native JSON.
+
+**Character set.** Use `utf8mb4` for your database and tables to avoid encoding issues with filenames that contain non-ASCII characters:
+
+```sql
+CREATE DATABASE mydb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+The CLI migration generates tables without an explicit charset — set it at the database level so all tables inherit it.
+
+**PlanetScale.** PlanetScale disables foreign key constraints by default. Better Media's schema defines foreign keys (e.g. `mediaId` references `media.id`), but the adapter will still function correctly because constraint enforcement happens at the application layer. Cascade deletes will not fire automatically — use `database.deleteMany()` explicitly.

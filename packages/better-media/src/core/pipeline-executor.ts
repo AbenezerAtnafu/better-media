@@ -135,7 +135,7 @@ export class PipelineExecutor {
         mimeType: context.file.mimeType,
         size: context.file.size,
         extension: context.file.extension,
-        context: appContext,
+        metadata: appContext,
       });
 
       for (const phase of HOOK_NAMES) {
@@ -151,7 +151,7 @@ export class PipelineExecutor {
         mimeType: context.file.mimeType,
         size: context.file.size,
         extension: context.file.extension,
-        context: appContext,
+        metadata: appContext,
       });
     } finally {
       await cleanupTempFile(context);

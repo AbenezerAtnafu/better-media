@@ -1,0 +1,152 @@
+---
+title: Background Jobs
+description: BullMQ-backed job queue for async plugin execution and worker process setup.
+---
+
+Plugins configured with `executionMode: "background"` enqueue their work via the job adapter instead of running inline. This keeps upload response times fast and lets processing scale independently.
+
+## How It Works
+
+1. During a pipeline run, a background plugin calls `jobs.enqueue(hookName, payload)` instead of executing immediately.
+2. The job adapter puts the payload on a queue (Redis via BullMQ, or in-process for dev).
+3. A worker process picks up the job and calls `media.runBackgroundJob(payload)`, which reconstructs the pipeline context and runs the handler.
+
+## In-Process Adapter (Development)
+
+For local development, the built-in memory adapter runs jobs with `setImmediate` — no Redis required:
+
+```typescript
+import { memoryJobAdapter } from "@better-media/adapter-jobs";
+
+const media = createBetterMedia({
+  jobs: memoryJobAdapter(),
+  // ...
+});
+```
+
+## BullMQ Adapter (Production)
+
+### Installation
+
+```bash
+pnpm add @better-media/adapter-jobs-bullmq bullmq
+```
+
+### Application Process
+
+Wire `bullmqJobAdapter` into your runtime. It publishes jobs to a Redis queue:
+
+```typescript
+import { bullmqJobAdapter } from "@better-media/adapter-jobs-bullmq";
+
+const media = createBetterMedia({
+  jobs: bullmqJobAdapter({
+    connection: {
+      host: process.env.REDIS_HOST ?? "localhost",
+      port: Number(process.env.REDIS_PORT ?? 6379),
+    },
+    queueName: "better-media:background", // default
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 1000 },
+      removeOnComplete: { count: 1000 },
+      removeOnFail: { count: 5000 },
+    },
+  }),
+  // ...
+});
+
+process.on("SIGTERM", () => process.exit(0));
+```
+
+### Worker Process
+
+Run a dedicated worker in a separate process (or dyno / container). It consumes jobs and calls `media.runBackgroundJob`:
+
+```typescript
+// worker.ts
+import { createBullMQWorker } from "@better-media/adapter-jobs-bullmq";
+import type { BackgroundJobPayload } from "better-media";
+import { media } from "./media"; // same runtime config as the app
+
+const worker = createBullMQWorker(
+  (payload) => media.runBackgroundJob(payload as BackgroundJobPayload),
+  {
+    connection: {
+      host: process.env.REDIS_HOST ?? "localhost",
+      port: Number(process.env.REDIS_PORT ?? 6379),
+    },
+    concurrency: 5, // default — lower for CPU-heavy jobs (e.g. video)
+  }
+);
+
+process.on("SIGTERM", async () => {
+  await worker.close();
+  process.exit(0);
+});
+```
+
+The `queueName` must match between the adapter and the worker.
+
+### Concurrency
+
+```typescript
+createBullMQWorker(processor, {
+  connection,
+  concurrency: 2, // e.g. 2 for video transcoding, 10+ for lightweight tasks
+})
+```
+
+Lower concurrency for CPU-intensive work (image processing, virus scanning). Scale horizontally by running multiple worker processes.
+
+## Worker Options
+
+| Option | Default | Description |
+|---|---|---|
+| `connection` | — | Redis connection (`host`, `port`, or `url`). |
+| `queueName` | `"better-media:background"` | Must match the adapter's `queueName`. |
+| `concurrency` | `5` | Max parallel jobs per worker process. |
+| `workerOptions` | `{}` | Any additional BullMQ `WorkerOptions` (e.g. `limiter`, `stalledInterval`). |
+
+## Retry Configuration
+
+BullMQ handles retries automatically. Set `defaultJobOptions` on the adapter:
+
+```typescript
+bullmqJobAdapter({
+  connection,
+  defaultJobOptions: {
+    attempts: 5,
+    backoff: {
+      type: "exponential",
+      delay: 2000, // 2s, 4s, 8s, 16s, 32s
+    },
+  },
+})
+```
+
+Failed jobs after all attempts are moved to the failed set and can be inspected or retried from the BullMQ dashboard.
+
+## Monitoring
+
+Use [Bull Board](https://github.com/felixmosh/bull-board) or [Arena](https://github.com/bee-queue/arena) to inspect queues, retry failed jobs, and monitor throughput.
+
+```bash
+pnpm add @bull-board/express @bull-board/api
+```
+
+```typescript
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { ExpressAdapter } from "@bull-board/express";
+import { Queue } from "bullmq";
+
+const serverAdapter = new ExpressAdapter().setBasePath("/admin/queues");
+
+createBullBoard({
+  queues: [new BullMQAdapter(new Queue("better-media:background", { connection }))],
+  serverAdapter,
+});
+
+app.use("/admin/queues", serverAdapter.getRouter());
+```

@@ -19,7 +19,7 @@ export async function validateChecksumUniqueness(
 
   const existing = await database.findOne({
     model: "media",
-    where: [{ field: "checksum", value: hash }],
+    where: [{ field: "checksumSha256", value: hash }],
   });
 
   if (existing && existing.id !== fileKey) {

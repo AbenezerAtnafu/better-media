@@ -1,6 +1,219 @@
 ---
 title: Options
-description: Configuration options and their intended use.
+description: Complete reference for all createBetterMedia configuration options.
 ---
 
-This page will become the central reference for runtime and adapter options.
+All options are passed to `createBetterMedia(config)`. Only `storage`, `database`, and `plugins` are required.
+
+```typescript
+import { createBetterMedia } from "better-media";
+
+const media = createBetterMedia({
+  storage,    // required
+  database,   // required
+  plugins,    // required
+  jobs,       // optional
+  fileHandling, // optional
+  trustedPolicy, // optional
+  events,     // optional
+  settings,   // optional
+});
+```
+
+---
+
+## `storage` — required
+
+A `StorageAdapter` instance. Controls where file bytes are stored.
+
+```typescript
+storage: StorageAdapter
+```
+
+Available adapters: [S3](/docs/storage/s3) · [Filesystem](/docs/storage/filesystem) · [Memory](/docs/storage/memory)
+
+---
+
+## `database` — required
+
+A `DatabaseAdapter` instance (or a raw `pg.Pool` for the built-in Postgres path).
+
+```typescript
+database: DatabaseAdapter | pg.Pool
+```
+
+Available adapters: [Postgres](/docs/database/sql/postgres) · [MySQL](/docs/database/sql/mysql) · [SQLite](/docs/database/sql/sqlite) · [MongoDB](/docs/database/mongodb)
+
+---
+
+## `plugins` — required
+
+An ordered array of `PipelinePlugin` instances. Plugins run in the order provided within each phase.
+
+```typescript
+plugins: PipelinePlugin[]
+```
+
+Available plugins: [Validation](/docs/plugins/validation) · [Media Processing](/docs/plugins/media-processing) · [Virus Scan](/docs/plugins/virus-scan)
+
+---
+
+## `jobs` — optional
+
+A `JobAdapter` for background execution. When omitted and background plugins are registered, the framework defaults to an in-process memory adapter (jobs run with `setImmediate`).
+
+```typescript
+jobs?: JobAdapter
+```
+
+Provide a BullMQ adapter for production:
+
+```typescript
+import { bullmqJobAdapter } from "@better-media/adapter-jobs-bullmq";
+
+jobs: bullmqJobAdapter({
+  connection: { host: "localhost", port: 6379 },
+  queueName: "better-media:background",     // default
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: "exponential", delay: 1000 },
+  },
+})
+```
+
+See [Background Jobs](/docs/architecture/jobs) for full setup.
+
+---
+
+## `fileHandling` — optional
+
+Controls how the framework loads file bytes before passing them to plugins.
+
+```typescript
+fileHandling?: {
+  maxBufferBytes?: number;
+}
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `maxBufferBytes` | `undefined` (no limit) | Files larger than this are streamed to a temp file instead of loaded into memory. Requires the storage adapter to implement `getSize` and `getStream`. |
+
+```typescript
+fileHandling: {
+  maxBufferBytes: 50 * 1024 * 1024, // 50 MB — stream files larger than this
+}
+```
+
+---
+
+## `trustedPolicy` — optional
+
+Controls which plugins are allowed to write to trusted metadata fields. Required only when registering a custom plugin that declares `trustLevel: "trusted"`. See [Plugin Architecture](/docs/architecture/plugins) for details.
+
+---
+
+## `events` — optional
+
+Lifecycle event callbacks. See [Events & Webhooks](/docs/architecture/events) for the full reference.
+
+```typescript
+events?: {
+  onUploadComplete?: (result: MediaResult) => void | Promise<void>;
+  onProcessingComplete?: (event: ProcessingCompleteEvent) => void | Promise<void>;
+  onError?: (error: Error, context: ErrorEvent) => void | Promise<void>;
+}
+```
+
+```typescript
+events: {
+  onUploadComplete: createWebhookEmitter("https://example.com/hooks", process.env.WEBHOOK_SECRET),
+  onError: async (err, ctx) => { await errorTracker.capture(err, ctx); },
+}
+```
+
+---
+
+## `settings` — optional
+
+Framework-level settings.
+
+```typescript
+settings?: {
+  logLevel?: "debug" | "info" | "warn" | "error";
+}
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `logLevel` | `"info"` | Controls framework log verbosity. |
+
+---
+
+## Full Example
+
+```typescript
+import { createBetterMedia, createWebhookEmitter } from "better-media";
+import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
+import { KyselyDbAdapter } from "@better-media/adapter-db-kysely";
+import { bullmqJobAdapter } from "@better-media/adapter-jobs-bullmq";
+import { validationPlugin } from "@better-media/plugin-validation";
+import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
+import { virusScanPlugin, ClamScanner } from "@better-media/plugin-virus-scan";
+import { schema } from "@better-media/core";
+import { Kysely, PostgresDialect } from "kysely";
+import { Pool } from "pg";
+
+export const media = createBetterMedia({
+  storage: new S3StorageAdapter({
+    region: process.env.AWS_REGION!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    bucket: process.env.S3_BUCKET!,
+  }),
+
+  database: new KyselyDbAdapter(
+    new Kysely({ dialect: new PostgresDialect({ pool: new Pool({ connectionString: process.env.DATABASE_URL }) }) }),
+    { config: { provider: "pg" }, schema }
+  ),
+
+  plugins: [
+    validationPlugin({
+      executionMode: "sync",
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+      maxBytes: 25 * 1024 * 1024,
+      preventDuplicates: true,
+    }),
+    virusScanPlugin({
+      scanner: new ClamScanner(),
+      executionMode: "sync",
+      onFailure: "abort",
+    }),
+    mediaProcessingPlugin({
+      executionMode: "background",
+      thumbnailPresets: [
+        { name: "sm", width: 320, format: "webp" },
+        { name: "lg", width: 1200, format: "webp" },
+      ],
+    }),
+  ],
+
+  jobs: bullmqJobAdapter({
+    connection: { host: process.env.REDIS_HOST!, port: Number(process.env.REDIS_PORT!) },
+    defaultJobOptions: { attempts: 3, backoff: { type: "exponential", delay: 1000 } },
+  }),
+
+  fileHandling: {
+    maxBufferBytes: 50 * 1024 * 1024,
+  },
+
+  events: {
+    onUploadComplete: createWebhookEmitter(process.env.WEBHOOK_URL!, process.env.WEBHOOK_SECRET),
+    onError: async (err, ctx) => console.error("[media]", err.message, ctx),
+  },
+
+  settings: {
+    logLevel: "info",
+  },
+});
+```

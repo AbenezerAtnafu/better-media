@@ -1,6 +1,205 @@
 ---
 title: Validation
-description: Validation plugin behavior, configuration, and usage patterns.
+description: File validation plugin — type checking, size limits, duplicate detection, and custom rules.
 ---
 
-This page will document the validation plugin in detail.
+The validation plugin runs at the `validation:run` phase of the pipeline. It reads the file bytes from storage, extracts trusted metadata (MIME type, dimensions, checksums), and applies all configured rules before any other plugin runs.
+
+## Installation
+
+```bash
+pnpm add @better-media/plugin-validation
+```
+
+## Basic Setup
+
+```typescript
+import { validationPlugin } from "@better-media/plugin-validation";
+
+const media = createBetterMedia({
+  // ...
+  plugins: [
+    validationPlugin({
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+      maxBytes: 10 * 1024 * 1024, // 10 MB
+    }),
+  ],
+});
+```
+
+## Execution Mode
+
+By default the plugin runs in `"background"` mode — it enqueues validation work via the job adapter and lets the pipeline respond immediately. Switch to `"sync"` when you need to block the upload on the validation result (e.g. abort infected or oversized files before anything is stored in the DB).
+
+```typescript
+validationPlugin({
+  executionMode: "sync", // default: "background"
+  onFailure: "abort",    // default: "abort" (sync only)
+})
+```
+
+| Mode | Behaviour |
+|---|---|
+| `"sync"` | Runs inline. Can abort the pipeline on failure via `onFailure`. |
+| `"background"` | Enqueued via job adapter. Result written to `media_validation_results`. Pipeline always continues. |
+
+### Failure Handling (sync mode)
+
+```typescript
+validationPlugin({
+  executionMode: "sync",
+  onFailure: "custom",
+  onFailureCallback: async (fileKey, errors) => {
+    await notify(errors);
+    return { valid: false, message: "File rejected" };
+  },
+})
+```
+
+| `onFailure` | Behaviour |
+|---|---|
+| `"abort"` | Returns a failed `ValidationResult`, stopping the pipeline. |
+| `"continue"` | Records failure to DB, lets the pipeline continue. |
+| `"custom"` | Invokes `onFailureCallback`. Pipeline stops if callback returns `{ valid: false }`. |
+
+## File Type Rules
+
+```typescript
+validationPlugin({
+  allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+
+  // Verify MIME from magic bytes, not just the extension or caller-provided header.
+  // Default: true — disable only if you trust the upload source completely.
+  useMagicBytes: true,
+})
+```
+
+## Size Rules
+
+```typescript
+validationPlugin({
+  minBytes: 1024,              // 1 KB minimum
+  maxBytes: 25 * 1024 * 1024, // 25 MB maximum
+})
+```
+
+## Dimension Rules
+
+```typescript
+validationPlugin({
+  minWidth: 100,
+  maxWidth: 4096,
+  minHeight: 100,
+  maxHeight: 4096,
+})
+```
+
+Dimension extraction requires `extractMetadata: true` (the default) and a valid raster image MIME type.
+
+## Duplicate Detection
+
+Block re-uploads of identical file content by checking the SHA-256 checksum against existing records:
+
+```typescript
+validationPlugin({
+  preventDuplicates: true,
+  // or with explicit algorithm:
+  preventDuplicates: { algorithm: "sha256" },
+})
+```
+
+The check queries the `media` table against `checksumSha256`. Runs only in `"sync"` mode (background mode cannot block the pipeline).
+
+## Checksum Extraction
+
+By default the plugin computes SHA-256 and stores it as trusted metadata (written to `media.checksumSha256`). Opt in to MD5 as well:
+
+```typescript
+validationPlugin({
+  extractChecksums: ["sha256", "md5"],
+})
+```
+
+## Integrity Verification
+
+Validate that the uploaded file matches a checksum the caller provided upfront:
+
+```typescript
+validationPlugin({
+  checksum: {
+    algorithm: "sha256",
+    metadataKey: "sha256", // reads from context.metadata.sha256
+  },
+})
+```
+
+## Presigned Upload Handling
+
+When using presigned URLs the file may not yet be in storage when the pipeline runs. Configure a retry strategy:
+
+```typescript
+validationPlugin({
+  fileNotFoundBehavior: "retry",
+  retryOptions: {
+    maxAttempts: 5,
+    delayMs: 1000,
+    backoff: "exponential",
+  },
+})
+```
+
+| `fileNotFoundBehavior` | Behaviour |
+|---|---|
+| `"fail"` | Returns a validation error immediately. |
+| `"retry"` | Retries with backoff using `retryOptions`. |
+| `"skip"` | Skips validation and lets the pipeline continue (use carefully). |
+
+## Filename Handling
+
+```typescript
+validationPlugin({
+  filenameSafety: "sanitize",  // default — strips unsafe characters
+  // filenameSafety: "randomize" — replaces filename with a UUID
+  maxFilenameLength: 255,
+})
+```
+
+## Custom Validators
+
+Add arbitrary validation logic. Return an array of errors; an empty array means the file passed.
+
+```typescript
+validationPlugin({
+  customValidators: [
+    async (buffer, metadata, fileKey) => {
+      if (buffer[0] !== 0xff) {
+        return [{ rule: "custom-header", message: "Not a valid JPEG header" }];
+      }
+      return [];
+    },
+  ],
+})
+```
+
+Each validator receives:
+- `buffer` — the raw file bytes
+- `metadata` — the `context.metadata` object from the pipeline
+- `fileKey` — the storage key
+
+## Validation Results
+
+Every run (pass or fail) is persisted to `media_validation_results`:
+
+```typescript
+{
+  mediaId: string,
+  valid: boolean,
+  pluginId: "better-media-validation",
+  errors: ValidationErrorItem[],  // [] on success
+  warnings: unknown[],
+  createdAt: Date,
+}
+```
+
+Re-runs for the same `mediaId` + `pluginId` update the existing row rather than creating duplicates.

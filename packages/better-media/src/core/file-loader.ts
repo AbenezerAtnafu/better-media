@@ -41,7 +41,7 @@ export async function loadTrustedFromDb(
       extension: record.extension ?? undefined,
     },
     checksums: {
-      sha256: record.checksum ?? undefined,
+      sha256: record.checksumSha256 ?? undefined,
       md5: record.checksumMd5 ?? undefined,
     },
     media: {
@@ -75,7 +75,7 @@ export async function saveTrustedToDb(
     mimeType?: string;
     size?: number;
     extension?: string;
-    context?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
   }
 ): Promise<void> {
   // We map the trusted metadata back to the central media table, falling back to initial args.
@@ -93,13 +93,14 @@ export async function saveTrustedToDb(
   if (trusted.file?.extension !== undefined) updatePayload.extension = trusted.file.extension;
   else if (initialArgs?.extension !== undefined) updatePayload.extension = initialArgs.extension;
 
-  if (trusted.checksums?.sha256 !== undefined) updatePayload.checksum = trusted.checksums.sha256;
+  if (trusted.checksums?.sha256 !== undefined)
+    updatePayload.checksumSha256 = trusted.checksums.sha256;
   if (trusted.checksums?.md5 !== undefined) updatePayload.checksumMd5 = trusted.checksums.md5;
   if (trusted.media?.width !== undefined) updatePayload.width = trusted.media.width;
   if (trusted.media?.height !== undefined) updatePayload.height = trusted.media.height;
   if (trusted.media?.duration !== undefined) updatePayload.duration = trusted.media.duration;
 
-  if (initialArgs?.context !== undefined) updatePayload.context = initialArgs.context;
+  if (initialArgs?.metadata !== undefined) updatePayload.metadata = initialArgs.metadata;
 
   // Perform a single-shot Upsert
   const existing = await database.findOne({

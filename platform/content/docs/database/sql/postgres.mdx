@@ -1,6 +1,125 @@
 ---
 title: Postgres
-description: Postgres-specific guidance and recommended usage patterns.
+description: PostgreSQL setup with the Kysely adapter and migration workflow.
 ---
 
-This page will focus on Postgres as the primary relational database path.
+PostgreSQL is the recommended relational database for production deployments. The Kysely adapter supports Postgres natively and handles schema migrations, serialization, and transactions.
+
+## Installation
+
+```bash
+pnpm add @better-media/adapter-db-kysely kysely pg
+pnpm add -D @types/pg
+```
+
+## Configuration
+
+Pass a `pg.Pool` instance and set `provider: "pg"`:
+
+```typescript
+import { Pool } from "pg";
+import { Kysely, PostgresDialect } from "kysely";
+import { KyselyDbAdapter } from "@better-media/adapter-db-kysely";
+import { schema } from "@better-media/core";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // or explicit fields:
+  host: process.env.PGHOST,
+  port: Number(process.env.PGPORT ?? 5432),
+  database: process.env.PGDATABASE,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  max: 10, // connection pool size
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : false,
+});
+
+const db = new Kysely({ dialect: new PostgresDialect({ pool }) });
+
+const database = new KyselyDbAdapter(db, {
+  config: { provider: "pg" },
+  schema,
+});
+
+const media = createBetterMedia({ storage, database, plugins });
+```
+
+## Migrations
+
+Better Media manages its own tables (`media`, `media_versions`, `media_jobs`, `media_validation_results`, `media_virus_scan_results`). Run migrations with the CLI:
+
+```bash
+# Preview what will be applied
+npx better-media generate --dialect postgres
+
+# Apply migrations interactively
+npx better-media migrate
+
+# Apply non-interactively (CI)
+npx better-media migrate --yes
+```
+
+The CLI reads your config file (`media.config.ts`) to find the adapter. See the [CLI reference](/docs/architecture/cli) for all options.
+
+### Programmatic Migration
+
+Run migrations from code (e.g. on application startup):
+
+```typescript
+import { runMigrations } from "@better-media/core";
+
+await runMigrations(database, schema);
+```
+
+`runMigrations` is idempotent — it compares the live schema against the expected schema and only applies the diff.
+
+## Connection Strings
+
+Common Postgres connection string formats:
+
+```bash
+# Local development
+DATABASE_URL=postgres://postgres:password@localhost:5432/mydb
+
+# SSL (Heroku, Railway, Render)
+DATABASE_URL=postgres://user:pass@host:5432/db?sslmode=require
+
+# Supabase
+DATABASE_URL=postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres
+```
+
+## Transactions
+
+The adapter exposes `transaction()` for atomic multi-table operations:
+
+```typescript
+await database.transaction(async (trx) => {
+  await trx.create({ model: "media", data: { id: "...", status: "pending" } });
+  await trx.create({ model: "media_jobs", data: { id: "...", mediaId: "..." } });
+});
+```
+
+## Connection Pooling
+
+For serverless environments (Vercel, AWS Lambda), use a connection pooler like [PgBouncer](https://www.pgbouncer.org/) or [Supabase Pooler](https://supabase.com/docs/guides/database/connection-pooling) in transaction mode:
+
+```typescript
+const pool = new Pool({
+  connectionString: process.env.DATABASE_POOLER_URL,
+  max: 1, // serverless: keep the pool small
+});
+```
+
+## Environment Variables
+
+A minimal `.env` setup:
+
+```bash
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=mydb
+PGUSER=postgres
+PGPASSWORD=secret
+# or as a single URL:
+DATABASE_URL=postgres://postgres:secret@localhost:5432/mydb
+```

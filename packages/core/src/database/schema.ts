@@ -16,19 +16,19 @@ export const schema: BmSchema = {
       size: { type: "number" },
       storageProvider: { type: "string" },
       storageKey: { type: "string" },
-      checksum: { type: "string" },
+      checksumSha256: { type: "string" },
       checksumMd5: { type: "string" },
       width: { type: "number" },
       height: { type: "number" },
       duration: { type: "number" },
-      context: { type: "json" },
-      status: { type: "string" },
-      visibility: { type: "string" },
+      metadata: { type: "json" },
+      status: { type: "string" }, // 'pending' | 'processing' | 'ready' | 'failed' | 'quarantined'
+      visibility: { type: "string" }, // 'public' | 'private' | 'unlisted'
       createdAt: { type: "date" },
       updatedAt: { type: "date" },
       deletedAt: { type: "date" },
     },
-    indexes: [{ fields: ["checksum", "storageKey"] }],
+    indexes: [{ fields: ["checksumSha256", "storageKey"] }],
   },
 
   // Different versions of the media (thumbnails, previews, etc.)
@@ -43,22 +43,25 @@ export const schema: BmSchema = {
           onDelete: "cascade",
         },
       },
+      storageProvider: { type: "string" },
       storageKey: { type: "string" },
-      checksum: { type: "string" },
+      checksumSha256: { type: "string" },
+      mimeType: { type: "string" },
+      size: { type: "number" },
+      width: { type: "number" },
+      height: { type: "number" },
       isOriginal: { type: "boolean" },
-      type: { type: "string" }, // e.g., 'thumbnail', 'preview', 'compressed'
+      type: { type: "string" }, // 'thumbnail' | 'preview' | 'compressed' | 'original'
       versionNumber: { type: "number" },
       createdAt: { type: "date" },
+      deletedAt: { type: "date" },
     },
-    indexes: [
-      {
-        fields: ["mediaId", "versionNumber"],
-        unique: true,
-      },
-    ],
+    indexes: [{ fields: ["mediaId"] }, { fields: ["mediaId", "versionNumber"], unique: true }],
   },
 
-  // Background job state for media processing
+  // Business record for media processing jobs — not a BullMQ state mirror.
+  // Tracks idempotency, final outcome, and links jobs to media.
+  // Runtime state (queue position, locks, backoff) lives in BullMQ/Redis.
   media_jobs: {
     fields: {
       id: { type: "string", primaryKey: true, required: true },
@@ -70,17 +73,20 @@ export const schema: BmSchema = {
           onDelete: "cascade",
         },
       },
-      type: { type: "string" }, // e.g., 'virus-scan', 'thumbnail'
-      status: { type: "string" }, // e.g., 'pending', 'running', 'completed', 'failed'
+      type: { type: "string" }, // 'virus-scan' | 'thumbnail' | 'compress' | 'validate'
+      status: { type: "string" }, // 'pending' | 'running' | 'completed' | 'failed'
       attempts: { type: "number" },
       maxAttempts: { type: "number" },
       idempotencyKey: { type: "string", unique: true },
       scheduledAt: { type: "date" },
       startedAt: { type: "date" },
       completedAt: { type: "date" },
-      error: { type: "string" },
+      error: { type: "json" }, // { message, code, stack, retryable }
+      result: { type: "json" },
       createdAt: { type: "date" },
+      updatedAt: { type: "date" },
     },
+    indexes: [{ fields: ["mediaId"] }],
   },
 
   media_validation_results: {
@@ -93,8 +99,10 @@ export const schema: BmSchema = {
       valid: { type: "boolean" },
       pluginId: { type: "string" },
       errors: { type: "json" },
+      warnings: { type: "json" },
       createdAt: { type: "date" },
     },
+    indexes: [{ fields: ["mediaId"] }],
   },
 
   media_virus_scan_results: {
@@ -104,10 +112,12 @@ export const schema: BmSchema = {
         type: "string",
         references: { model: "media", field: "id", onDelete: "cascade" },
       },
-      status: { type: "string" }, // 'clean', 'infected', 'error'
-      threats: { type: "json" }, // List of detected threats
-      scanner: { type: "string" }, // clamd, etc.
+      status: { type: "string" }, // 'clean' | 'infected' | 'error'
+      threats: { type: "json" },
+      scanner: { type: "string" },
+      metadata: { type: "json" },
       createdAt: { type: "date" },
     },
+    indexes: [{ fields: ["mediaId"] }],
   },
 };
