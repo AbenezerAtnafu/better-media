@@ -5,6 +5,8 @@ export const alt = "Better Media — File upload stack. One config. Full pipelin
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+const steps = ["Validate", "Scan", "Process", "Store"];
+
 export default function OGImage() {
   return new ImageResponse(
     <div
@@ -21,9 +23,10 @@ export default function OGImage() {
         position: "relative",
       }}
     >
-      {/* Subtle blue glow top-left */}
+      {/* Blue glow — top-left */}
       <div
         style={{
+          display: "flex",
           position: "absolute",
           top: -60,
           left: -60,
@@ -33,9 +36,10 @@ export default function OGImage() {
           background: "radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%)",
         }}
       />
-      {/* Subtle purple glow top-right */}
+      {/* Purple glow — top-right */}
       <div
         style={{
+          display: "flex",
           position: "absolute",
           top: -40,
           right: -40,
@@ -48,13 +52,7 @@ export default function OGImage() {
 
       {/* Logo row */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 56 }}>
-        <svg
-          width="48"
-          height="48"
-          viewBox="0 0 256 256"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
+        <svg width="48" height="48" viewBox="0 0 256 256" fill="none">
           <rect width="256" height="256" rx="56" fill="white" />
           <path
             d="M72 160C52.1177 160 36 143.882 36 124C36 104.118 52.1177 88 72 88C78.1504 88 83.9404 89.5456 89.0014 92.2704C98.5365 72.6624 118.64 59 142 59C174.585 59 201 85.4152 201 118C201 119.353 200.954 120.696 200.864 122.027C213.57 127.159 222 139.611 222 154C222 173.882 205.882 190 186 190H80"
@@ -71,29 +69,40 @@ export default function OGImage() {
         </span>
       </div>
 
-      {/* Headline */}
-      <div
-        style={{
-          color: "#ffffff",
-          fontSize: 64,
-          fontWeight: 800,
-          lineHeight: 1.1,
-          letterSpacing: "-0.03em",
-          marginBottom: 32,
-          maxWidth: 820,
-        }}
-      >
-        File upload stack.
-        <br />
-        One config. Full pipeline.
+      {/* Headline — two spans in a column to avoid <br/> */}
+      <div style={{ display: "flex", flexDirection: "column", marginBottom: 40 }}>
+        <span
+          style={{
+            color: "#ffffff",
+            fontSize: 64,
+            fontWeight: 800,
+            lineHeight: 1.15,
+            letterSpacing: "-0.03em",
+          }}
+        >
+          File upload stack.
+        </span>
+        <span
+          style={{
+            color: "#ffffff",
+            fontSize: 64,
+            fontWeight: 800,
+            lineHeight: 1.15,
+            letterSpacing: "-0.03em",
+          }}
+        >
+          One config. Full pipeline.
+        </span>
       </div>
 
-      {/* Pipeline steps */}
+      {/* Pipeline steps — flat list avoids conditional child rendering */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {["Validate", "Scan", "Process", "Store"].map((step, i) => (
-          <div key={step} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {steps.flatMap((step, i) => {
+          const pill = (
             <div
+              key={step}
               style={{
+                display: "flex",
                 background: "rgba(59,130,246,0.12)",
                 border: "1px solid rgba(59,130,246,0.3)",
                 borderRadius: 8,
@@ -106,14 +115,23 @@ export default function OGImage() {
             >
               {step}
             </div>
-            {i < 3 && <span style={{ color: "#3b82f6", fontSize: 22, fontWeight: 300 }}>→</span>}
-          </div>
-        ))}
+          );
+          if (i < steps.length - 1) {
+            return [
+              pill,
+              <span key={`arrow-${i}`} style={{ color: "#3b82f6", fontSize: 22 }}>
+                →
+              </span>,
+            ];
+          }
+          return [pill];
+        })}
       </div>
 
       {/* URL */}
       <div
         style={{
+          display: "flex",
           position: "absolute",
           bottom: 56,
           right: 96,
