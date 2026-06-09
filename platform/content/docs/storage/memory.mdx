@@ -1,6 +1,72 @@
 ---
 title: Memory
-description: In-memory storage for development and testing.
+description: In-memory storage for testing and development.
 ---
 
-This page will document the in-memory storage adapter used for tests and lightweight local workflows.
+The memory adapter stores files in a `Map` inside the running process. All data is lost when the process exits. Use it for unit tests, integration tests, and quick local experiments where you do not want files written to disk.
+
+## Installation
+
+```bash
+pnpm add @better-media/adapter-storage-memory
+```
+
+## Usage
+
+```typescript
+import { memoryStorage } from "@better-media/adapter-storage-memory";
+
+const media = createBetterMedia({
+  storage: memoryStorage(),
+  // ...
+});
+```
+
+`memoryStorage()` returns a plain object satisfying `StorageAdapter`. Each call creates an independent store — create one per test suite or share one across a test file as needed.
+
+## Supported Operations
+
+| Method | Description |
+|---|---|
+| `get(key)` | Returns the `Buffer` stored at `key`, or `null`. |
+| `put(key, buffer)` | Stores the buffer. Overwrites silently if the key exists. |
+| `delete(key)` | Removes the key. Silent no-op if it does not exist. |
+| `exists(key)` | Returns `true` if the key is present. |
+| `getSize(key)` | Returns `buffer.length`, or `null` if not found. |
+| `getStream(key)` | Returns a `ReadableStream` backed by the buffer, or `null`. |
+| `clear()` | Removes all stored files. |
+
+## Testing Example
+
+```typescript
+import { memoryStorage } from "@better-media/adapter-storage-memory";
+import { memoryDatabase } from "@better-media/adapter-db-memory";
+import { createBetterMedia } from "better-media";
+
+describe("media upload", () => {
+  let media: ReturnType<typeof createBetterMedia>;
+
+  beforeEach(() => {
+    media = createBetterMedia({
+      storage: memoryStorage(),
+      database: memoryDatabase(),
+    });
+  });
+
+  it("stores a file and returns an id", async () => {
+    const result = await media.upload.ingest({
+      file: { buffer: Buffer.from("hello"), filename: "test.txt" },
+    });
+    expect(result.id).toBeDefined();
+  });
+});
+```
+
+Calling `memoryStorage()` inside `beforeEach` gives each test a clean store with no leftover state.
+
+## Limitations
+
+- **Not persistent.** Data is gone when the process exits or when `clear()` is called.
+- **Not thread-safe.** The `Map` is not safe for concurrent writes from multiple worker threads. Use one instance per Node.js worker.
+- **No presigned URLs.** `createPresignedUpload` is not implemented.
+- **Memory growth.** Large files accumulate in the heap. Set a size limit in your tests or call `clear()` between runs.

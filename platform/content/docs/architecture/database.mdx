@@ -1,12 +1,94 @@
 ---
 title: Database
-description: Explain how Better Media thinks about persistence and database adapters.
+description: What Better Media stores, how to choose an adapter, and how migrations work.
 ---
 
-This page will describe the database architecture in conceptual terms.
+Better Media stores all file metadata, job records, and processing results in a database you provide. Pick the adapter that matches your stack — the rest of the framework is unaffected.
 
-Suggested scope:
+## What Gets Stored
 
-- what the database layer is responsible for
-- how relational and document stores fit in
-- how ORMs and adapters intersect with the runtime
+| Table | What it holds |
+|---|---|
+| `media` | One row per file — storage key, MIME type, dimensions, checksums, status, visibility. |
+| `media_versions` | Derived files: thumbnails, compressed variants. One row per derivative. |
+| `media_jobs` | Background job records — status, idempotency key, error and result data. |
+| `media_validation_results` | Pass/fail outcome per validation run. |
+| `media_virus_scan_results` | Scan result per file — clean, infected, or error. |
+
+You never write DDL for these tables — Better Media creates and migrates them.
+
+## Choosing an Adapter
+
+| Adapter | Package | When to use |
+|---|---|---|
+| Kysely (SQL) | `@better-media/adapter-db-kysely` | Postgres, MySQL, or SQLite |
+| MongoDB | `@better-media/adapter-databases/mongodb-adapter` | Existing MongoDB deployment |
+| In-memory | `@better-media/adapter-db-memory` | Tests and local development |
+
+See the database section for setup guides: [Postgres](/docs/database/sql/postgres) · [MySQL](/docs/database/sql/mysql) · [SQLite](/docs/database/sql/sqlite) · [MongoDB](/docs/database/mongodb)
+
+## Migrations
+
+Better Media manages its own migrations. You don't write them — the CLI or `runMigrations()` computes the diff and applies only what is missing.
+
+```bash
+# Preview the SQL before applying
+npx better-media generate --dialect postgres
+
+# Apply (interactive)
+npx better-media migrate
+
+# Apply in CI
+npx better-media migrate --yes
+```
+
+Or call it on startup in code:
+
+```typescript
+import { runMigrations } from "@better-media/core";
+await runMigrations(database, schema);
+```
+
+Migrations are additive only — they never drop tables or columns.
+
+## Using with Prisma or Drizzle
+
+Better Media tables and your application tables live side by side in the same database. Each tool manages its own set — no conflicts.
+
+```typescript
+// Your app tables — managed by Prisma or Drizzle as usual
+const prisma = new PrismaClient();
+
+// Better Media tables — managed by the Kysely adapter
+const database = new KyselyDbAdapter(db, { config: { provider: "pg" }, schema });
+const media = createBetterMedia({ storage, database, plugins });
+```
+
+See [Prisma](/docs/database/tooling/prisma) and [Drizzle](/docs/database/tooling/drizzle) for the full setup.
+
+## Querying Records
+
+You can query media records directly through the adapter — useful for building dashboards or admin views:
+
+```typescript
+// Get a media record
+const record = await database.findOne({
+  model: "media",
+  where: [{ field: "id", value: recordId }],
+});
+
+// List all thumbnails for a file
+const versions = await database.findMany({
+  model: "media_versions",
+  where: [{ field: "mediaId", value: recordId }],
+  sortBy: { field: "versionNumber", direction: "asc" },
+});
+
+// Count ready files
+const count = await database.count({
+  model: "media",
+  where: [{ field: "status", value: "ready" }],
+});
+```
+
+For anything more complex, query the database directly with your own client.

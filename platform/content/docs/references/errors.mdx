@@ -1,6 +1,71 @@
 ---
 title: Errors
-description: Error classes, failure cases, and expected operational issues.
+description: Errors thrown by Better Media and how to handle them.
 ---
 
-This page will catalog the main error categories surfaced by Better Media.
+## `ValidationError`
+
+Thrown when a sync plugin rejects a file — validation fails, virus detected, or a custom plugin aborts the pipeline.
+
+```typescript
+import { ValidationError } from "better-media";
+
+try {
+  await media.upload.ingest({ file: { buffer }, metadata });
+} catch (err) {
+  if (err instanceof ValidationError) {
+    // File was rejected — safe to show this to the caller
+    console.error(err.message);   // e.g. "File type not allowed"
+    console.error(err.recordId);  // database record ID
+    console.error(err.fileKey);   // storage key
+  } else {
+    // Storage failure, DB connection error, etc.
+    throw err;
+  }
+}
+```
+
+`ValidationError` is only thrown when `executionMode: "sync"` and `onFailure: "abort"` (the defaults for both plugins). Background-mode rejections are written to the DB and reported via `onError`.
+
+## Storage Errors
+
+Failures from `storage.put()`, `storage.get()`, etc. propagate directly from the underlying SDK. Common causes:
+
+| Cause | Example |
+|---|---|
+| Wrong credentials | AWS `AccessDenied` |
+| Bucket/directory missing | AWS `NoSuchBucket`, Node `ENOENT` |
+| Disk full | Node `ENOSPC` |
+| Network timeout | Provider-specific |
+
+These are not wrapped — catch them alongside `ValidationError` and handle as infrastructure errors.
+
+## Database Errors
+
+Connection errors and constraint violations propagate from the adapter. Common causes:
+
+| Cause | Fix |
+|---|---|
+| `relation does not exist` | Migrations not run — call `runMigrations()` on startup |
+| Connection refused | Check `DATABASE_URL` / host and port |
+| Unique constraint violation | Duplicate `idempotencyKey` or record `id` |
+
+## Presigned Upload Errors
+
+```
+Error: Presigned upload not supported by this storage adapter.
+```
+
+Thrown by `requestPresignedUpload()` or `getUrl()` when the configured storage adapter does not support them. Use the S3 adapter for presigned URL workflows.
+
+## Background Job Errors
+
+Job failures are caught by the framework, re-thrown to the queue (for retry), and also forwarded to your `onError` handler if configured:
+
+```typescript
+events: {
+  onError: async (error, { id, key }) => {
+    await myErrorTracker.capture(error, { mediaId: id });
+  },
+}
+```

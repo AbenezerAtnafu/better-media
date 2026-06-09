@@ -6,6 +6,21 @@ import { isReferenceUrlMode, readBufferForProcessing } from "./buffer";
 import { tryImportSharp, generateThumbnailsWithSharp } from "./image";
 import { nextMediaVersionStart } from "./next-version";
 
+function formatToMimeType(format: string | undefined): string | undefined {
+  switch (format) {
+    case "jpg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+    case "avif":
+      return "image/avif";
+    default:
+      return undefined;
+  }
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   if (!Number.isFinite(ms) || ms <= 0) return promise;
   return new Promise<T>((resolve, reject) => {
@@ -139,6 +154,10 @@ export async function runMediaProcessing(
             id: randomUUID(),
             mediaId: context.recordId,
             storageKey: result.key,
+            mimeType: formatToMimeType(result.format),
+            size: outBuf.length,
+            width: result.width,
+            height: result.height,
             isOriginal: false,
             type: "thumbnail",
             versionNumber: versionCounter,

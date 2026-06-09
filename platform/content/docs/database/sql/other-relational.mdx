@@ -1,6 +1,83 @@
 ---
 title: Other Relational Databases
-description: Notes for relational engines outside the primary documented paths.
+description: LibSQL/Turso, MSSQL, and other relational engines outside the primary documented paths.
 ---
 
-This page is reserved for compatibility guidance beyond the main relational database targets.
+Better Media's Kysely adapter supports any database that Kysely supports. The three first-class providers are `"pg"`, `"mysql"`, and `"sqlite"`. Other engines work with varying levels of support.
+
+## LibSQL / Turso
+
+[Turso](https://turso.tech/) is a distributed SQLite-compatible database built on LibSQL. It works with the `"sqlite"` provider since it speaks the SQLite dialect.
+
+```bash
+pnpm add @libsql/kysely-libsql
+```
+
+```typescript
+import { LibsqlDialect } from "@libsql/kysely-libsql";
+import { Kysely } from "kysely";
+import { KyselyDbAdapter } from "@better-media/adapter-db-kysely";
+import { schema } from "@better-media/core";
+
+const db = new Kysely({
+  dialect: new LibsqlDialect({
+    url: process.env.TURSO_DATABASE_URL!,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  }),
+});
+
+const database = new KyselyDbAdapter(db, {
+  config: { provider: "sqlite" }, // LibSQL uses the SQLite dialect
+  schema,
+});
+```
+
+**Limitations:** Same as SQLite — no `RETURNING` support, adapter re-fetches after writes. Turso handles replication transparently so the single-writer constraint is lifted at the database level.
+
+## Microsoft SQL Server (MSSQL)
+
+MSSQL is not a first-class provider and has not been tested. Kysely has a `MssqlDialect` — if you need MSSQL you can pass it and set `provider: "pg"` as a dialect hint.
+
+```typescript
+import { MssqlDialect } from "kysely";
+
+const db = new Kysely({ dialect: new MssqlDialect({ /* tediousConfig */ }) });
+
+const database = new KyselyDbAdapter(db, {
+  config: { provider: "pg" }, // closest dialect approximation
+  schema,
+});
+```
+
+The CLI `generate` and `migrate` commands do not support MSSQL — run migrations programmatically with `runMigrations()` or generate SQL with `compileMigrationOperationsSql("mssql")` and apply it manually.
+
+## CockroachDB
+
+CockroachDB is wire-compatible with Postgres. Use the `"pg"` provider and a `pg.Pool` pointed at your CockroachDB cluster:
+
+```typescript
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = new Kysely({ dialect: new PostgresDialect({ pool }) });
+
+const database = new KyselyDbAdapter(db, {
+  config: { provider: "pg" },
+  schema,
+});
+```
+
+CockroachDB supports `RETURNING`, transactions, and JSON columns. The migration CLI works as-is with `--dialect postgres`.
+
+## Neon / Supabase / Railway
+
+These are hosted Postgres services — use the standard [Postgres setup](/docs/database/sql/postgres). Connect with a `pg.Pool` and `provider: "pg"`.
+
+```bash
+# Neon (serverless — use the pooled connection string)
+DATABASE_URL=postgres://user:pass@ep-xxx.us-east-2.aws.neon.tech/dbname?sslmode=require
+
+# Supabase
+DATABASE_URL=postgresql://postgres:[password]@db.[ref].supabase.co:5432/postgres
+
+# Railway
+DATABASE_URL=postgresql://postgres:pass@containers-us-west-xxx.railway.app:6543/railway
+```

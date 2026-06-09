@@ -41,6 +41,7 @@ async function recordScanResult(database: DatabaseAdapter, record: ScanRecord): 
     status,
     threats: record.viruses,
     scanner: record.scannerName,
+    metadata: { durationMs: record.durationMs },
     createdAt: record.scannedAt,
   };
 

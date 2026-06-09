@@ -1,0 +1,174 @@
+---
+title: Events & Webhooks
+description: Lifecycle event callbacks and outbound webhook delivery with HMAC signing.
+---
+
+Better Media fires lifecycle events at key points in the pipeline. You can handle them with simple callbacks in config, or use the built-in `createWebhookEmitter` to POST signed payloads to an external URL.
+
+## Configuring Events
+
+Pass an `events` object to `createBetterMedia`:
+
+```typescript
+import { createBetterMedia } from "better-media";
+
+const media = createBetterMedia({
+  // ...
+  events: {
+    onUploadComplete: async (result) => {
+      console.log("Upload complete:", result.id, result.status);
+    },
+    onProcessingComplete: async (event) => {
+      console.log("Background plugin finished:", event.pluginName, "for", event.id);
+    },
+    onError: async (error, context) => {
+      console.error("Pipeline error:", error.message, context.id);
+    },
+  },
+});
+```
+
+Event handler errors are swallowed — a throwing handler will not propagate back into the pipeline or the caller. Errors are logged to stderr with the prefix `[better-media:events]`.
+
+## Event Reference
+
+### `onUploadComplete`
+
+Fires after `upload.ingest()` or `upload.complete()` finishes all sync pipeline phases successfully.
+
+```typescript
+onUploadComplete: (result: MediaResult) => void | Promise<void>
+```
+
+```typescript
+type MediaResult = {
+  id: string;        // database record ID
+  key: string;       // storage key
+  url?: string;
+  metadata?: MediaMetadata;
+  status: "stored" | "processed";
+};
+```
+
+`status` is `"processed"` when all sync plugins completed without aborting. It is `"stored"` when the file was stored but one or more sync plugins were skipped or ran in background mode.
+
+### `onProcessingComplete`
+
+Fires after a background job handler finishes successfully — once per background plugin, per file.
+
+```typescript
+onProcessingComplete: (event: ProcessingCompleteEvent) => void | Promise<void>
+
+type ProcessingCompleteEvent = {
+  id: string;         // media record ID
+  key: string;        // storage key
+  pluginName: string; // the plugin that just finished
+};
+```
+
+Use this to trigger downstream work that must wait for background processing (e.g. notify a user that their thumbnail is ready).
+
+### `onError`
+
+Fires on any unhandled pipeline or background job error.
+
+```typescript
+onError: (error: Error, context: ErrorEvent) => void | Promise<void>
+
+type ErrorEvent = {
+  id?: string;   // media record ID, if known
+  key?: string;  // storage key, if known
+};
+```
+
+The original error is still thrown to the caller — `onError` is a side-effect notification, not an error boundary. Use it to send errors to your observability platform without swallowing them.
+
+## Outbound Webhooks
+
+`createWebhookEmitter` wraps any event into a POST request to an external URL. It handles serialization, optional HMAC signing, and retries on 5xx responses.
+
+```typescript
+import { createBetterMedia } from "better-media";
+import { createWebhookEmitter } from "better-media";
+
+const media = createBetterMedia({
+  events: {
+    onUploadComplete: createWebhookEmitter(
+      "https://api.example.com/webhooks/media",
+      process.env.WEBHOOK_SECRET  // optional — enables HMAC signing
+    ),
+    onError: createWebhookEmitter("https://api.example.com/webhooks/errors"),
+  },
+});
+```
+
+### Payload
+
+The emitter POSTs the event argument as JSON with `Content-Type: application/json`.
+
+For `onUploadComplete` the body looks like:
+
+```json
+{
+  "id": "01J8XKPZ...",
+  "key": "uploads/my-image.jpg",
+  "status": "processed",
+  "metadata": { "filename": "my-image.jpg" }
+}
+```
+
+### HMAC Signing
+
+When a `secret` is provided, every request includes an `X-Better-Media-Signature` header:
+
+```
+X-Better-Media-Signature: sha256=<hex-digest>
+```
+
+The digest is `HMAC-SHA256(secret, body)`. Verify it on your endpoint:
+
+```typescript
+import { createHmac } from "node:crypto";
+
+function verifySignature(body: string, header: string, secret: string): boolean {
+  const expected = `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
+  return expected === header;
+}
+
+// Express example
+app.post("/webhooks/media", express.text({ type: "application/json" }), (req, res) => {
+  const sig = req.headers["x-better-media-signature"] as string;
+  if (!verifySignature(req.body, sig, process.env.WEBHOOK_SECRET!)) {
+    return res.sendStatus(401);
+  }
+  const payload = JSON.parse(req.body);
+  // handle payload...
+  res.sendStatus(200);
+});
+```
+
+### Retry Behaviour
+
+The emitter retries up to 3 times on network errors or 5xx responses with exponential backoff (1 s, 2 s). 4xx responses are not retried — they indicate a permanent client error (wrong URL, auth failure).
+
+| Attempt | Delay before retry |
+|---|---|
+| 1st retry | 1 s |
+| 2nd retry | 2 s |
+| 3rd attempt (final) | — |
+
+After 3 failed attempts the emitter gives up silently. If you need guaranteed delivery, forward events to a durable queue (SQS, Pub/Sub) inside your handler.
+
+## Combining Callbacks and Webhooks
+
+```typescript
+events: {
+  onUploadComplete: async (result) => {
+    // In-process side-effect
+    await updateUserDashboard(result.id);
+
+    // Outbound webhook (fire-and-forget)
+    await createWebhookEmitter("https://partner.example.com/hooks")(result);
+  },
+}
+```

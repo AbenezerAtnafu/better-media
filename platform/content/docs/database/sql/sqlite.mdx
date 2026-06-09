@@ -1,6 +1,93 @@
 ---
 title: SQLite
-description: SQLite-specific guidance for local development and lightweight deployments.
+description: SQLite setup for local development and lightweight single-process deployments.
 ---
 
-This page will explain where SQLite fits best in the Better Media workflow.
+SQLite requires no server and stores the entire database in a single file. It is ideal for local development, CI test runs, and self-contained single-process deployments (e.g. Electron apps, edge workers with embedded SQLite).
+
+## Installation
+
+```bash
+pnpm add @better-media/adapter-db-kysely kysely better-sqlite3
+pnpm add -D @types/better-sqlite3
+```
+
+## Configuration
+
+`better-sqlite3` is synchronous. Kysely wraps it with an async interface via `SqliteDialect`.
+
+```typescript
+import Database from "better-sqlite3";
+import { Kysely, SqliteDialect } from "kysely";
+import { KyselyDbAdapter } from "@better-media/adapter-db-kysely";
+import { schema } from "@better-media/core";
+
+const sqlite = new Database(process.env.DATABASE_PATH ?? "./media.db");
+
+// Recommended: enable WAL mode for better concurrent read performance
+sqlite.pragma("journal_mode = WAL");
+sqlite.pragma("foreign_keys = ON");
+
+const db = new Kysely({ dialect: new SqliteDialect({ database: sqlite }) });
+
+const database = new KyselyDbAdapter(db, {
+  config: { provider: "sqlite" },
+  schema,
+});
+
+const media = createBetterMedia({ storage, database, plugins });
+```
+
+Use `:memory:` as the path for an in-process in-memory database (useful in tests):
+
+```typescript
+const sqlite = new Database(":memory:");
+```
+
+## Migrations
+
+```bash
+# Preview generated SQL
+npx better-media generate --dialect sqlite
+
+# Apply migrations
+npx better-media migrate --yes
+```
+
+Or programmatically:
+
+```typescript
+import { runMigrations } from "@better-media/core";
+await runMigrations(database, schema);
+```
+
+## Compatibility Notes
+
+**No `RETURNING` clause.** Better Media handles this transparently with `better-sqlite3`.
+
+**Single writer.** SQLite allows only one concurrent writer. With WAL mode enabled, concurrent reads are non-blocking, but writes queue behind each other. This is fine for low-to-medium write throughput. For high-write production workloads, use Postgres or MySQL.
+
+**No network access.** The database file must be local to the process. This makes SQLite unsuitable for multi-node deployments unless all nodes share the same filesystem.
+
+**Turso / LibSQL.** If you need a distributed SQLite-compatible database, see [Other Relational Databases](/docs/database/sql/other-relational) for LibSQL/Turso notes.
+
+## Local Development Workflow
+
+A common pattern is to use SQLite locally and Postgres in production, controlled by an environment variable:
+
+```typescript
+import Database from "better-sqlite3";
+import { Pool } from "pg";
+import { Kysely, SqliteDialect, PostgresDialect } from "kysely";
+import { KyselyDbAdapter } from "@better-media/adapter-db-kysely";
+import { schema } from "@better-media/core";
+
+const db =
+  process.env.NODE_ENV === "production"
+    ? new Kysely({ dialect: new PostgresDialect({ pool: new Pool({ connectionString: process.env.DATABASE_URL }) }) })
+    : new Kysely({ dialect: new SqliteDialect({ database: new Database("./media.db") }) });
+
+const provider = process.env.NODE_ENV === "production" ? "pg" : "sqlite";
+
+const database = new KyselyDbAdapter(db, { config: { provider }, schema });
+```

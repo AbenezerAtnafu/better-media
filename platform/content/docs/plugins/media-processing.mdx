@@ -1,6 +1,199 @@
 ---
 title: Media Processing
-description: Media processing plugin behavior and transformation workflow guidance.
+description: Image thumbnail generation, dimension extraction, and media version tracking.
 ---
 
-This page will document the media processing plugin in detail.
+The media processing plugin runs at the `process:run` phase. It generates derivative images (thumbnails, previews) from the original file using [`sharp`](https://sharp.pixelplumbing.com/), stores each derivative in your storage backend, and records a `media_versions` row per derivative.
+
+## Installation
+
+```bash
+pnpm add @better-media/plugin-media-processing
+# sharp is an optional peer dependency — install it to enable image processing
+pnpm add sharp
+```
+
+## Basic Setup
+
+```typescript
+import { mediaProcessingPlugin } from "@better-media/plugin-media-processing";
+
+const media = createBetterMedia({
+  // ...
+  plugins: [
+    mediaProcessingPlugin({
+      thumbnailPresets: [
+        { name: "sm", width: 320, format: "webp" },
+        { name: "md", width: 768, format: "webp" },
+      ],
+    }),
+  ],
+});
+```
+
+If `sharp` is not installed the plugin emits `{ skipped: "sharp-not-installed" }` metadata and returns without failing the pipeline.
+
+## Execution Mode
+
+```typescript
+mediaProcessingPlugin({
+  executionMode: "background", // default — deferred via job adapter
+  // executionMode: "sync"     — runs inline, blocks the response
+})
+```
+
+Background mode is strongly recommended for image processing — it keeps upload latency low and lets the job worker scale independently.
+
+## Thumbnail Presets
+
+Each preset defines one derivative image. Names must be stable — they are used as part of the storage key.
+
+```typescript
+mediaProcessingPlugin({
+  thumbnailPresets: [
+    { name: "sm",    width: 320,                format: "webp", quality: 80 },
+    { name: "md",    width: 768,                format: "webp", quality: 80 },
+    { name: "lg",    width: 1920,               format: "webp", quality: 85 },
+    { name: "thumb", width: 160, height: 160,   format: "webp", fit: "cover" },
+    { name: "og",    width: 1200, height: 630,  format: "jpeg", fit: "cover", quality: 90 },
+  ],
+})
+```
+
+### Preset Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `name` | `string` | — | Used in the storage key. Must be unique per preset list. |
+| `width` | `number` | — | Max output width in pixels. |
+| `height` | `number` | — | Max output height in pixels. |
+| `format` | `"webp" \| "jpeg" \| "png" \| "avif"` | `"webp"` | Output image format. |
+| `quality` | `number` | `80` | Quality for lossy formats (1–100). |
+| `fit` | `ThumbnailResizeFit` | `"inside"` | How the image is scaled to the target dimensions. |
+
+### Resize Fit Strategies
+
+| `fit` | Behaviour |
+|---|---|
+| `"inside"` | Scale down to fit within `width × height`. Never enlarges. |
+| `"cover"` | Crop to fill exactly `width × height`. |
+| `"contain"` | Letterbox to fit within `width × height`. |
+| `"fill"` | Stretch to exactly `width × height`. |
+| `"outside"` | Scale to cover at least `width × height`. |
+
+## Storage Key Format
+
+Derivatives are stored at:
+
+```
+{derivativePrefix}/{recordId}/thumb-{name}.{ext}
+```
+
+The default `derivativePrefix` is `"versions"`, producing keys like:
+
+```
+versions/01J8XKPZ.../thumb-sm.webp
+versions/01J8XKPZ.../thumb-md.webp
+```
+
+Customise with:
+
+```typescript
+mediaProcessingPlugin({
+  derivativePrefix: "media/derivatives",
+})
+```
+
+## Allowed MIME Types
+
+Only process files whose `mimeType` is in the allowlist. Non-matching files are skipped silently.
+
+```typescript
+mediaProcessingPlugin({
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/tiff",
+    "image/avif",
+  ],
+})
+```
+
+The defaults already cover common raster formats. Override to restrict (e.g. no GIF processing).
+
+## Input Size Limit
+
+Skip processing when the original file is too large to process safely in memory:
+
+```typescript
+mediaProcessingPlugin({
+  maxInputBytes: 25 * 1024 * 1024, // default: 25 MiB
+})
+```
+
+## Media Versions
+
+After each successful `storage.put`, the plugin inserts a row into `media_versions`:
+
+```typescript
+{
+  id: string,
+  mediaId: string,
+  storageKey: string,      // derivative storage key
+  mimeType: string,        // e.g. "image/webp"
+  size: number,            // bytes
+  width: number,
+  height: number,
+  isOriginal: false,
+  type: "thumbnail",
+  versionNumber: number,   // auto-incremented per mediaId
+  createdAt: Date,
+}
+```
+
+Disable if you don't need version tracking:
+
+```typescript
+mediaProcessingPlugin({ persistMediaVersions: false })
+```
+
+## Skipping Existing Derivatives
+
+Re-processing a record skips derivative generation if the storage key already exists:
+
+```typescript
+mediaProcessingPlugin({
+  skipExistingDerivatives: true, // default: true
+})
+```
+
+Set to `false` to force regeneration (e.g. after changing preset dimensions).
+
+## Dynamic Preset Resolution
+
+Merge per-upload metadata into presets at runtime — for example when users provide crop coordinates:
+
+```typescript
+mediaProcessingPlugin({
+  thumbnailPresets: [{ name: "crop", width: 400, height: 400, fit: "cover" }],
+  resolveThumbnailPreset: async (context, preset, index) => {
+    const fit = context.metadata.fit as string;
+    if (fit && ["cover", "contain", "inside"].includes(fit)) {
+      return { ...preset, fit: fit as ThumbnailResizeFit };
+    }
+    return preset;
+  },
+})
+```
+
+Always validate client-provided values before merging into the preset.
+
+## Processing Timeout
+
+```typescript
+mediaProcessingPlugin({
+  timeoutMs: 60_000, // default: 120_000 ms (2 minutes)
+})
+```

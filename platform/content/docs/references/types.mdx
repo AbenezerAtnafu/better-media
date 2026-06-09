@@ -1,6 +1,109 @@
 ---
 title: Types
-description: Important public TypeScript types and contracts.
+description: Types to import when annotating your own code against the Better Media API.
 ---
 
-This page will collect the most important public types and interfaces used across the system.
+All types are exported from `better-media`.
+
+## Upload
+
+### `IngestInput`
+
+The argument to `media.upload.ingest()`.
+
+```typescript
+import type { IngestInput } from "better-media";
+
+const input: IngestInput = {
+  file: { buffer },           // or stream, path, url
+  metadata: { filename: "photo.jpg", mimeType: "image/jpeg" },
+  key: "uploads/photo.jpg",   // optional — auto-generated if omitted
+  deleteAfterUpload: true,    // path-based only, default true
+};
+```
+
+### `MediaFileInput`
+
+The `file` field of `IngestInput`. Provide one variant:
+
+```typescript
+type MediaFileInput =
+  | { buffer: Buffer }
+  | { stream: Readable }
+  | { path: string }
+  | { url: string; mode?: "import" | "reference" };
+```
+
+`"import"` (default) downloads the URL to storage. `"reference"` registers the URL as the storage key without downloading.
+
+### `MediaMetadata`
+
+Caller-supplied metadata attached to an upload. All fields are optional.
+
+```typescript
+type MediaMetadata = {
+  filename?: string;
+  mimeType?: string;
+  size?: number;
+  context?: Record<string, unknown>; // e.g. { userId, tenantId }
+  [key: string]: unknown;            // any extra fields
+};
+```
+
+### `MediaResult`
+
+Returned by all upload methods.
+
+```typescript
+type MediaResult = {
+  id: string;      // database record UUID — use this to reference the file later
+  key: string;     // storage key
+  url?: string;
+  metadata?: MediaMetadata;
+  status: "stored" | "processed";
+};
+```
+
+## Events
+
+Use these when typing your `events` callbacks.
+
+```typescript
+import type { BetterMediaEvents, ProcessingCompleteEvent, ErrorEvent } from "better-media";
+
+const events: BetterMediaEvents = {
+  onUploadComplete: (result: MediaResult) => { /* ... */ },
+  onProcessingComplete: (event: ProcessingCompleteEvent) => { /* ... */ },
+  onError: (error: Error, context: ErrorEvent) => { /* ... */ },
+};
+```
+
+```typescript
+type ProcessingCompleteEvent = { id: string; key: string; pluginName: string };
+type ErrorEvent = { id?: string; key?: string };
+```
+
+## Background Jobs
+
+The only type you need when wiring a worker:
+
+```typescript
+import type { BackgroundJobPayload } from "better-media";
+
+const worker = createBullMQWorker(
+  (payload) => media.runBackgroundJob(payload as BackgroundJobPayload),
+  { connection }
+);
+```
+
+## Plugin Authoring
+
+These are only needed when writing a custom plugin. See [Plugin Architecture](/docs/architecture/plugins) for context.
+
+```typescript
+import type {
+  PipelinePlugin,    // interface your plugin class implements
+  PipelineContext,   // the context object passed to handlers
+  PluginApi,         // the write interface (emitMetadata, emitProcessing)
+} from "@better-media/core";
+```

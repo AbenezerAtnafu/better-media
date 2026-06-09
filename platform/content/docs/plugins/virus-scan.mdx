@@ -1,6 +1,192 @@
 ---
 title: Virus Scan
-description: Virus scanning plugin behavior, scanners, and security workflow guidance.
+description: Malware detection plugin with ClamAV and VirusTotal scanner backends.
 ---
 
-This page will document the virus scan plugin in detail.
+The virus scan plugin runs at the `scan:run` phase. It scans the file bytes with a configured scanner, persists the result to `media_virus_scan_results`, and can abort the pipeline when a threat is detected.
+
+## Installation
+
+```bash
+pnpm add @better-media/plugin-virus-scan
+```
+
+Install the scanner package that matches your chosen backend:
+
+```bash
+# ClamAV (local daemon)
+pnpm add clamscan
+
+# VirusTotal (cloud API) — no extra package needed, uses native fetch
+```
+
+## Basic Setup
+
+```typescript
+import { virusScanPlugin, ClamScanner } from "@better-media/plugin-virus-scan";
+
+const media = createBetterMedia({
+  // ...
+  plugins: [
+    virusScanPlugin({
+      scanner: new ClamScanner(),
+      executionMode: "sync",
+      onFailure: "abort",
+    }),
+  ],
+});
+```
+
+## Execution Mode
+
+```typescript
+virusScanPlugin({
+  executionMode: "sync",       // runs inline — can block infected files
+  // executionMode: "background" // default — deferred via job adapter
+})
+```
+
+Use `"sync"` to abort infected files before they complete the pipeline. Use `"background"` when scans are too slow for the upload response time budget (e.g. VirusTotal polling).
+
+## Failure Handling
+
+```typescript
+virusScanPlugin({
+  onFailure: "abort",    // default — stop pipeline on detection
+  // onFailure: "continue" — record to DB, let pipeline proceed
+  // onFailure: "custom"  — invoke onFailureCallback
+})
+```
+
+```typescript
+virusScanPlugin({
+  onFailure: "custom",
+  onFailureCallback: async (fileKey, viruses) => {
+    await quarantine(fileKey);
+    await alertSecurityTeam(viruses);
+    return { valid: false, message: `Threat detected: ${viruses.join(", ")}` };
+  },
+})
+```
+
+## ClamAV Scanner
+
+Requires a running ClamAV daemon (`clamd`). The `clamscan` npm package wraps the daemon socket.
+
+```typescript
+import { ClamScanner } from "@better-media/plugin-virus-scan";
+
+const scanner = new ClamScanner({
+  clamdscan: {
+    host: "127.0.0.1",  // default
+    port: 3310,          // default
+    // socket: "/var/run/clamav/clamd.ctl", // Unix socket (faster, overrides host/port)
+    timeout: 5000,       // connection timeout ms
+  },
+  removeInfected: false,        // default — do not auto-delete files
+  quarantinePath: "/tmp/quarantine", // move infected files here (optional)
+  debugMode: false,
+});
+
+virusScanPlugin({ scanner, executionMode: "sync" })
+```
+
+### ClamAV Setup
+
+Install ClamAV and start the daemon:
+
+```bash
+# macOS
+brew install clamav
+freshclam          # update signatures
+clamd              # start daemon
+
+# Ubuntu / Debian
+apt-get install clamav clamav-daemon
+freshclam
+service clamav-daemon start
+```
+
+## VirusTotal Scanner
+
+Submits the file to VirusTotal's API v3 and polls until analysis completes. Requires a VirusTotal API key.
+
+```typescript
+import { VirusTotalScanner } from "@better-media/plugin-virus-scan";
+
+const scanner = new VirusTotalScanner({
+  apiKey: process.env.VIRUSTOTAL_API_KEY!,
+  pollingTimeoutMs: 120_000,  // default: 2 minutes
+  pollingIntervalMs: 5_000,   // default: 5 seconds
+});
+
+virusScanPlugin({
+  scanner,
+  executionMode: "background", // recommended — polling takes time
+})
+```
+
+Files larger than 32 MB are uploaded via a special VirusTotal upload URL automatically.
+
+## Custom Scanner
+
+Implement the `VirusScanner` interface to use any backend:
+
+```typescript
+import type { VirusScanner, ScanResult } from "@better-media/plugin-virus-scan";
+
+class MyScanner implements VirusScanner {
+  readonly name = "my-scanner";
+
+  async init(): Promise<void> {
+    // connect to daemon / warm up SDK
+  }
+
+  async scanBuffer(buffer: Buffer): Promise<ScanResult> {
+    const result = await myApi.scan(buffer);
+    return { infected: result.isInfected, viruses: result.threats };
+  }
+
+  async scanFile(filePath: string): Promise<ScanResult> {
+    const result = await myApi.scanFile(filePath);
+    return { infected: result.isInfected, viruses: result.threats };
+  }
+}
+
+virusScanPlugin({ scanner: new MyScanner() })
+```
+
+## Retry Configuration
+
+Handle transient scanner failures (daemon restarts, network blips):
+
+```typescript
+virusScanPlugin({
+  retryOptions: {
+    maxAttempts: 3,        // default
+    delayMs: 1000,         // default
+    backoff: "exponential", // default — delays: 1s, 2s, 4s
+    // backoff: "linear"   — delays: 1s, 2s, 3s
+  },
+  scanTimeoutMs: 30_000,  // per-attempt timeout (default: 30s)
+})
+```
+
+If all retries fail, the plugin returns `{ valid: false }` — the pipeline is aborted. The scanner failure is treated as an unknown result: never assume a failed scan means clean.
+
+## Scan Results
+
+Every scan is persisted to `media_virus_scan_results`:
+
+```typescript
+{
+  mediaId: string,
+  status: "clean" | "infected" | "error",
+  threats: string[],           // e.g. ["Win.Trojan.Agent-123"]
+  scanner: string,             // e.g. "clamav", "virustotal"
+  metadata: { durationMs: number },
+  createdAt: Date,
+}
+```
+
+Re-scans for the same `mediaId` update the existing row.

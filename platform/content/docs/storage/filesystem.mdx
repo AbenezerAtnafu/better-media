@@ -1,6 +1,89 @@
 ---
 title: Filesystem
-description: Local filesystem storage for development and simple deployments.
+description: Local filesystem storage for development and single-node deployments.
 ---
 
-This page will document the filesystem storage adapter and its best-fit use cases.
+The filesystem adapter stores files on disk under a configurable base directory. It is a good fit for local development, self-hosted single-server setups, and CI environments. For distributed or cloud deployments, use the [S3 adapter](/docs/storage/s3) instead.
+
+## Installation
+
+```bash
+pnpm add @better-media/adapter-storage-filesystem
+```
+
+## Configuration
+
+```typescript
+import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
+
+const storage = new FileSystemStorageAdapter({
+  baseDir: "./uploads", // resolved to an absolute path at construction time
+});
+```
+
+The `baseDir` directory is created automatically on first write (via `mkdir -p`). Relative paths are resolved from the current working directory.
+
+## Path Traversal Protection
+
+Keys are resolved relative to `baseDir` and validated before any file operation. Attempting to escape the base directory throws immediately:
+
+```typescript
+await storage.get("../../etc/passwd");
+// throws: Storage key resolves outside base directory
+```
+
+This makes the adapter safe to use with untrusted or user-provided key names.
+
+## Supported Operations
+
+| Method | Description |
+|---|---|
+| `get(key)` | Read file as `Buffer`. Returns `null` if the key does not exist. |
+| `put(key, buffer)` | Write file. Creates intermediate directories as needed. |
+| `delete(key)` | Remove file. Silent no-op if the key does not exist. |
+| `exists(key)` | Returns `true` if the file exists. |
+| `getSize(key)` | Returns file size in bytes, or `null` if not found. |
+| `getStream(key)` | Returns a `ReadableStream`, or `null` if not found. Used by the framework for large-file streaming to avoid loading the full file into memory. |
+
+## Large File Streaming
+
+When `fileHandling.maxBufferBytes` is set on the runtime, the framework calls `getStream()` instead of `get()` for files above that threshold. The filesystem adapter supports this natively — files are streamed to a temp file on disk rather than being loaded into the Node.js heap.
+
+```typescript
+const media = createBetterMedia({
+  storage: new FileSystemStorageAdapter({ baseDir: "./uploads" }),
+  fileHandling: {
+    maxBufferBytes: 50 * 1024 * 1024, // buffer files up to 50 MB; stream larger ones
+  },
+  // ...
+});
+```
+
+## Usage with Multer
+
+If you use Multer for form-based uploads, point both adapters at the same directory — or copy Multer's temp file into the Better Media storage key:
+
+```typescript
+import multer from "multer";
+import fs from "node:fs/promises";
+
+const upload = multer({ dest: "./tmp" });
+
+app.post("/upload", upload.single("file"), async (req, res) => {
+  const tmpPath = req.file!.path;
+  const buffer = await fs.readFile(tmpPath);
+  await fs.unlink(tmpPath);
+
+  const result = await media.upload.ingest({
+    file: { buffer, filename: req.file!.originalname },
+  });
+
+  res.json(result);
+});
+```
+
+## Limitations
+
+- **Single node only.** All replicas must share the same filesystem (e.g. an NFS mount or EBS volume) to avoid `null` reads across nodes.
+- **No presigned URLs.** `createPresignedUpload` is not implemented. Use the [S3 adapter](/docs/storage/s3) if you need client-side direct uploads.
+- **No atomic moves.** `storage.move` falls back to copy + delete; there is no native rename across directories.
