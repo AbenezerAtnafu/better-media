@@ -53,7 +53,7 @@ export function Navbar() {
             <Link
               key={label}
               href={href}
-              className="px-3 py-1.5 text-xs font-semibold tracking-tight text-zinc-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-all duration-150"
+              className="px-3 py-1.5 text-xs font-semibold tracking-tight text-zinc-400 hover:text-white hover:bg-white/6 rounded-md transition-all duration-150"
             >
               {label}
             </Link>
@@ -64,7 +64,7 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <Link
             href="https://github.com/abenezeratnafu/better-media"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold tracking-tight text-zinc-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-all duration-150"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold tracking-tight text-zinc-400 hover:text-white hover:bg-white/6 rounded-md transition-all duration-150"
             rel="noopener noreferrer"
             target="_blank"
           >
