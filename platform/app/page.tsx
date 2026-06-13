@@ -5,6 +5,7 @@ import { Infrastructure } from "@/components/landing/Infrastructure";
 import { FrameworkSupport } from "@/components/landing/FrameworkSupport";
 import { PluginsGallery } from "@/components/landing/PluginsGallery";
 import { QuickStart } from "@/components/landing/QuickStart";
+import { BlogSection } from "@/components/landing/BlogSection";
 import { Contributors } from "@/components/landing/Contributors";
 import { Footer } from "@/components/landing/Footer";
 import { Navbar } from "@/components/landing/Navbar";
@@ -22,6 +23,7 @@ export default function HomePage() {
         <Architecture />
         <Infrastructure />
         <PluginsGallery />
+        <BlogSection />
         <Contributors />
       </main>
       <Footer />
