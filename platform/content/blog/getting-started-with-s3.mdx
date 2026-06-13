@@ -1,0 +1,107 @@
+---
+title: "Getting Started with S3 Storage"
+description: "A step-by-step guide to wiring up the Better Media S3 adapter in an Express app, including presigned URL uploads."
+date: "2026-06-10"
+author: "Better Media"
+tags: ["tutorial"]
+readingTime: 8
+image: "/blog/getting-started-s3.svg"
+---
+
+The S3 adapter is the most commonly used storage backend in Better Media. This guide walks through a complete setup — from installing dependencies to handling a file upload in production.
+
+## Prerequisites
+
+- An AWS account with an S3 bucket
+- Node.js 18+
+- An Express app (or any Node.js HTTP server)
+
+## Install
+
+```bash
+npm install better-media @better-media/adapter-s3
+```
+
+You'll also need to configure AWS credentials. Better Media uses the AWS SDK v3 under the hood, which picks up credentials from environment variables, `~/.aws/credentials`, or an IAM role automatically.
+
+## Configure the adapter
+
+```ts
+import { createBetterMedia } from "better-media";
+import { s3Adapter } from "@better-media/adapter-s3";
+
+export const media = createBetterMedia({
+  storage: s3Adapter({
+    bucket: process.env.S3_BUCKET!,
+    region: process.env.AWS_REGION ?? "us-east-1",
+    // Optional: path prefix for all uploaded files
+    prefix: "uploads/",
+  }),
+});
+```
+
+## Handle an upload in Express
+
+```ts
+import express from "express";
+import { media } from "./media";
+
+const app = express();
+
+app.post("/upload", async (req, res) => {
+  const file = await media.upload(req, {
+    allowedTypes: ["image/jpeg", "image/png", "image/webp"],
+    maxSize: 10 * 1024 * 1024, // 10MB
+  });
+
+  res.json({ url: file.url, key: file.key });
+});
+```
+
+Better Media parses the multipart body, validates the file type and size, uploads to S3, and returns the file metadata. No manual stream handling required.
+
+## Upload flow
+
+![S3 upload flow with Better Media](/blog/getting-started-s3.svg)
+
+## Presigned URLs
+
+For large files, uploading through your server wastes bandwidth. Presigned URLs let clients upload directly to S3. Better Media generates them in one line:
+
+```ts
+app.post("/upload-url", async (req, res) => {
+  const { url, key } = await media.presign({
+    filename: req.body.filename,
+    contentType: req.body.contentType,
+    expiresIn: 300, // 5 minutes
+  });
+
+  res.json({ url, key });
+});
+```
+
+The client uses the `url` to PUT the file directly to S3. After the upload completes, the client notifies your server with the `key` to store in your database.
+
+## Handling metadata
+
+Better Media doesn't force you to use a specific database, but it does provide adapters for tracking upload metadata. Here's the MongoDB adapter:
+
+```ts
+import { mongoAdapter } from "@better-media/adapter-mongodb";
+
+export const media = createBetterMedia({
+  storage: s3Adapter({ bucket: process.env.S3_BUCKET! }),
+  database: mongoAdapter({
+    uri: process.env.MONGODB_URI!,
+    collection: "media",
+  }),
+});
+```
+
+With a database adapter configured, `media.upload()` automatically persists metadata and returns a record with an `id` you can reference later.
+
+## Next steps
+
+- Add the [validation plugin](/docs/plugins/validation) to reject invalid files before upload
+- Add the [virus scan plugin](/docs/plugins) to scan user uploads before serving them
+- See the [full S3 adapter reference](/docs/storage) for all configuration options

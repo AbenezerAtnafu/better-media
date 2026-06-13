@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="g1" cx="15%" cy="15%" r="70%">
+      <stop offset="0%" stop-color="rgba(59,130,246,0.18)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="90%" cy="85%" r="50%">
+      <stop offset="0%" stop-color="rgba(139,92,246,0.1)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.04)"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="#09090b"/>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+  <rect width="1200" height="630" fill="url(#g1)"/>
+  <rect width="1200" height="630" fill="url(#g2)"/>
+
+  <!-- Top-left label -->
+  <text x="64" y="80" font-family="monospace" font-size="13" font-weight="700" fill="rgba(255,255,255,0.25)" letter-spacing="4">RELEASE</text>
+
+  <!-- Version badge -->
+  <rect x="64" y="220" width="120" height="36" rx="6" fill="rgba(59,130,246,0.12)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+  <text x="124" y="243" font-family="monospace" font-size="13" font-weight="700" fill="#60a5fa" text-anchor="middle" letter-spacing="2">v1.0</text>
+
+  <!-- Headline -->
+  <text x="64" y="320" font-family="system-ui, sans-serif" font-size="56" font-weight="700" fill="#ffffff" letter-spacing="-1.5">Introducing</text>
+  <text x="64" y="390" font-family="system-ui, sans-serif" font-size="56" font-weight="700" fill="#ffffff" letter-spacing="-1.5">Better Media 1.0</text>
+
+  <!-- Subline -->
+  <text x="64" y="450" font-family="system-ui, sans-serif" font-size="22" fill="rgba(255,255,255,0.4)">The first stable release of the modular media pipeline.</text>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="590" width="1200" height="40" fill="rgba(255,255,255,0.02)"/>
+  <text x="64" y="616" font-family="monospace" font-size="12" fill="rgba(255,255,255,0.2)" letter-spacing="2">BETTER MEDIA BLOG</text>
+  <text x="1136" y="616" font-family="monospace" font-size="12" fill="rgba(255,255,255,0.2)" text-anchor="end">2026</text>
+
+  <!-- Decorative ring -->
+  <circle cx="1050" cy="300" r="180" fill="none" stroke="rgba(59,130,246,0.08)" stroke-width="1"/>
+  <circle cx="1050" cy="300" r="120" fill="none" stroke="rgba(59,130,246,0.06)" stroke-width="1"/>
+  <circle cx="1050" cy="300" r="60" fill="rgba(59,130,246,0.05)" stroke="rgba(59,130,246,0.12)" stroke-width="1"/>
+  <circle cx="1050" cy="300" r="8" fill="rgba(59,130,246,0.4)"/>
+</svg>

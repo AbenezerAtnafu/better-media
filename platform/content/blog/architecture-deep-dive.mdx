@@ -1,0 +1,111 @@
+---
+title: "How Better Media's Plugin System Works"
+description: "An inside look at the composable plugin architecture that powers Better Media — how plugins are defined, ordered, and executed in the upload pipeline."
+date: "2026-06-08"
+author: "Better Media"
+tags: ["engineering"]
+readingTime: 7
+image: "/blog/architecture-deep-dive.svg"
+---
+
+One of the core design goals of Better Media was to make the upload pipeline composable. You should be able to add validation, image processing, or virus scanning without touching the core upload logic. Here's how the plugin system makes that possible.
+
+## The pipeline model
+
+Every upload in Better Media passes through a pipeline of plugins. Plugins run in the order they're declared, and each one can transform the file, add metadata, or abort the upload entirely.
+
+```ts
+const media = createBetterMedia({
+  storage: s3Adapter({ bucket: process.env.S3_BUCKET! }),
+  plugins: [
+    validationPlugin({ maxSize: 10 * 1024 * 1024 }),
+    imagePlugin({ resize: { width: 1200 } }),
+    virusScanPlugin({ apiKey: process.env.CLAMAV_KEY! }),
+  ],
+});
+```
+
+The pipeline runs left to right. If `validationPlugin` rejects the file, `imagePlugin` never runs.
+
+## Pipeline visualization
+
+![Better Media plugin pipeline diagram](/blog/architecture-deep-dive.svg)
+
+## Plugin anatomy
+
+A plugin is a function that returns a `Plugin` object with lifecycle hooks:
+
+```ts
+import { definePlugin } from "better-media";
+
+export const myPlugin = definePlugin(() => ({
+  name: "my-plugin",
+
+  // Runs before the file is written to storage
+  async beforeUpload(ctx) {
+    if (ctx.file.size > 5_000_000) {
+      ctx.reject("File too large");
+    }
+  },
+
+  // Runs after the file is written to storage
+  async afterUpload(ctx) {
+    console.log(`Uploaded: ${ctx.file.key}`);
+  },
+}));
+```
+
+The `ctx` (context) object gives plugins access to the file, the storage adapter, the request, and any metadata accumulated by previous plugins in the chain.
+
+## Context mutation
+
+Plugins can add to the metadata object that gets persisted to the database:
+
+```ts
+async afterUpload(ctx) {
+  ctx.metadata.dimensions = await getImageDimensions(ctx.file);
+  ctx.metadata.blurhash = await computeBlurhash(ctx.file);
+}
+```
+
+These fields end up in the upload record when you retrieve it later. Each plugin owns its own namespace in the metadata object to avoid conflicts.
+
+## Error handling
+
+Plugins throw to abort the pipeline. Better Media catches these and translates them into structured HTTP responses:
+
+```ts
+async beforeUpload(ctx) {
+  const result = await scanFile(ctx.file.buffer);
+  if (result.infected) {
+    throw new PluginError("VIRUS_DETECTED", "File failed virus scan");
+  }
+}
+```
+
+The error code is included in the response body so clients can handle specific failure modes.
+
+## Why not middleware?
+
+We considered modeling plugins as HTTP middleware (like Express middleware). The problem is that middleware operates on the request, not the file. By the time a middleware runs, the file might not be parsed yet. Better Media's plugin system operates on the parsed file, which gives plugins a clean, consistent API regardless of how the file arrived (multipart upload, presigned URL callback, etc.).
+
+## Performance
+
+Plugins run sequentially by default, but the pipeline supports parallel execution for independent operations:
+
+```ts
+plugins: [
+  validationPlugin({ maxSize: 10 * 1024 * 1024 }),
+  parallel([
+    imagePlugin({ resize: { width: 1200 } }),
+    blurhashPlugin(),
+  ]),
+  virusScanPlugin({ apiKey: process.env.CLAMAV_KEY! }),
+]
+```
+
+`parallel()` runs the wrapped plugins concurrently and waits for all of them before proceeding. Validation runs first (it's fast and rejects invalid files early), then image processing and blurhash run in parallel, then the virus scan runs last.
+
+## What's coming
+
+We're working on a plugin registry — a public directory of community-built plugins with type-safe configuration schemas. If you've built a plugin you want to share, reach out on GitHub.

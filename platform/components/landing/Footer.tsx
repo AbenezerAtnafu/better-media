@@ -45,6 +45,11 @@ export function Footer() {
                   Architecture
                 </Link>
               </li>
+              <li>
+                <Link className="hover:text-white transition-colors" href="/blog">
+                  Blog
+                </Link>
+              </li>
             </ul>
           </div>
           <div>

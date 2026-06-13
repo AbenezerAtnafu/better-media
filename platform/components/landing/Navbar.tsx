@@ -47,6 +47,7 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-0.5">
           {[
             { label: "Docs", href: "/docs" },
+            { label: "Blog", href: "/blog" },
             { label: "Plugins", href: "/docs/plugins/validation" },
             { label: "Architecture", href: "/docs/architecture" },
           ].map(({ label, href }) => (
