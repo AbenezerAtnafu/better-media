@@ -1,0 +1,55 @@
+---
+title: "Introducing Better Media 1.0"
+description: "Today we're shipping the first stable release of Better Media — a modular, storage-agnostic media pipeline for modern backends."
+date: "2026-06-13"
+author: "Better Media"
+tags: ["release"]
+readingTime: 4
+image: "/blog/introducing-v1.svg"
+---
+
+After months of internal use and iteration, we're ready to call it stable. Better Media 1.0 is a production-ready media toolkit you can drop into any Node.js backend — Express, Next.js, NestJS, or anything else.
+
+## What is Better Media?
+
+Better Media is a framework-agnostic library for handling file uploads, storage, and processing in Node.js backends. It handles the boring parts — multipart parsing, presigned URLs, virus scanning, image transformation — so you can focus on your product.
+
+```ts
+import { createBetterMedia } from "better-media";
+import { s3Adapter } from "@better-media/adapter-s3";
+
+const media = createBetterMedia({
+  storage: s3Adapter({
+    bucket: process.env.S3_BUCKET!,
+    region: "us-east-1",
+  }),
+});
+```
+
+That's all you need to get started. The adapter handles the rest.
+
+## What's in 1.0
+
+- **Storage adapters** — S3, Google Cloud Storage, filesystem, and in-memory (for tests)
+- **Database adapters** — MongoDB and PostgreSQL for tracking upload metadata
+- **Plugin system** — composable plugins for validation, image processing, and virus scanning
+- **Presigned URLs** — secure direct-to-storage uploads without your server as a proxy
+- **Type-safe** — full TypeScript support with inferred types from your configuration
+
+## Why we built it
+
+Every project we worked on needed the same thing: a reliable way to handle user uploads with validation, storage, and metadata tracking. We kept copying the same code between projects. Better Media is what we wish had existed.
+
+## Package overview
+
+![Better Media 1.0 package structure](/blog/introducing-v1.svg)
+
+## What's next
+
+Version 1.1 is already in progress. We're working on:
+
+- Video transcoding plugin
+- Cloudflare R2 adapter
+- Webhook support for async processing
+
+Follow the [changelog](/blog) for updates, or star the project on GitHub.

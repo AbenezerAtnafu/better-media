@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="g1" cx="80%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="rgba(139,92,246,0.18)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="10%" cy="90%" r="50%">
+      <stop offset="0%" stop-color="rgba(59,130,246,0.08)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="rgba(255,255,255,0.04)"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="#09090b"/>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+  <rect width="1200" height="630" fill="url(#g1)"/>
+  <rect width="1200" height="630" fill="url(#g2)"/>
+
+  <!-- Top-left label -->
+  <text x="64" y="80" font-family="monospace" font-size="13" font-weight="700" fill="rgba(255,255,255,0.25)" letter-spacing="4">ENGINEERING</text>
+
+  <!-- Tag badge -->
+  <rect x="64" y="220" width="148" height="36" rx="6" fill="rgba(139,92,246,0.1)" stroke="rgba(139,92,246,0.25)" stroke-width="1"/>
+  <text x="138" y="243" font-family="monospace" font-size="13" font-weight="700" fill="#a78bfa" text-anchor="middle" letter-spacing="1">PLUGIN SYSTEM</text>
+
+  <!-- Headline -->
+  <text x="64" y="320" font-family="system-ui, sans-serif" font-size="52" font-weight="700" fill="#ffffff" letter-spacing="-1.5">How the Plugin</text>
+  <text x="64" y="385" font-family="system-ui, sans-serif" font-size="52" font-weight="700" fill="#ffffff" letter-spacing="-1.5">System Works</text>
+
+  <!-- Subline -->
+  <text x="64" y="450" font-family="system-ui, sans-serif" font-size="22" fill="rgba(255,255,255,0.4)">An inside look at the composable upload pipeline.</text>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="590" width="1200" height="40" fill="rgba(255,255,255,0.02)"/>
+  <text x="64" y="616" font-family="monospace" font-size="12" fill="rgba(255,255,255,0.2)" letter-spacing="2">BETTER MEDIA BLOG</text>
+  <text x="1136" y="616" font-family="monospace" font-size="12" fill="rgba(255,255,255,0.2)" text-anchor="end">2026</text>
+
+  <!-- Decorative: pipeline nodes -->
+  <circle cx="960" cy="220" r="28" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.2)" stroke-width="1"/>
+  <line x1="988" y1="220" x2="1022" y2="220" stroke="rgba(139,92,246,0.15)" stroke-width="1" stroke-dasharray="4,3"/>
+  <circle cx="1050" cy="220" r="28" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.2)" stroke-width="1"/>
+  <line x1="1078" y1="220" x2="1112" y2="220" stroke="rgba(139,92,246,0.15)" stroke-width="1" stroke-dasharray="4,3"/>
+  <circle cx="1140" cy="220" r="28" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.2)" stroke-width="1"/>
+
+  <line x1="1050" y1="248" x2="1050" y2="282" stroke="rgba(139,92,246,0.1)" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <circle cx="960" cy="310" r="28" fill="rgba(139,92,246,0.05)" stroke="rgba(139,92,246,0.15)" stroke-width="1"/>
+  <line x1="988" y1="310" x2="1022" y2="310" stroke="rgba(139,92,246,0.1)" stroke-width="1" stroke-dasharray="4,3"/>
+  <circle cx="1050" cy="310" r="28" fill="rgba(139,92,246,0.12)" stroke="rgba(139,92,246,0.3)" stroke-width="1"/>
+  <line x1="1078" y1="310" x2="1112" y2="310" stroke="rgba(139,92,246,0.1)" stroke-width="1" stroke-dasharray="4,3"/>
+  <circle cx="1140" cy="310" r="28" fill="rgba(139,92,246,0.05)" stroke="rgba(139,92,246,0.15)" stroke-width="1"/>
+
+  <line x1="1050" y1="338" x2="1050" y2="372" stroke="rgba(139,92,246,0.1)" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <circle cx="960" cy="400" r="28" fill="rgba(139,92,246,0.03)" stroke="rgba(139,92,246,0.1)" stroke-width="1"/>
+  <line x1="988" y1="400" x2="1022" y2="400" stroke="rgba(139,92,246,0.08)" stroke-width="1" stroke-dasharray="4,3"/>
+  <circle cx="1050" cy="400" r="28" fill="rgba(139,92,246,0.05)" stroke="rgba(139,92,246,0.12)" stroke-width="1"/>
+  <line x1="1078" y1="400" x2="1112" y2="400" stroke="rgba(139,92,246,0.08)" stroke-width="1" stroke-dasharray="4,3"/>
+  <circle cx="1140" cy="400" r="28" fill="rgba(139,92,246,0.03)" stroke="rgba(139,92,246,0.1)" stroke-width="1"/>
+</svg>

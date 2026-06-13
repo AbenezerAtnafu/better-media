@@ -154,6 +154,94 @@
   background-size: 40px 40px;
 }
 
+/* Blog editorial prose */
+.blog-prose {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  color: #e2e8f0;
+}
+
+.blog-prose p {
+  margin-bottom: 1.5rem;
+}
+
+.blog-prose h2 {
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin: 2.5rem 0 1rem;
+}
+
+.blog-prose h3 {
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin: 2rem 0 0.75rem;
+}
+
+.blog-prose ul,
+.blog-prose ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.blog-prose li {
+  margin-bottom: 0.5rem;
+}
+
+.blog-prose ul {
+  list-style-type: disc;
+}
+
+.blog-prose ol {
+  list-style-type: decimal;
+}
+
+.blog-prose :where(code):not(:where(pre *)) {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.blog-prose pre {
+  border-radius: 8px;
+  margin: 1.75rem 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.blog-prose a {
+  color: #3b82f6;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.blog-prose a:hover {
+  color: #60a5fa;
+}
+
+.blog-prose blockquote {
+  border-left: 2px solid rgba(59, 130, 246, 0.4);
+  padding-left: 1.25rem;
+  color: #a1a1aa;
+  margin: 1.5rem 0;
+  font-style: italic;
+}
+
+.blog-prose hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 2.5rem 0;
+}
+
 /* Right-hand table of contents: clearer vertical guide (Fumadocs “clerk”-style built-in is `tableOfContent={{ style: "clerk" }}` on `DocsPage` in fumadocs-ui ≥ 14; we enhance the default v12 rail here) */
 @media (min-width: 1024px) {
   .dark [data-toc] .border-s-2 {
