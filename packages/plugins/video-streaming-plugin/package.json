@@ -1,0 +1,62 @@
+{
+  "name": "@better-media/plugin-video-streaming",
+  "version": "0.5.0",
+  "description": "Video streaming plugin for Better Media pipeline — HLS/DASH adaptive bitrate transcoding",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@better-media/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "fluent-ffmpeg": ">=2.1.0"
+  },
+  "peerDependenciesMeta": {
+    "fluent-ffmpeg": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@better-media/adapter-db-memory": "workspace:*",
+    "@better-media/adapter-storage-memory": "workspace:*",
+    "@types/fluent-ffmpeg": "^2.1.27",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "tsup": "^8.5.1"
+  },
+  "keywords": [],
+  "author": "Abenezer Atnafu",
+  "license": "MIT",
+  "packageManager": "pnpm@10.25.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbenezerAtnafu/better-media.git"
+  },
+  "homepage": "https://better-media.dev/",
+  "bugs": {
+    "url": "https://github.com/AbenezerAtnafu/better-media/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

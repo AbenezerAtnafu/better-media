@@ -19,6 +19,15 @@ import type { FileHandlingConfig } from "./core/file-loader";
 import { toDatabaseAdapter } from "./db/postgres";
 import type { PresignedUploadOptions } from "@better-media/core";
 import { safeEmit } from "./events/webhook-emitter";
+import { getPlaybackUrl, getVariants } from "./stream/stream-helpers";
+export { createStreamingRouter } from "./stream/streaming-router";
+export type {
+  PlaybackUrl,
+  PlaybackUrlOptions,
+  StreamingVariant,
+  StreamingFormat,
+  StreamingRouterOptions,
+} from "./stream/stream.interface";
 
 function createNoopJobAdapter(): JobAdapter {
   return {
@@ -379,6 +388,16 @@ export function createBetterMedia(config: BetterMediaConfig): BetterMediaRuntime
         }
         await database.deleteMany({ model: "media", where: [] });
       },
+    },
+    stream: {
+      getPlaybackUrl: (
+        recordId: string,
+        opts?: import("./stream/stream.interface").PlaybackUrlOptions
+      ) => getPlaybackUrl(database, storage, recordId, opts),
+      getVariants: (
+        recordId: string,
+        opts?: Pick<import("./stream/stream.interface").PlaybackUrlOptions, "expiresIn">
+      ) => getVariants(database, storage, recordId, opts),
     },
     async runBackgroundJob(payload: BackgroundJobPayload) {
       try {
