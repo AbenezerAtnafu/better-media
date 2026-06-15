@@ -4,6 +4,7 @@ import type {
   PresignedUploadResult,
 } from "@better-media/core";
 import type { BackgroundJobPayload } from "../core/lifecycle-engine";
+import type { PlaybackUrl, PlaybackUrlOptions, StreamingVariant } from "../stream/stream.interface";
 
 import type { Readable } from "node:stream";
 
@@ -99,6 +100,34 @@ export interface BetterMediaRuntime {
     checkConnection(): Promise<boolean>;
     /** Dev-only logic: Hard wipes both the storage bucket and DB records */
     clearStorage(): Promise<void>;
+  };
+
+  /** Streaming delivery helpers — resolve playback URLs and proxy segments. */
+  stream: {
+    /**
+     * Get the playback URL for a media record's master playlist or progressive file.
+     * Returns null if no streaming version has been processed yet.
+     * Requires the storage adapter to support getUrl() (S3, GCS, etc.).
+     * For private storage without public URLs, use createStreamingRouter() instead.
+     *
+     * @example
+     * const result = await media.stream.getPlaybackUrl(recordId, { format: "hls" });
+     * res.json({ playbackUrl: result?.url });
+     */
+    getPlaybackUrl(recordId: string, options?: PlaybackUrlOptions): Promise<PlaybackUrl | null>;
+
+    /**
+     * List all streaming variants (HLS, DASH, progressive) for a media record.
+     * Useful for building a quality picker UI or checking processing status.
+     *
+     * @example
+     * const variants = await media.stream.getVariants(recordId);
+     * // [{ format: "hls", masterKey: "streaming/abc/hls/master.m3u8", url: "https://..." }]
+     */
+    getVariants(
+      recordId: string,
+      options?: Pick<PlaybackUrlOptions, "expiresIn">
+    ): Promise<StreamingVariant[]>;
   };
 
   /** Execute background job (call from worker). */
