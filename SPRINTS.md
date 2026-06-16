@@ -91,7 +91,7 @@ Many projects use Firebase / GCP. S3 + filesystem doesn't cover them.
 - [x] Support: `get`, `put`, `delete`, `exists`, `getSize`, `getStream`, `move`, `copy`, `deleteMany`, `list`
 - [x] Implement `createPresignedUpload()` for both PUT (signed URL) and POST (signed policy)
 - [x] `GCSStorageAdapterOptions`: `bucket`, `keyFilename | credentials`, `projectId`, `basePrefix`
-- [~] Write integration tests (GCS emulator or real bucket with test credentials)
+- [x] Write integration tests (GCS emulator or real bucket with test credentials)
 
 **Acceptance criteria:**
 
@@ -106,18 +106,18 @@ The media processing plugin is Sharp-only (images). Video is a primary use case.
 
 **Tasks:**
 
-- [ ] Create `packages/plugins/video-processing-plugin/` package
-- [ ] Tap `process:run` lifecycle hook
-- [ ] Options:
+- [x] Create `packages/plugins/video-processing-plugin/` package
+- [x] Tap `process:run` lifecycle hook
+- [x] Options:
   - `thumbnails`: extract frame(s) at timestamp or percentage (`{at: "10%", format: "webp", width: 320}`)
   - `transcode`: output presets (`{name, format: "mp4"|"webm", codec, bitrate, resolution}`)
   - `allowedMimeTypes`: whitelist (default: `video/mp4`, `video/webm`, `video/quicktime`, etc.)
   - `maxInputBytes`: skip threshold
   - `ffmpegPath`: override binary location
-- [ ] Use `fluent-ffmpeg` as optional peer dependency
-- [ ] Store video thumbnails as `media_versions` rows (same table as image plugin)
-- [ ] Emit duration, codec, resolution, framerate to trusted metadata
-- [ ] Write tests with fixture video files
+- [x] Use `fluent-ffmpeg` as optional peer dependency
+- [x] Store video thumbnails as `media_versions` rows (same table as image plugin)
+- [x] Emit duration, codec, resolution, framerate to trusted metadata
+- [x] Write tests with fixture video files
 
 **Acceptance criteria:**
 
