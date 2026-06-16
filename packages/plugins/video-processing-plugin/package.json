@@ -1,7 +1,7 @@
 {
-  "name": "@better-media/adapter-storage-gcs",
-  "version": "0.3.0",
-  "description": "Google Cloud Storage adapter for Better Media",
+  "name": "@better-media/plugin-video-processing",
+  "version": "0.1.0",
+  "description": "Video processing plugin for Better Media — thumbnail extraction, transcoding, and metadata via ffmpeg",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -17,23 +17,38 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "jest --testPathIgnorePatterns=integration",
-    "test:integration": "jest --testPathPattern=integration"
+    "test": "jest"
   },
   "files": [
     "dist",
     "README.md"
   ],
   "dependencies": {
-    "@better-media/core": "workspace:*",
-    "@google-cloud/storage": "^7.21.0"
+    "@better-media/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "fluent-ffmpeg": ">=2.1.0"
+  },
+  "peerDependenciesMeta": {
+    "fluent-ffmpeg": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.27",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "tsup": "^8.5.1"
   },
   "keywords": [
     "better-media",
-    "storage",
-    "gcs",
-    "google-cloud",
-    "adapter"
+    "video",
+    "ffmpeg",
+    "thumbnail",
+    "transcode",
+    "plugin"
   ],
   "author": "Abenezer Atnafu",
   "license": "MIT",
