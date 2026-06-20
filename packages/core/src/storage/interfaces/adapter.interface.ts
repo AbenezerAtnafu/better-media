@@ -1,3 +1,9 @@
+/** Options for a direct put (server-side upload). */
+export interface StoragePutOptions {
+  /** MIME type to set on the stored object (e.g. "application/x-mpegURL" for .m3u8). */
+  contentType?: string;
+}
+
 /** Options for generating a URL to access stored media */
 export interface GetUrlOptions {
   /** Expiration time in seconds (for signed URLs). Default depends on adapter. */
@@ -121,7 +127,7 @@ export interface ListOptions {
 
 export interface StorageAdapter {
   get(key: string): Promise<Buffer | null>;
-  put(key: string, value: Buffer): Promise<void>;
+  put(key: string, value: Buffer, options?: StoragePutOptions): Promise<void>;
   delete(key: string): Promise<void>;
 
   /**

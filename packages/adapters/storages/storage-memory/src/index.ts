@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import type { StorageAdapter } from "@better-media/core";
+import type { StorageAdapter, StoragePutOptions } from "@better-media/core";
 
 /**
  * In-memory storage adapter for development/testing.
@@ -12,7 +12,7 @@ export function memoryStorage(): StorageAdapter {
     async get(key: string) {
       return store.get(key) ?? null;
     },
-    async put(key: string, value: Buffer) {
+    async put(key: string, value: Buffer, _options?: StoragePutOptions) {
       store.set(key, value);
     },
     async delete(key: string) {

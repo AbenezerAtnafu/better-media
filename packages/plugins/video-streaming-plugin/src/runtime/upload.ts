@@ -7,6 +7,19 @@ export interface UploadedFile {
   size: number;
 }
 
+const STREAMING_CONTENT_TYPES: Record<string, string> = {
+  ".m3u8": "application/x-mpegURL",
+  ".ts": "video/MP2T",
+  ".mpd": "application/dash+xml",
+  ".m4s": "video/iso.segment",
+  ".mp4": "video/mp4",
+};
+
+function inferContentType(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  return STREAMING_CONTENT_TYPES[ext] ?? "application/octet-stream";
+}
+
 /**
  * Walk tempDir recursively and upload every file to storage under storagePrefix/.
  * Mirrors the local directory structure into storage keys.
@@ -47,7 +60,7 @@ async function walkAndUpload(
       }
 
       const buffer = await fs.readFile(fullPath);
-      await storage.put(storageKey, buffer);
+      await storage.put(storageKey, buffer, { contentType: inferContentType(entry.name) });
       acc.push({ storageKey, size: buffer.length });
     })
   );

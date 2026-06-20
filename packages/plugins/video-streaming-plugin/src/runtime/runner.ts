@@ -130,8 +130,18 @@ export async function runVideoStreaming(
       let duration = 0;
       try {
         const transcode = format === "hls" ? transcodeHLS : transcodeDASH;
+        const transcodeOnProgress = opts.onProgress
+          ? (event: { preset?: string; percent?: number; currentTimeSecs?: number }) =>
+              opts.onProgress!({ format, ...event })
+          : undefined;
         const result = await withTimeout(
-          transcode(inputPath, tempOutputDir, presets, resolved.segmentDuration),
+          transcode(
+            inputPath,
+            tempOutputDir,
+            presets,
+            resolved.segmentDuration,
+            transcodeOnProgress
+          ),
           resolved.timeoutMs,
           `transcode-${format}`
         );
@@ -174,20 +184,27 @@ export async function runVideoStreaming(
       if (resolved.persistMediaVersions) {
         let versionCounter = await nextMediaVersionStart(context.database, context.recordId);
 
+        // HLS: master + one row per variant playlist.
+        // DASH: master only — all representations live inside the single master.mpd.
+        const variantRows =
+          format === "hls"
+            ? presets.map((p) => ({
+                storageKey: variantPlaylistKey(
+                  resolved.derivativePrefix,
+                  context.recordId,
+                  format,
+                  p.name
+                ),
+                mimeType: "application/x-mpegURL" as const,
+              }))
+            : [];
+
         const rowsToInsert: Array<{ storageKey: string; mimeType: string }> = [
           {
             storageKey: masterKey,
             mimeType: format === "hls" ? "application/x-mpegURL" : "application/dash+xml",
           },
-          ...presets.map((p) => ({
-            storageKey: variantPlaylistKey(
-              resolved.derivativePrefix,
-              context.recordId,
-              format,
-              p.name
-            ),
-            mimeType: format === "hls" ? "application/x-mpegURL" : "application/dash+xml",
-          })),
+          ...variantRows,
         ];
 
         for (const row of rowsToInsert) {
