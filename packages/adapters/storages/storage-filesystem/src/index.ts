@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
-import type { StorageAdapter } from "@better-media/core";
+import type { StorageAdapter, StoragePutOptions } from "@better-media/core";
 
 export interface FilesystemStorageConfig {
   /** Base directory where all files are stored. Keys are resolved relative to this path. */
@@ -47,7 +47,7 @@ export class FileSystemStorageAdapter implements StorageAdapter {
     }
   }
 
-  async put(key: string, value: Buffer): Promise<void> {
+  async put(key: string, value: Buffer, _options?: StoragePutOptions): Promise<void> {
     const filePath = resolveSafePath(this.baseDir, key);
     const dir = path.dirname(filePath);
     await fs.mkdir(dir, { recursive: true });

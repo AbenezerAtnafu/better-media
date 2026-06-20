@@ -40,6 +40,7 @@ export {
 export type { VerifiedSourceId, PipelineContextWithVerified } from "./plugin/index";
 export type {
   StorageAdapter,
+  StoragePutOptions,
   GetUrlOptions,
   PresignedUploadMethod,
   PresignedUploadOptions,

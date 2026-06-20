@@ -2,6 +2,7 @@ import type { StreamingPreset } from "../interfaces/options.interface";
 
 export const DEFAULT_STREAMING_PRESETS: StreamingPreset[] = [
   { name: "360p", height: 360, videoBitrate: "800k", audioBitrate: "96k" },
+  { name: "480p", height: 480, videoBitrate: "1400k", audioBitrate: "128k" },
   { name: "720p", height: 720, videoBitrate: "2500k", audioBitrate: "128k" },
   { name: "1080p", height: 1080, videoBitrate: "5000k", audioBitrate: "192k" },
 ];

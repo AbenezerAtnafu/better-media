@@ -2,6 +2,7 @@ import { Storage } from "@google-cloud/storage";
 import { Readable } from "node:stream";
 import type {
   StorageAdapter,
+  StoragePutOptions,
   GetUrlOptions,
   PresignedUploadOptions,
   PresignedUploadResult,
@@ -59,8 +60,10 @@ export class GCSStorageAdapter implements StorageAdapter {
     }
   }
 
-  async put(key: string, value: Buffer): Promise<void> {
-    await this.bucket(key).file(this.fileKey(key)).save(value);
+  async put(key: string, value: Buffer, options?: StoragePutOptions): Promise<void> {
+    await this.bucket(key)
+      .file(this.fileKey(key))
+      .save(value, options?.contentType ? { contentType: options.contentType } : undefined);
   }
 
   async delete(key: string): Promise<void> {

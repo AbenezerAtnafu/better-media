@@ -4,6 +4,7 @@ import { runVideoStreaming } from "./runtime/runner";
 
 export type {
   VideoStreamingPluginOptions,
+  StreamingProgressEvent,
   StreamingPreset,
   StreamingFormat,
 } from "./interfaces/options.interface";

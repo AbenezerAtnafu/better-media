@@ -23,6 +23,7 @@ import { Buffer } from "node:buffer";
 import { Readable } from "node:stream";
 import type {
   StorageAdapter,
+  StoragePutOptions,
   GetUrlOptions,
   PresignedUploadOptions,
   PresignedUploadResult,
@@ -133,12 +134,13 @@ export class S3StorageAdapter implements StorageAdapter {
     }
   }
 
-  async put(key: string, value: Buffer): Promise<void> {
+  async put(key: string, value: Buffer, options?: StoragePutOptions): Promise<void> {
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.getBucket(key),
         Key: key,
         Body: value,
+        ...(options?.contentType && { ContentType: options.contentType }),
       })
     );
   }

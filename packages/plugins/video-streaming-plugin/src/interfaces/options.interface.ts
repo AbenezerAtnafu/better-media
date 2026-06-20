@@ -3,6 +3,17 @@ import { DEFAULT_STREAMING_PRESETS, DEFAULT_VIDEO_MIME_TYPES } from "../constant
 
 export type StreamingFormat = "hls" | "dash";
 
+export interface StreamingProgressEvent {
+  /** Which streaming format is being transcoded. */
+  format: StreamingFormat;
+  /** For HLS: the preset currently being transcoded (one pass per preset). Absent for DASH. */
+  preset?: string;
+  /** Estimated completion percentage (0–100). */
+  percent?: number;
+  /** How far into the source video ffmpeg has processed, in seconds. */
+  currentTimeSecs?: number;
+}
+
 export interface StreamingPreset {
   /** Used in storage path, e.g. "360p", "720p". Must be stable for idempotent keys. */
   name: string;
@@ -65,6 +76,13 @@ export interface VideoStreamingPluginOptions {
 
   /** Timeout for the full transcoding pass (ms). Default: 600_000 (10 min). */
   timeoutMs?: number;
+
+  /**
+   * Called periodically during transcoding with ffmpeg progress information.
+   * For HLS each preset runs as a separate pass, so events include the preset name.
+   * For DASH all presets run in a single pass, so `preset` is absent.
+   */
+  onProgress?: (event: StreamingProgressEvent) => void;
 }
 
 export type ResolvedVideoStreamingOptions = Required<
