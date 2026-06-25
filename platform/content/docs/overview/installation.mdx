@@ -1,90 +1,162 @@
 ---
 title: Installation
-description: Installation and environment setup guidance.
+description: Step-by-step setup guide for Better Media.
 ---
 
-To get started with Better Media, you need the core package and at least one storage adapter.
+<Steps>
+  <Step>
+    ### Install packages
 
-**Pick your package manager** in the tabs below. The same choice is shared with the [CLI](/docs/architecture/cli) page in this site so you do not have to switch twice.
+    Install the core package along with a storage adapter and a database adapter for your stack.
 
-## Quick install
+    <Tabs groupId="docs-package-manager" items={['pnpm', 'npm', 'yarn']} persist>
+      <Tab value="pnpm">
+        ```bash
+        pnpm add better-media @better-media/core
+        pnpm add @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
+        pnpm add kysely pg @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+        ```
+      </Tab>
+      <Tab value="npm">
+        ```bash
+        npm install better-media @better-media/core
+        npm install @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
+        npm install kysely pg @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+        ```
+      </Tab>
+      <Tab value="yarn">
+        ```bash
+        yarn add better-media @better-media/core
+        yarn add @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
+        yarn add kysely pg @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+        ```
+      </Tab>
+    </Tabs>
 
-Install the core library and `@better-media/core`:
+    <Callout type="info" title="Local development">
+      For local development without external services, use the filesystem and in-memory adapters instead:
+      ```bash
+      pnpm add @better-media/adapter-storage-filesystem @better-media/adapter-db-memory
+      ```
+    </Callout>
+  </Step>
 
-<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']} persist>
-  <Tab value="pnpm">
-```bash
-pnpm add better-media @better-media/core
-```
-  </Tab>
-  <Tab value="npx">
-```bash
-npm install better-media @better-media/core
-```
-  </Tab>
-  <Tab value="yarn">
-```bash
-yarn add better-media @better-media/core
-```
-  </Tab>
-</Tabs>
+  <Step>
+    ### Set environment variables
 
-## Recommended setup
+    Add your storage and database credentials to your `.env` file:
 
-A typical production setup requires a storage adapter (e.g. S3) and a database adapter (e.g. Kysely for PostgreSQL).
+    ```bash
+    # S3 Storage
+    AWS_REGION=us-east-1
+    AWS_ACCESS_KEY_ID=your-access-key
+    AWS_SECRET_ACCESS_KEY=your-secret-key
+    S3_BUCKET=your-bucket-name
 
-<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']}>
-  <Tab value="pnpm">
-```bash
-pnpm add @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
-```
-  </Tab>
-  <Tab value="npx">
-```bash
-npm install @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
-```
-  </Tab>
-  <Tab value="yarn">
-```bash
-yarn add @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
-```
-  </Tab>
-</Tabs>
+    # Database
+    DATABASE_URL=postgres://user:password@localhost:5432/mydb
+    ```
+  </Step>
 
-## Peer dependencies
+  <Step>
+    ### Configure the database adapter
 
-Better Media relies on certain peer dependencies depending on the adapters you choose:
+    Set up Kysely with your Postgres connection:
 
-- **S3 Storage**: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`
-- **PostgreSQL/SQL**: `kysely`, `pg` (or your preferred driver)
-- **Image Processing**: `sharp`
+    ```ts title="lib/database.ts"
+    import { Pool } from "pg";
+    import { Kysely, PostgresDialect } from "kysely";
+    import { KyselyDbAdapter } from "@better-media/adapter-db-kysely";
+    import { schema } from "@better-media/core";
 
-## Local development
+    const db = new Kysely({
+      dialect: new PostgresDialect({
+        pool: new Pool({ connectionString: process.env.DATABASE_URL }),
+      }),
+    });
 
-For local development, we recommend the **Filesystem** and **In-Memory** database adapters so you can run without external services.
+    export const database = new KyselyDbAdapter(db, {
+      config: { provider: "pg" },
+      schema,
+    });
+    ```
+  </Step>
 
-<Tabs groupId="docs-package-manager" items={['pnpm', 'npx', 'yarn']}>
-  <Tab value="pnpm">
-```bash
-pnpm add @better-media/adapter-storage-filesystem @better-media/adapter-db-memory
-```
-  </Tab>
-  <Tab value="npx">
-```bash
-npm install @better-media/adapter-storage-filesystem @better-media/adapter-db-memory
-```
-  </Tab>
-  <Tab value="yarn">
-```bash
-yarn add @better-media/adapter-storage-filesystem @better-media/adapter-db-memory
-```
-  </Tab>
-</Tabs>
+  <Step>
+    ### Create a Better Media instance
 
-```ts title="lib/storage.ts"
-import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
+    Wire your storage, database, and plugins together in one place:
 
-const storage = new FileSystemStorageAdapter({
-  baseDir: "./uploads",
-});
-```
+    ```ts title="lib/media.ts"
+    import { createBetterMedia } from "better-media";
+    import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
+    import { database } from "./database";
+
+    export const media = createBetterMedia({
+      storage: new S3StorageAdapter({
+        region: process.env.AWS_REGION!,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        bucket: process.env.S3_BUCKET!,
+      }),
+      database,
+      plugins: [],
+    });
+    ```
+
+    Import `media` anywhere in your app — route handlers, workers, scripts.
+  </Step>
+
+  <Step>
+    ### Create database tables
+
+    Better Media manages its own tables. Run the migration CLI to apply them:
+
+    <Tabs groupId="docs-package-manager" items={['pnpm', 'npm', 'yarn']}>
+      <Tab value="pnpm">
+        ```bash
+        pnpm exec media migrate
+        ```
+      </Tab>
+      <Tab value="npm">
+        ```bash
+        npx media migrate
+        ```
+      </Tab>
+      <Tab value="yarn">
+        ```bash
+        yarn media migrate
+        ```
+      </Tab>
+    </Tabs>
+
+    Or run migrations programmatically on app startup:
+
+    ```ts
+    import { runMigrations } from "@better-media/core";
+    import { database } from "./lib/database";
+    import { schema } from "@better-media/core";
+
+    await runMigrations(database, schema);
+    ```
+  </Step>
+
+  <Step>
+    ### You're ready
+
+    Your `media` instance is ready to use. Upload your first file:
+
+    ```ts
+    import { media } from "./lib/media";
+
+    const result = await media.upload.ingest({
+      file: { buffer: fileBuffer },
+      metadata: { filename: "photo.jpg", mimeType: "image/jpeg" },
+    });
+
+    console.log(result.id, result.key);
+    ```
+
+    From here, explore [plugins](/docs/plugins) to add validation, virus scanning, or image processing to the pipeline.
+  </Step>
+</Steps>
