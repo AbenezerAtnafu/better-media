@@ -18,33 +18,28 @@ Modern media pipelines are often a mess of multipart forms, custom S3 clients, a
     title="Background Processing"
     description="Effortlessly offload heavy tasks like transcoding via the integrated job system."
   />
+  <Card
+    title="Non-blocking Uploads"
+    description="Processing large files in the main thread kills performance. Heavy work runs in background workers so your upload responses stay fast."
+  />
+  <Card
+    title="Unified Metadata"
+    description="File metadata is stored and retrieved consistently regardless of which storage provider holds the actual file."
+  />
+  <Card
+    title="Plugin Extensibility"
+    description="Hook into any pipeline phase with a custom plugin. Watermarking, CDN invalidation, custom webhooks — without touching the core."
+  />
 </Cards>
-
-## Problems Solved
-
-<Accordions>
-  <Accordion title="Ad-hoc Storage Logic">
-    Stop writing repetitive AWS SDK or Multer logic. Better Media abstracts the storage layer so you can focus on your business logic.
-  </Accordion>
-
-  <Accordion title="Blocked Event Loop">
-    Processing large files in the main thread kills performance. Better Media uses its job adapter to move heavy work to background workers.
-  </Accordion>
-
-  <Accordion title="Metadata Fragmentation">
-    Better Media provides a unified way to store and retrieve media metadata regardless of where the file is physically stored.
-  </Accordion>
-</Accordions>
 
 ## vs Rolling Your Own
 
-**The media layer your app was missing** - Most apps treat file handling as an afterthought — a few upload routes and an S3 bucket. Better Media gives media a proper home in your architecture, with a consistent interface your whole team can reason about.
-
-**Own your stack** - Better Media doesn't host anything. No vendor, no SaaS bill, no lock-in. It runs inside your app with your database, your storage, and your queue.
-
-**Focus on your product** - The infrastructure is solved. Stop spending sprint time on upload handlers, database schemas, and job wiring — and start building the things that actually move your product forward.
-
-**Confidence at every stage** - From local development to production, the same setup applies. Nothing breaks when you swap providers, add a plugin, or scale to more workers.
+- **The media layer your app was missing** - Most apps treat file handling as an afterthought — a few upload routes and an S3 bucket. Better Media gives media a proper home in your architecture, with a consistent interface your whole team can reason about.
+- **Own your stack** - Better Media doesn't host anything. No vendor, no SaaS bill, no lock-in. It runs inside your app with your database, your storage, and your queue.
+- **No blocked responses** - Processing large files in the main thread kills performance. Better Media's job adapter moves heavy work to background workers so your uploads stay fast.
+- **Metadata in one place** - No more fragmented records across tables and services. Better Media stores and retrieves file metadata consistently regardless of where the file is physically stored.
+- **Focus on your product** - The infrastructure is solved. Stop spending sprint time on upload handlers, database schemas, and job wiring — and start building the things that actually move your product forward.
+- **Confidence at every stage** - From local development to production, the same setup applies. Nothing breaks when you swap providers, add a plugin, or scale to more workers.
 
 ## When to Use Better Media
 

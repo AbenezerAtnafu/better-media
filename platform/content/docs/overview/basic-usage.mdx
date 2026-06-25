@@ -1,34 +1,128 @@
 ---
 title: Basic Usage
-description: The smallest practical Better Media setup.
+description: Upload, retrieve, and delete files with Better Media.
 ---
 
-The following is the smallest practical Better Media setup.
+This page walks through the core operations — upload, retrieve, and delete — using a minimal local setup. For a full production setup see [Installation](/docs/overview/installation).
 
-```ts
+## Setup
+
+```ts title="lib/media.ts"
 import { createBetterMedia } from "better-media";
 import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 import { memoryDatabase } from "@better-media/adapter-db-memory";
-import { validationPlugin } from "@better-media/plugin-validation";
 
-// 1. Initialise the framework
-const media = createBetterMedia({
+export const media = createBetterMedia({
   storage: new FileSystemStorageAdapter({ baseDir: "./uploads" }),
   database: memoryDatabase(),
-  plugins: [validationPlugin({ maxSize: "10mb" })],
+  plugins: [],
 });
-
-// 2. Upload a file
-const result = await media.upload({
-  file: readFileSync("my-image.jpg"), // Buffer or Stream
-  fileName: "my-image.jpg",
-});
-
-console.log("Stored as:", result.fileKey);
 ```
 
-## Key Components
+## Upload a file
 
-1.  **Storage**: Controls where the physical binary files are stored.
-2.  **Database**: Controls where metadata and relationships are saved.
-3.  **Plugins**: Intercept and process files during the ingest lifecycle.
+Pass a `Buffer`, stream, file path, or URL to `media.upload.ingest()`:
+
+```ts
+const result = await media.upload.ingest({
+  file: { buffer: fileBuffer },
+  metadata: {
+    filename: "photo.jpg",
+    mimeType: "image/jpeg",
+  },
+});
+```
+
+The result contains everything you need to reference the file later:
+
+```ts
+{
+  id: "01J8XKPZ...",        // database record ID — use this to reference the file
+  key: "uploads/photo.jpg", // storage key
+  status: "processed",      // "stored" | "processed"
+  metadata: { filename: "photo.jpg", mimeType: "image/jpeg" }
+}
+```
+
+Save `result.id` — it's the identifier for all subsequent operations.
+
+## Retrieve a file
+
+Get the raw file bytes by record ID:
+
+```ts
+const file = await media.files.get(result.id);
+// returns Buffer | null
+```
+
+Get a URL to serve the file (requires an adapter that supports URLs, e.g. S3):
+
+```ts
+const url = await media.files.getUrl(result.id, { expiresIn: 3600 });
+// returns a signed URL valid for 1 hour
+```
+
+Check if a file exists:
+
+```ts
+const exists = await media.files.exists(result.id);
+// returns true | false
+```
+
+## Delete a file
+
+Removes the file from storage and the database record:
+
+```ts
+await media.files.delete(result.id);
+```
+
+## Handle errors
+
+Wrap upload calls in a `try/catch` to handle validation failures and infrastructure errors:
+
+```ts
+import { ValidationError } from "better-media";
+
+try {
+  const result = await media.upload.ingest({
+    file: { buffer: fileBuffer },
+    metadata: { filename: "photo.jpg", mimeType: "image/jpeg" },
+  });
+} catch (err) {
+  if (err instanceof ValidationError) {
+    // File was rejected by a sync plugin (wrong type, too large, virus detected, etc.)
+    console.error(err.message);
+  } else {
+    // Storage failure, DB connection error, etc.
+    throw err;
+  }
+}
+```
+
+`ValidationError` is only thrown when a plugin runs in `sync` mode and rejects the file. See [Errors](/docs/references/errors) for the full error reference.
+
+## Next steps
+
+<Cards>
+  <Card
+    title="Add Validation"
+    description="Restrict file types, sizes, and detect duplicates."
+    href="/docs/plugins/validation"
+  />
+  <Card
+    title="Add Virus Scanning"
+    description="Scan every upload with ClamAV or VirusTotal."
+    href="/docs/plugins/virus-scan"
+  />
+  <Card
+    title="Generate Thumbnails"
+    description="Automatically create image derivatives on upload."
+    href="/docs/plugins/media-processing"
+  />
+  <Card
+    title="Switch to S3"
+    description="Move from local disk to S3-compatible cloud storage."
+    href="/docs/storage/s3"
+  />
+</Cards>

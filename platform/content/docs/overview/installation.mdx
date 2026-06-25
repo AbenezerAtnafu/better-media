@@ -5,39 +5,78 @@ description: Step-by-step setup guide for Better Media.
 
 <Steps>
   <Step>
-    ### Install packages
-
-    Install the core package along with a storage adapter and a database adapter for your stack.
+    ### Install Better Media
 
     <Tabs groupId="docs-package-manager" items={['pnpm', 'npm', 'yarn']} persist>
       <Tab value="pnpm">
         ```bash
-        pnpm add better-media @better-media/core
-        pnpm add @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
-        pnpm add kysely pg @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+        pnpm add better-media
         ```
       </Tab>
       <Tab value="npm">
         ```bash
-        npm install better-media @better-media/core
-        npm install @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
-        npm install kysely pg @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+        npm install better-media
         ```
       </Tab>
       <Tab value="yarn">
         ```bash
-        yarn add better-media @better-media/core
-        yarn add @better-media/adapter-storage-s3 @better-media/adapter-db-kysely
-        yarn add kysely pg @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+        yarn add better-media
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step>
+    ### Install a storage adapter
+
+    For this example we'll use S3, which works with AWS S3, Cloudflare R2, MinIO, and any S3-compatible provider.
+
+    <Tabs groupId="docs-package-manager" items={['pnpm', 'npm', 'yarn']}>
+      <Tab value="pnpm">
+        ```bash
+        pnpm add @better-media/adapter-storage-s3
+        ```
+      </Tab>
+      <Tab value="npm">
+        ```bash
+        npm install @better-media/adapter-storage-s3
+        ```
+      </Tab>
+      <Tab value="yarn">
+        ```bash
+        yarn add @better-media/adapter-storage-s3
         ```
       </Tab>
     </Tabs>
 
-    <Callout type="info" title="Local development">
-      For local development without external services, use the filesystem and in-memory adapters instead:
-      ```bash
-      pnpm add @better-media/adapter-storage-filesystem @better-media/adapter-db-memory
-      ```
+    <Callout type="info" title="Other storage options">
+      Filesystem and in-memory adapters are also available. See the [Storage](/docs/storage) section for all options.
+    </Callout>
+  </Step>
+
+  <Step>
+    ### Install a database adapter
+
+    <Tabs groupId="docs-package-manager" items={['pnpm', 'npm', 'yarn']}>
+      <Tab value="pnpm">
+        ```bash
+        pnpm add @better-media/adapter-db-kysely pg
+        ```
+      </Tab>
+      <Tab value="npm">
+        ```bash
+        npm install @better-media/adapter-db-kysely pg
+        ```
+      </Tab>
+      <Tab value="yarn">
+        ```bash
+        yarn add @better-media/adapter-db-kysely pg
+        ```
+      </Tab>
+    </Tabs>
+
+    <Callout type="info" title="Other databases">
+      MongoDB, MySQL, and SQLite are also supported. See the [Database](/docs/database) section for setup guides.
     </Callout>
   </Step>
 
