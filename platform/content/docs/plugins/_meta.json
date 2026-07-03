@@ -2,5 +2,6 @@
   "index": "Plugins",
   "validation": "Validation",
   "virus-scan": "Virus Scan",
-  "media-processing": "Media Processing"
+  "media-processing": "Media Processing",
+  "video-streaming": "Video Streaming"
 }
