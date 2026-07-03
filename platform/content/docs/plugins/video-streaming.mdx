@@ -1,0 +1,354 @@
+---
+title: Video Streaming
+description: Adaptive bitrate video transcoding and streaming with HLS and DASH.
+---
+
+Raw video files are large, codec-incompatible across devices, and impossible to seek efficiently. Serving them directly means slow starts, buffering on mobile, and no quality adaptation when bandwidth changes.
+
+Add `videoStreamingPlugin` to your Better Media pipeline and uploaded videos are automatically transcoded into adaptive bitrate streams. Your users get smooth playback on any device and network — you get a single `recordId` to resolve or proxy the stream from.
+
+**Additional features**
+
+- HLS and DASH from a single upload
+- Real-time transcode progress events
+- Built-in serving utilities for public, signed, and proxied delivery
+
+### Direct file serving vs. adaptive streaming
+
+| | Direct file serving | Adaptive streaming (this plugin) |
+|---|---|---|
+| **Startup time** | Player must buffer before playing | Starts on the first short segment (~6 s) |
+| **Quality adaptation** | Fixed — one file, one quality | Switches automatically as bandwidth changes |
+| **Mobile / slow connections** | Buffers or stalls | Drops to a lower quality and keeps playing |
+| **Seeking** | Depends on server range request support | Always fast — seeks jump to the right segment |
+| **Browser compatibility** | Depends on the file's codec | HLS and DASH work on every modern platform |
+
+Use direct file serving for short clips or previews. Use this plugin when you need reliable playback across devices and network conditions.
+
+## Prerequisites
+
+`ffmpeg` must be installed and available in `PATH` on the server running your pipeline.
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Ubuntu / Debian
+apt-get install ffmpeg
+```
+
+## Installation
+
+<Steps>
+  <Step>
+    ### Install the package
+
+    <Tabs groupId="docs-package-manager" items={['pnpm', 'npm', 'yarn']} persist>
+      <Tab value="pnpm">
+        ```bash
+        pnpm add @better-media/plugin-video-streaming fluent-ffmpeg
+        pnpm add -D @types/fluent-ffmpeg
+        ```
+      </Tab>
+      <Tab value="npm">
+        ```bash
+        npm install @better-media/plugin-video-streaming fluent-ffmpeg
+        npm install --save-dev @types/fluent-ffmpeg
+        ```
+      </Tab>
+      <Tab value="yarn">
+        ```bash
+        yarn add @better-media/plugin-video-streaming fluent-ffmpeg
+        yarn add --dev @types/fluent-ffmpeg
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step>
+    ### Register the plugin
+
+    ```typescript
+    import { videoStreamingPlugin } from "@better-media/plugin-video-streaming";
+
+    const media = createBetterMedia({
+      // ...
+      plugins: [
+        videoStreamingPlugin(),
+      ],
+    });
+    ```
+
+    Transcoding is queued and processed in the background — the upload response returns immediately.
+  </Step>
+</Steps>
+
+## Usage
+
+### Uploading a video
+
+Upload a video file through your pipeline as you normally would. The plugin runs automatically — no extra steps on your end.
+
+```typescript title="server.ts"
+const result = await media.upload.ingest({
+  file: { path: req.file.path },
+  metadata: {
+    filename: req.file.filename,
+    mimeType: req.file.mimetype,
+    size: req.file.size,
+  },
+});
+
+const { id: recordId } = result;
+```
+
+### Checking transcoding status
+
+Because the plugin runs in background mode, the upload response returns before transcoding finishes. Calling `resolveStreamingUrls` immediately after upload will return an empty result — the master playlist doesn't exist yet.
+
+Use `resolveStreamingStatus` to check whether transcoding is complete before serving:
+
+```typescript title="server.ts"
+import { resolveStreamingStatus } from "@better-media/plugin-video-streaming";
+
+const status = await resolveStreamingStatus(recordId, { storage });
+// { hls: true, dash: false, ready: true }
+
+if (!status.ready) {
+  return res.status(202).json({ message: "Transcoding in progress" });
+}
+```
+
+Poll this from your client until `ready` is `true`, or use the `onProgress` callback to push status updates over a websocket.
+
+### Serving strategies
+
+The plugin gives you three ways to deliver streams to clients. Choose based on your access control requirements.
+
+| Strategy | How segments are served | Access control |
+|---|---|---|
+| **A — Public URL** | Directly from storage or CDN | None — anyone with the URL can watch |
+| **B — Signed URL** | Directly from storage or CDN | Time-limited master URL controls discovery |
+| **C — Proxy** | Through your server | Full auth on every request |
+
+**Strategy A** — if your videos are public and you want the simplest possible setup, use `resolveStreamingUrls` without `expiresIn`. Segments are served directly from storage or your CDN with no signing overhead.
+
+```typescript title="server.ts"
+import { resolveStreamingUrls } from "@better-media/plugin-video-streaming";
+
+const urls = await resolveStreamingUrls(recordId, { database, storage });
+// { hls: "https://cdn.example.com/…/hls/master.m3u8" }
+```
+
+**Strategy B** — if you want to gate who can start watching without the cost of signing every segment, pass `expiresIn`. The master playlist URL is time-limited; segments are served publicly once the player has the manifest.
+
+```typescript title="server.ts"
+const urls = await resolveStreamingUrls(recordId, {
+  database,
+  storage,
+  expiresIn: 3600, // master URL expires in 1 hour
+});
+```
+
+> **Note:** Strategy B requires your storage bucket to allow public reads on the `streaming/` prefix. If your bucket is fully private, use Strategy C instead.
+
+**Strategy C** — if you need full access control on every request (subscription gating, per-user auth), proxy all traffic through your server. Auth runs on every segment — nothing reaches the client without passing your middleware.
+
+```typescript title="server.ts"
+import { createStreamingProxy } from "@better-media/plugin-video-streaming";
+
+const proxy = createStreamingProxy({
+  storage,
+  authenticate: async (req, { recordId }) => {
+    const session = await getSession(req);
+    if (!session.canView(recordId)) throw new Error("Forbidden");
+  },
+});
+
+app.get("/stream/:recordId/*", async (req, res) => {
+  const response = await proxy.handle({
+    recordId: req.params.recordId,
+    filePath: req.params[0],
+    req,
+  });
+  res.status(response.status);
+  response.headers.forEach((v, k) => res.setHeader(k, v));
+  Readable.fromWeb(response.body).pipe(res);
+});
+```
+
+### Tracking progress
+
+If you want to show users live transcoding progress — via a websocket, SSE, or a polling endpoint — pass an `onProgress` callback when registering the plugin.
+
+```typescript title="media.config.ts"
+videoStreamingPlugin({
+  onProgress: (event) => {
+    console.log(`${event.format} ${event.preset} — ${event.percent}%`);
+    // { format: "hls", preset: "720p", percent: 42, currentTimeSecs: 38 }
+  },
+})
+```
+
+## Configuration
+
+### Custom presets
+
+The default quality ladder is 360p, 480p, 720p, and 1080p. Override `presets` to control exactly which quality levels are produced — useful for reducing transcoding cost, targeting a specific audience, or matching your storage budget.
+
+```typescript title="media.config.ts"
+import { videoStreamingPlugin } from "@better-media/plugin-video-streaming";
+
+videoStreamingPlugin({
+  presets: [
+    { name: "360p",  height: 360,  videoBitrate: "800k",  audioBitrate: "96k"  },
+    { name: "720p",  height: 720,  videoBitrate: "2500k", audioBitrate: "128k" },
+    { name: "1080p", height: 1080, videoBitrate: "5000k", audioBitrate: "192k" },
+  ],
+})
+```
+
+Each preset produces one variant stream. The `name` is used in the storage key — keep it stable after launch or existing stream URLs will break.
+
+**Preset options:**
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Used in the storage path. Must be unique and stable. |
+| `height` | `number` | Output height in pixels. Aspect ratio is preserved. |
+| `width` | `number` | Output width in pixels. Use instead of or alongside `height`. |
+| `videoBitrate` | `string` | Target video bitrate, e.g. `"2500k"`. |
+| `audioBitrate` | `string` | Target audio bitrate, e.g. `"128k"`. |
+| `videoCodec` | `string` | Video codec. Defaults to `"libx264"`. |
+| `audioCodec` | `string` | Audio codec. Defaults to `"aac"`. |
+
+### Enabling DASH
+
+By default the plugin produces HLS only. Add `"dash"` to `formats` to also generate a DASH manifest in the same transcoding run — no extra upload cost, no second ffmpeg pass.
+
+```typescript title="media.config.ts"
+videoStreamingPlugin({
+  formats: ["hls", "dash"],
+})
+```
+
+Both manifests are stored and tracked in `media_versions`. `resolveStreamingUrls` returns both URLs when both are present:
+
+```typescript title="server.ts"
+const urls = await resolveStreamingUrls(recordId, { database, storage });
+// { hls: "https://…/hls/master.m3u8", dash: "https://…/dash/master.mpd" }
+```
+
+Use the DASH URL with Shaka Player or `dash.js`. Pass the HLS URL as a fallback for browsers or players that don't support DASH.
+
+<Callout type="info">
+  DASH is the better choice for Smart TVs, Android, and Shaka Player. HLS is required for Safari and iOS. Enabling both covers every platform.
+</Callout>
+
+### Dynamic preset resolution
+
+Use `resolvePreset` to adjust the quality ladder at runtime — per upload, per user, or per request. The callback runs once per preset before transcoding starts and returns the preset to use (or a modified version of it).
+
+```typescript title="media.config.ts"
+videoStreamingPlugin({
+  resolvePreset: async (context, preset) => {
+    // Restrict free-tier users to 720p max
+    if (context.metadata.plan === "free" && preset.name === "1080p") {
+      return { ...preset, name: "720p", height: 720, videoBitrate: "2500k" };
+    }
+    return preset;
+  },
+})
+```
+
+`context.metadata` contains everything passed to `media.upload.ingest()` — subscription tier, user ID, content flags, or anything else your application puts there.
+
+### Allowed MIME types
+
+The plugin only processes files whose `mimeType` matches the allowed list. Files that don't match are silently skipped — no error, no transcoding. The defaults cover the most common video formats:
+
+`video/mp4`, `video/quicktime`, `video/x-msvideo`, `video/x-matroska`, `video/webm`, `video/mpeg`, `video/ogg`, `video/3gpp`, `video/x-flv`, `video/x-ms-wmv`
+
+To add formats not in the default list, spread the defaults and append your additions:
+
+```typescript title="media.config.ts"
+import { DEFAULT_VIDEO_MIME_TYPES, videoStreamingPlugin } from "@better-media/plugin-video-streaming";
+
+videoStreamingPlugin({
+  allowedMimeTypes: [...DEFAULT_VIDEO_MIME_TYPES, "video/x-m4v"],
+})
+```
+
+To restrict processing to specific formats only, pass a new list without spreading the defaults.
+
+### Idempotency
+
+By default the plugin checks whether the master playlist already exists in storage before transcoding. If it does, the entire run is skipped — re-uploading the same video or re-triggering the pipeline is safe and cheap.
+
+Set `skipExistingDerivatives: false` when you need to force regeneration — for example after changing presets:
+
+```typescript title="media.config.ts"
+videoStreamingPlugin({
+  skipExistingDerivatives: false,
+})
+```
+
+<Callout type="warn">
+  After changing `presets`, existing streams use the old quality ladder until regenerated. Set `skipExistingDerivatives: false` and re-trigger the pipeline for affected records.
+</Callout>
+
+## Error handling
+
+The plugin is designed to degrade gracefully — errors in one part of the run don't abort everything else.
+
+| Situation | Behavior |
+|---|---|
+| `ffmpeg` not found | Emits `{ error: "ffmpeg-not-found" }` metadata. Pipeline continues. No exception thrown. |
+| One format fails | Emits `{ error: "transcode-failed", format }`. Other formats continue. |
+| Timeout exceeded | Treated as a transcode failure. Emits `{ error: "transcode-failed", format }`. |
+| Upload fails | Emits `{ error: "upload-failed", format }`. Other formats continue. |
+
+The default timeout is 10 minutes. For large files or slower machines, increase it:
+
+```typescript title="media.config.ts"
+videoStreamingPlugin({
+  timeoutMs: 30 * 60 * 1000, // 30 minutes
+})
+```
+
+## Schema
+
+The plugin writes to the `media_versions` table — one row for the master playlist and one row per variant playlist. Individual segments are not recorded.
+
+export const mediaVersionsFields = [
+  { name: "id", type: "string", description: "Unique identifier for this version row.", isPrimaryKey: true },
+  { name: "mediaId", type: "string", description: "The recordId from your upload result.", isForeignKey: true },
+  { name: "storageKey", type: "string", description: 'Storage path, e.g. "streaming/abc123/hls/master.m3u8".' },
+  { name: "mimeType", type: "string", description: '"application/x-mpegURL" for HLS playlists, "application/dash+xml" for DASH manifests.' },
+  { name: "size", type: "number", description: "File size in bytes." },
+  { name: "type", type: '"compressed"', description: "Always compressed for streaming outputs." },
+  { name: "isOriginal", type: "boolean", description: "Always false — streaming outputs are derivatives of the original." },
+  { name: "versionNumber", type: "number", description: "Auto-incremented per mediaId." },
+  { name: "createdAt", type: "Date", description: "When the row was inserted." },
+];
+
+<DatabaseTable name="media_versions" fields={mediaVersionsFields} />
+
+`resolveStreamingUrls` queries this table to find the master playlist key for a given `recordId`.
+
+## Options
+
+Full reference for `videoStreamingPlugin(options)`.
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `formats` | `("hls" \| "dash")[]` | `["hls"]` | Streaming formats to generate. |
+| `presets` | `StreamingPreset[]` | 360p / 480p / 720p / 1080p | Quality ladder. Each preset produces one variant stream. |
+| `resolvePreset` | `function` | — | Called per-preset at runtime. Return a modified preset to adjust quality dynamically (e.g. based on subscription tier). |
+| `segmentDuration` | `number` | `6` | Segment length in seconds. Shorter segments improve seek accuracy; longer segments reduce playlist overhead. |
+| `derivativePrefix` | `string` | `"streaming"` | Storage key prefix for all transcoded output. |
+| `allowedMimeTypes` | `string[]` | common video types | Files whose `mimeType` is not in this list are skipped. |
+| `persistMediaVersions` | `boolean` | `true` | Write `media_versions` rows for master and variant playlists. |
+| `skipExistingDerivatives` | `boolean` | `true` | Skip transcoding if the master playlist already exists in storage. |
+| `timeoutMs` | `number` | `600_000` | Maximum time allowed for the full transcoding pass, in milliseconds. |
+| `onProgress` | `function` | — | Called periodically during transcoding with format, preset, percent, and current timestamp. |

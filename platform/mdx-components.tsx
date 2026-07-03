@@ -6,6 +6,7 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { Steps, Step } from "fumadocs-ui/components/steps";
 import { TypeTable } from "fumadocs-ui/components/type-table";
 import { Card, Cards } from "fumadocs-ui/components/card";
+import { DatabaseTable } from "./components/docs/DatabaseTable";
 
 const base: MDXComponents = {
   ...defaultComponents,
@@ -19,6 +20,7 @@ const base: MDXComponents = {
   TypeTable,
   Card,
   Cards,
+  DatabaseTable,
 } as MDXComponents;
 
 /** Pass to compiled MDX (`<Content components={...} />`) — required for Fumadocs MDX 14+ / RSC. */
