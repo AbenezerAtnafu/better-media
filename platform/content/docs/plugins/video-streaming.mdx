@@ -131,7 +131,9 @@ The plugin gives you three ways to deliver streams to clients. Choose based on y
 | **B — Signed URL** | Directly from storage or CDN | Time-limited master URL controls discovery |
 | **C — Proxy** | Through your server | Full auth on every request |
 
-**Strategy A** — if your videos are public and you want the simplest possible setup, use `resolveStreamingUrls` without `expiresIn`. Segments are served directly from storage or your CDN with no signing overhead.
+#### Public URL
+
+If your videos are public and you want the simplest possible setup, use `resolveStreamingUrls` without `expiresIn`. Segments are served directly from storage or your CDN with no signing overhead.
 
 ```typescript title="server.ts"
 import { resolveStreamingUrls } from "@better-media/plugin-video-streaming";
@@ -140,7 +142,24 @@ const urls = await resolveStreamingUrls(recordId, { database, storage });
 // { hls: "https://cdn.example.com/…/hls/master.m3u8" }
 ```
 
-**Strategy B** — if you want to gate who can start watching without the cost of signing every segment, pass `expiresIn`. The master playlist URL is time-limited; segments are served publicly once the player has the manifest.
+**CORS**
+
+Your storage bucket needs CORS configured to allow the client origin — the player fetches manifests and segments directly from storage:
+
+```json
+[{
+  "AllowedOrigins": ["https://yourapp.com"],
+  "AllowedMethods": ["GET", "HEAD"],
+  "AllowedHeaders": ["*"],
+  "ExposeHeaders": ["Content-Length", "Content-Type"]
+}]
+```
+
+The S3 and GCS adapters expose a `setCorsConfiguration()` method for this — see the [S3](/docs/storage/s3) and GCS storage adapter docs.
+
+#### Signed URL
+
+If you want to gate who can start watching without the cost of signing every segment, pass `expiresIn`. The master playlist URL is time-limited; segments are served publicly once the player has the manifest.
 
 ```typescript title="server.ts"
 const urls = await resolveStreamingUrls(recordId, {
@@ -150,32 +169,99 @@ const urls = await resolveStreamingUrls(recordId, {
 });
 ```
 
-> **Note:** Strategy B requires your storage bucket to allow public reads on the `streaming/` prefix. If your bucket is fully private, use Strategy C instead.
+**CORS**
 
-**Strategy C** — if you need full access control on every request (subscription gating, per-user auth), proxy all traffic through your server. Auth runs on every segment — nothing reaches the client without passing your middleware.
+The same bucket-level CORS configuration from strategy A applies here. Strategy B requires your storage bucket to allow public reads on the `streaming/` prefix — if your bucket is fully private, use Strategy C instead.
+
+#### Proxy
+
+If you need full access control on every request (subscription gating, per-user auth), proxy all traffic through your server. Auth runs on every segment — nothing reaches the client without passing your middleware.
+
+Create the proxy once, then wire the handler into a route:
 
 ```typescript title="server.ts"
 import { createStreamingProxy } from "@better-media/plugin-video-streaming";
 
 const proxy = createStreamingProxy({
   storage,
+
+  // Runs before every request — master playlist, variant playlists, segments.
+  // Throw any error to deny access (→ 403). Receives the original request
+  // object and the resolved storage key so you can check per-record permissions.
   authenticate: async (req, { recordId }) => {
     const session = await getSession(req);
     if (!session.canView(recordId)) throw new Error("Forbidden");
   },
-});
 
-app.get("/stream/:recordId/*", async (req, res) => {
-  const response = await proxy.handle({
-    recordId: req.params.recordId,
-    filePath: req.params[0],
-    req,
-  });
-  res.status(response.status);
-  response.headers.forEach((v, k) => res.setHeader(k, v));
-  Readable.fromWeb(response.body).pipe(res);
+  // Playlists are re-written on every re-transcode — never cache them.
+  // Segments are content-addressed and immutable — cache aggressively.
+  cacheControl: {
+    playlist: "no-cache, no-store",
+    segment: "public, max-age=31536000, immutable",
+  },
+
+  // CORS origin sent on every response. Set to your app's origin in production.
+  // Defaults to "*" if omitted.
+  corsOrigin: "https://yourapp.com",
 });
 ```
+
+The handler returns a standard Web API `Response`, so it works across frameworks:
+
+<Tabs items={['Express', 'Next.js', 'Fastify']}>
+  <Tab value="Express">
+    ```typescript title="server.ts"
+    import { Readable } from "node:stream";
+
+    app.get("/stream/:recordId/*", async (req, res) => {
+      const response = await proxy.handle({
+        recordId: req.params.recordId,
+        filePath: req.params[0],
+        req,
+      });
+      res.status(response.status);
+      response.headers.forEach((v, k) => res.setHeader(k, v));
+      Readable.fromWeb(response.body).pipe(res);
+    });
+    ```
+  </Tab>
+  <Tab value="Next.js">
+    ```typescript title="app/stream/[recordId]/[...filePath]/route.ts"
+    export async function GET(
+      req: Request,
+      { params }: { params: { recordId: string; filePath: string[] } }
+    ) {
+      return proxy.handle({
+        recordId: params.recordId,
+        filePath: params.filePath.join("/"),
+        req,
+      });
+    }
+
+    export const HEAD = GET;
+    ```
+  </Tab>
+  <Tab value="Fastify">
+    ```typescript title="server.ts"
+    import { Readable } from "node:stream";
+
+    fastify.get("/stream/:recordId/*", async (req, reply) => {
+      const response = await proxy.handle({
+        recordId: req.params.recordId,
+        filePath: req.params["*"],
+        req,
+      });
+      reply.status(response.status);
+      response.headers.forEach((v, k) => reply.header(k, v));
+      reply.send(Readable.fromWeb(response.body));
+    });
+    ```
+  </Tab>
+</Tabs>
+
+**CORS**
+
+The proxy sets CORS headers on every response via `corsOrigin` — no bucket-level CORS configuration needed.
 
 ### Tracking progress
 
@@ -188,6 +274,54 @@ videoStreamingPlugin({
     // { format: "hls", preset: "720p", percent: 42, currentTimeSecs: 38 }
   },
 })
+```
+
+## Client-side playback
+
+Once you have a URL from `resolveStreamingUrls` or a proxy route, pass it to a player. The plugin returns a standard HLS or DASH URL — player choice is yours.
+
+### HLS.js
+
+For browsers that don't support HLS natively (Chrome, Firefox). Falls back to native playback on Safari, which supports HLS without a library.
+
+```typescript
+import Hls from "hls.js";
+
+const { hls: hlsUrl } = await fetch(`/api/stream/${recordId}`).then(r => r.json());
+
+if (Hls.isSupported()) {
+  const hls = new Hls();
+  hls.loadSource(hlsUrl);
+  hls.attachMedia(videoElement);
+} else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
+  // Safari — native HLS, no library needed
+  videoElement.src = hlsUrl;
+}
+```
+
+### Shaka Player
+
+Supports both DASH and HLS. Best choice for Smart TVs, Android, and any app that needs DASH. Pass the DASH URL when available, with HLS as a fallback.
+
+```typescript
+import shaka from "shaka-player";
+
+const { dash: dashUrl, hls: hlsUrl } = await fetch(`/api/stream/${recordId}`).then(r => r.json());
+
+const player = new shaka.Player(videoElement);
+await player.load(dashUrl ?? hlsUrl);
+```
+
+### React Native
+
+Use `react-native-video` with the HLS URL. iOS and Android both support HLS natively.
+
+```typescript
+import Video from "react-native-video";
+
+const { hls: hlsUrl } = await fetch(`/api/stream/${recordId}`).then(r => r.json());
+
+<Video source={{ uri: hlsUrl }} resizeMode="contain" />;
 ```
 
 ## Configuration

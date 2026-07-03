@@ -49,6 +49,7 @@ function orderRootSections(tree: typeof pageTree): typeof pageTree {
         name: (
           <span className="inline-flex items-center gap-2">
             <span
+              key="icon"
               className="material-symbols-outlined leading-none"
               style={{
                 fontSize: "18px",
@@ -57,7 +58,7 @@ function orderRootSections(tree: typeof pageTree): typeof pageTree {
             >
               {icon}
             </span>
-            <span>{label}</span>
+            <span key="label">{label}</span>
           </span>
         ),
       };
