@@ -1,0 +1,24 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "libx264",
+    "quicktime",
+    "msvideo",
+    "matroska",
+    "fluent",
+    "ffmpeg",
+    "mpegURL",
+    "webm",
+    "paywalled",
+    "TINYINT",
+    "NVARCHAR",
+    "hls",
+    "dash",
+    "mpd",
+    "m3u8",
+    "m4s",
+    "ts"
+  ],
+  "ignorePaths": ["node_modules", "dist", ".changeset", "pnpm-lock.yaml", "*.lock"]
+}
