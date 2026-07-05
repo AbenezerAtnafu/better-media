@@ -74,14 +74,14 @@ describe("videoStreamingPlugin", () => {
     );
   });
 
-  it("respects executionMode sync override", () => {
-    const plugin = videoStreamingPlugin({ executionMode: "sync" });
+  it("always runs in background mode", () => {
+    const plugin = videoStreamingPlugin();
     const { runtime } = createMockRuntime();
     plugin.apply!(runtime);
     expect(runtime.hooks["process:run"].tap).toHaveBeenCalledWith(
       "video-streaming",
       expect.any(Function),
-      { mode: "sync" }
+      { mode: "background" }
     );
   });
 

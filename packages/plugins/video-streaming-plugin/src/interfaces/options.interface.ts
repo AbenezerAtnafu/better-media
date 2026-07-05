@@ -32,9 +32,6 @@ export interface StreamingPreset {
 }
 
 export interface VideoStreamingPluginOptions {
-  /** Execution mode. Default: "background". */
-  executionMode?: "sync" | "background";
-
   /**
    * Streaming formats to generate. Default: ["hls"].
    * Add "dash" to also produce a DASH manifest.
