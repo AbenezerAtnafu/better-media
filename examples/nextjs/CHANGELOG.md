@@ -1,5 +1,18 @@
 # better-media-example-nextjs
 
+## 1.1.2
+
+### Patch Changes
+
+- @better-media/core@0.6.0
+- @better-media/framework@0.6.0
+- @better-media/plugin-validation@0.6.0
+- @better-media/plugin-virus-scan@0.6.0
+- @better-media/plugin-media-processing@0.6.0
+- @better-media/adapter-storage-memory@0.6.0
+- @better-media/adapter-db-memory@0.6.0
+- @better-media/adapter-jobs@0.6.0
+
 ## 1.1.1
 
 ### Patch Changes

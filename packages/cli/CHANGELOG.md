@@ -1,5 +1,11 @@
 # @better-media/cli
 
+## 0.6.0
+
+### Patch Changes
+
+- @better-media/core@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes

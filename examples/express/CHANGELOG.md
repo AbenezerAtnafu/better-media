@@ -1,5 +1,27 @@
 # better-media-example-express
 
+## 1.2.2
+
+### Patch Changes
+
+- Updated dependencies [ce82214]
+  - @better-media/plugin-video-streaming@0.6.0
+  - @better-media/framework@0.6.0
+  - @better-media/plugin-validation@0.6.0
+  - @better-media/plugin-virus-scan@0.6.0
+  - @better-media/plugin-media-processing@0.6.0
+  - @better-media/adapter-storage-memory@0.6.0
+  - @better-media/adapter-jobs-bullmq@0.3.1
+  - @better-media/adapter-storage-filesystem@0.3.1
+  - @better-media/adapter-storage-s3@0.5.1
+
+## 1.2.1
+
+### Patch Changes
+
+- Updated dependencies [ce82214]
+  - @better-media/plugin-video-streaming@1.0.0
+
 ## 1.2.0
 
 ### Minor Changes
