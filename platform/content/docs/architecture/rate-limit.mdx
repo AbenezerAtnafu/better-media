@@ -1,0 +1,139 @@
+---
+title: Rate Limiting
+description: "Control upload throughput per user, IP, or tenant using the built-in rate limiting plugin or a custom strategy."
+---
+
+Rate limiting in better-media is handled at the **plugin layer**, not in the HTTP layer. This lets you apply limits per pipeline run — i.e. per file upload — with access to the full `context` object (user ID, tenant, IP, etc.) that your route handler passed in.
+
+## The rate limiting plugin
+
+Install the plugin:
+
+```bash
+npm install @better-media/plugin-rate-limit
+```
+
+Wire it into your runtime:
+
+```ts title="lib/media.ts"
+import { createBetterMedia } from "better-media";
+import { rateLimitPlugin } from "@better-media/plugin-rate-limit";
+import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
+import { memoryDatabase } from "@better-media/adapter-db-memory";
+
+export const media = createBetterMedia({
+  storage: new FileSystemStorageAdapter({ baseDir: "./uploads" }),
+  database: memoryDatabase(),
+  plugins: [
+    rateLimitPlugin({
+      windowMs: 60_000,       // 1 minute window
+      maxUploads: 10,         // max 10 uploads per window
+      keyBy: (ctx) => ctx.userId ?? ctx.ip, // scope per user or IP
+    }),
+  ],
+});
+```
+
+When the limit is exceeded, the plugin throws a `RateLimitError` (exported from `@better-media/plugin-rate-limit`), which your handler can catch and map to a `429`.
+
+## `rateLimitPlugin` options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `windowMs` | `number` | `60_000` | Rolling window in milliseconds |
+| `maxUploads` | `number` | `20` | Max upload attempts per window |
+| `maxBytes` | `number` | — | Optional: max total bytes per window |
+| `keyBy` | `(ctx: PluginContext) => string` | IP from context | How to group requests |
+| `store` | `RateLimitStore` | In-memory | Custom store (e.g. Redis) |
+
+## Using `context` for rate limit keys
+
+Rate limit keys are derived from the `context` object your route handler passes to `ingest` or `complete`. Include whatever you need:
+
+```ts title="routes/upload.ts"
+const result = await media.upload.ingest({
+  file: { path: req.file.path },
+  metadata: {
+    filename: req.file.originalname,
+    mimeType: req.file.mimetype,
+    size: req.file.size,
+    context: {
+      userId: req.user.id,
+      ip: req.ip,
+      tenantId: req.user.tenantId,
+    },
+  },
+});
+```
+
+Then in `rateLimitPlugin`, `keyBy` receives that context:
+
+```ts
+keyBy: (ctx) => `${ctx.tenantId}:${ctx.userId}`,
+```
+
+## Handling `RateLimitError`
+
+```ts title="routes/upload.ts"
+import { RateLimitError } from "@better-media/plugin-rate-limit";
+
+try {
+  const result = await media.upload.ingest({ ... });
+  res.json(result);
+} catch (e) {
+  if (e instanceof RateLimitError) {
+    res.status(429).json({
+      error: "Too many uploads",
+      retryAfter: e.retryAfterMs,
+    });
+    return;
+  }
+  throw e;
+}
+```
+
+## Redis store
+
+For multi-process or multi-instance deployments, swap in the Redis store:
+
+```ts
+import { redisRateLimitStore } from "@better-media/plugin-rate-limit/redis";
+import { createClient } from "redis";
+
+const redis = createClient({ url: process.env.REDIS_URL });
+await redis.connect();
+
+rateLimitPlugin({
+  windowMs: 60_000,
+  maxUploads: 10,
+  keyBy: (ctx) => ctx.userId ?? ctx.ip,
+  store: redisRateLimitStore(redis),
+});
+```
+
+The in-memory store works well for single-process apps and development. Use Redis (or any adapter that implements `RateLimitStore`) when running multiple processes or replicas.
+
+## Custom rate limit strategy
+
+If the plugin doesn't fit your requirements, implement `RateLimitStore` directly:
+
+```ts
+import type { RateLimitStore } from "@better-media/plugin-rate-limit";
+
+const myStore: RateLimitStore = {
+  async increment(key, windowMs) {
+    // Return { count, resetAt } after incrementing the key in your backend
+  },
+  async reset(key) {
+    // Clear the key (optional — used by admin tooling)
+  },
+};
+```
+
+Or write a fully custom plugin using the plugin API — see [Plugins](/docs/architecture/plugins) for the plugin shape.
+
+## Notes
+
+- Rate limiting runs **before** storage I/O. If a request is rejected, no bytes are written.
+- `maxBytes` applies to the total uncompressed size reported in `metadata.size`. The plugin trusts the size passed in; for stricter enforcement, validate it against the actual stream in an earlier plugin.
+- The in-memory store does not persist across restarts. Use Redis or a database-backed store in production if window continuity matters.

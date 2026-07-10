@@ -2,8 +2,9 @@
   "index": "Architecture",
   "api": "API",
   "cli": "CLI",
-  "jobs": "Background Jobs",
-  "events": "Events & Webhooks",
+  "database": "Database",
+  "events": "Hooks & Webhooks",
   "plugins": "Plugins",
-  "database": "Database"
+  "rate-limit": "Rate Limiting",
+  "jobs": "Background Jobs"
 }
