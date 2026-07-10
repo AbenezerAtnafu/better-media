@@ -3,13 +3,11 @@ title: API
 description: "The public surface of the framework: createBetterMedia, the runtime object, and how to call it from your server."
 ---
 
-When you call `createBetterMedia`, you get a **runtime** object. That object is the main integration surface: every workflow—ingest, direct uploads, file lookups, and background jobs—goes through it. Optional plugins and adapters extend behavior, but your application code should talk to the runtime, not to adapters directly, except when constructing configuration.
+When you call `createBetterMedia`, you get a **runtime** object. That object is the entire integration surface — every upload, file operation, and background job goes through it. Your application code talks to the runtime, not to adapters directly.
 
-Think of it as one **initialized instance** on the server, with **grouped methods** and **explicit inputs**—not a new HTTP client, but a typed object your handlers call into.
+## `createBetterMedia`
 
-## The factory: `createBetterMedia`
-
-Import the factory from the `better-media` package and pass a single configuration object. The framework wires **storage**, **database**, **plugins**, and (optionally) **jobs** and **file handling** policy, then returns the runtime.
+Import the factory from `better-media` and pass a single config object. It wires storage, database, plugins, and jobs together and returns the runtime.
 
 ```ts title="lib/media.ts"
 import { createBetterMedia } from "better-media";
@@ -21,33 +19,66 @@ export const media = createBetterMedia({
   storage: new FileSystemStorageAdapter({ baseDir: "./uploads" }),
   database: memoryDatabase(),
   plugins: [validationPlugin({ maxSize: "10mb" })],
-  // jobs: yourJobAdapter,  // optional: custom queue; defaults may apply for background plugins
-  // fileHandling: { maxBufferBytes: 50_000_000 },
 });
 ```
 
-Import `media` in your route handlers, workers, and scripts — it's the single object your application code talks to.
+| Option | Required | Description |
+|---|---|---|
+| `storage` | Yes | Storage adapter — where bytes land |
+| `database` | Yes | Database adapter — where media records are written |
+| `plugins` | No | Array of plugins that extend the pipeline |
+| `jobs` | No | Job adapter for background work; defaults to in-process if omitted |
+| `fileHandling` | No | e.g. `{ maxBufferBytes: 50_000_000 }` — limits before streaming kicks in |
 
-## Runtime shape: namespaces on `media`
+## Runtime namespaces
 
-The return value of `createBetterMedia` is a **`BetterMediaRuntime`**. It groups methods by concern:
+`createBetterMedia` returns a **`BetterMediaRuntime`** grouped by concern:
 
-| Namespace        | Role |
-| ---------------- | ---- |
-| `media.upload`   | Ingest bytes or references, presigned upload flow, completion after direct-to-storage upload |
-| `media.files`    | Read, delete, move, copy, URL/size checks, download, reprocess (by **media record id**). |
-| `media.system`   | Health and destructive admin helpers (e.g. `clearStorage`) when supported by adapters. |
-| `runBackgroundJob` | Execute a work item from your worker using the same pipeline as inline background plugins. |
+| Namespace | Role |
+|---|---|
+| `media.upload` | Ingest bytes or references, presigned upload flow, completion after direct-to-storage upload |
+| `media.files` | Read, mutate, and reprocess files by **media record id** |
+| `media.system` | Health check and destructive admin helpers |
+| `media.runBackgroundJob` | Execute a queued work item from your worker — see [Background Jobs](/docs/architecture/jobs) |
 
-There is no HTTP server inside the framework: your **app** (Express, Nest, Next route handlers, etc.) calls these methods with plain objects, Buffers, and streams. The important shapes are **`IngestInput`**, **metadata objects**, and **plugin context**, not how the request was parsed.
+## `media.upload`
 
-### Example: hand off a Multer temp file (Express)
+### Ingest inputs
 
-```ts title="routes/upload.express.ts"
+`upload.ingest` accepts a file source and metadata:
+
+```ts
+await media.upload.ingest({
+  file: { path: req.file.path },           // or: { buffer }, { stream }, { url }
+  metadata: {
+    filename: req.file.originalname,
+    mimeType: req.file.mimetype,
+    size: req.file.size,
+    context: { userId: req.user.id },      // arbitrary — passed into plugins
+  },
+  key: "avatars/photo.jpg",               // optional; derived from filename if omitted
+});
+```
+
+**File source shapes:**
+
+| Shape | Description |
+|---|---|
+| `{ buffer: Buffer }` | Raw bytes already in memory |
+| `{ stream: Readable }` | Node.js readable stream |
+| `{ path: string }` | Temp file path; deleted after ingest by default (`deleteAfterUpload: true`) |
+| `{ url: string; mode?: "import" \| "reference" }` | `import` pulls bytes into storage; `reference` records the URL without storing bytes |
+
+Convenience methods (`fromBuffer`, `fromStream`, `fromPath`, `fromUrl`) wrap `ingest` — same options, file source is the first argument.
+
+Successful ingest returns a **`MediaResult`**: `id`, `key`, `status`, and `metadata`.
+
+### Example
+
+```ts title="routes/upload.ts"
 import type { Request, Response } from "express";
 import { media } from "../lib/media";
 
-// Assume `req.file` comes from `multer` (path points at a temp file; ingest can delete it after use).
 export async function postUpload(req: Request, res: Response) {
   if (!req.file) {
     res.status(400).json({ error: "No file" });
@@ -67,93 +98,19 @@ export async function postUpload(req: Request, res: Response) {
 }
 ```
 
-### Example: raw `Buffer` in a Next.js route
+### Presigned uploads
 
-```ts title="app/api/upload/route.ts"
-import { media } from "@/lib/media";
-import { ValidationError } from "better-media";
-import { type NextRequest, NextResponse } from "next/server";
+For direct browser-to-storage uploads, your server issues a presigned token and steps aside:
 
-export async function POST(request: NextRequest) {
-  const file = await request.arrayBuffer();
-  const filename =
-    request.headers.get("x-filename") ?? `upload-${Date.now()}`;
-  const mimeType = request.headers.get("content-type") ?? "application/octet-stream";
-
-  try {
-    const result = await media.upload.fromBuffer(Buffer.from(file), {
-      metadata: {
-        filename,
-        mimeType,
-        context: { requestId: request.headers.get("x-request-id") },
-      },
-    });
-    return NextResponse.json({ id: result.id, key: result.key, status: result.status });
-  } catch (e) {
-    if (e instanceof ValidationError) {
-      return NextResponse.json({ error: e.message }, { status: 400 });
-    }
-    throw e;
-  }
-}
-```
-
-## `media.upload`
-
-### `ingest` and file inputs
-
-`upload.ingest` accepts an **`IngestInput`**:
-
-- **`file`**: one of
-  - `{ buffer: Buffer }`
-  - `{ stream: Readable }`
-  - `{ path: string }` — optional `deleteAfterUpload` on the input (default: delete path after success, e.g. Multer temp files)
-  - `{ url: string; mode?: "import" | "reference" }` — `import` pulls bytes into storage; `reference` records the URL without storing bytes
-- **`metadata`**: e.g. `filename`, `mimeType`, and optional `context` (arbitrary `Record` for request/user/tenant data passed into plugins)
-- **`key`**: optional storage key; otherwise derived from filename or a generated id
-- **`deleteAfterUpload`**: for path-based files only, whether to remove the file from disk after ingest (default `true`).
-
-**Convenience** methods mirror the same `IngestInput` (minus `file`):
-
-- `fromBuffer` / `fromStream` / `fromPath` / `fromUrl`
-
-```ts title="lib/ingest-once.ts"
-import { media } from "./media";
-
-// Same as ingest({ file: { buffer }, metadata: { ... } })
-const result = await media.upload.fromBuffer(someBuffer, {
-  key: "avatars/team-photo.jpg",
-  metadata: {
-    filename: "team-photo.jpg",
-    mimeType: "image/jpeg",
-  },
-});
-```
-
-Successful completion returns a **`MediaResult`**: at minimum `id` (media record id), `key` (storage key), `status`, and `metadata` as applicable.
-
-### Presigned upload flow
-
-If the storage adapter supports it:
-
-1. **`requestPresignedUpload(key, options)`** — returns a presigned upload payload (adapter-specific).
-2. The client uploads directly to storage.
-3. **`complete(key, metadata?)`** — runs the pipeline for that storage key and returns a **`MediaResult`**, same family as `ingest`.
-
-`complete` is keyed by **storage key** (`key`), not necessarily the same as the media `id` returned from **`ingest`**, depending on your schema and how you look up records.
-
-```ts title="lib/presigned-upload.ts"
-import { media } from "./media";
-
-// 1) Server: give the client a way to upload bytes without proxying the file through your app.
-//    `options` is adapter-specific (S3: method, content type, field policy, expiry, etc.).
+```ts
+// 1. Issue token
 const presign = await media.upload.requestPresignedUpload("user/123/avatar.png", {
-  // e.g. contentType: "image/png" — see your storage adapter
+  contentType: "image/png",
 });
 
-// 2) Client: PUT/POST the file to `presign.url` (or follow adapter instructions).
+// 2. Browser uploads to presign.url (adapter-specific)
 
-// 3) After the object exists in storage, run the pipeline on the server.
+// 3. Run pipeline after bytes land in storage
 const result = await media.upload.complete("user/123/avatar.png", {
   filename: "avatar.png",
   mimeType: "image/png",
@@ -161,74 +118,69 @@ const result = await media.upload.complete("user/123/avatar.png", {
 });
 ```
 
+The browser handles step 2 directly against the presigned URL — a standard `PUT` or `POST` depending on the storage adapter.
+
 ## `media.files`
 
-These methods work against the **media record** stored in your database. For most operations, the first argument is the **media record id** (the `id` field on `MediaResult`), which the implementation uses to look up `storageKey` and delegate to the storage adapter.
+All methods take a **media record id** (the `id` from `MediaResult`) as their first argument. The runtime resolves the storage key internally.
 
-- **Read / inspect**: `get`, `exists`, `getSize`
-- **URLs and bytes**: `getUrl` (when the adapter supports signed/public URLs), `download`, `stream` (if the adapter implements streaming)
-- **Mutations**: `delete`, `deleteMany`, `move`, `copy` (last two require adapter support)
-- **Pipelines again**: `reprocess` — re-run the pipeline for an existing file with optional metadata
+| Method | Returns | Notes |
+|---|---|---|
+| `get(id)` | `MediaRecord` | Throws if not found |
+| `exists(id)` | `boolean` | |
+| `getSize(id)` | `number` (bytes) | |
+| `getUrl(id, options?)` | `string` | Requires adapter URL support; `options` accepts `expiresIn` (seconds) |
+| `download(id)` | `Buffer` | |
+| `stream(id)` | `Readable` | Requires adapter streaming support |
+| `delete(id)` | `void` | Removes from storage and database |
+| `deleteMany(ids)` | `void` | Batched delete |
+| `move(id, newKey)` | `void` | Requires adapter support |
+| `copy(id, newKey)` | `MediaResult` | Requires adapter support |
+| `reprocess(id, metadata?)` | `MediaResult` | Re-runs the plugin pipeline for an existing file |
 
-If an adapter does not support an optional capability (e.g. `getUrl` without a signer), the runtime throws a clear error rather than returning a partial result.
-
-```ts title="lib/media-operations.ts"
-import { media } from "./media";
-
-// `recordId` is the `id` from ingest / complete
-async function publicUrlFor(recordId: string) {
-  return media.files.getUrl(recordId, { expiresIn: 3600 });
-}
-
-async function removeFromEverywhere(recordId: string) {
-  await media.files.delete(recordId);
-}
-
-async function rebuildDerivatives(recordId: string) {
-  await media.files.reprocess(recordId, { /* optional new metadata for plugins */ });
-}
-```
+If an adapter does not support an optional capability, the runtime throws a clear error rather than returning a partial result.
 
 ## `media.system`
 
-- **`checkConnection()`** — validates storage when the adapter exposes a connection check; otherwise can resolve optimistically.
-- **`clearStorage()`** — destructive: clears storage when supported and removes media rows. Intended for **development** or controlled admin flows, not routine production use.
+| Method | Description |
+|---|---|
+| `checkConnection()` | Validates storage reachability; resolves optimistically when the adapter has no health check |
+| `clearStorage()` | **Destructive** — wipes storage and removes all media rows. Development and controlled admin use only |
 
-```ts title="scripts/healthcheck-media.ts"
-import { media } from "../lib/media";
+## Error types
 
-const ok = await media.system.checkConnection();
-console.log(ok ? "Storage reachable" : "Storage check failed");
-// await media.system.clearStorage(); // dev only — wipes storage + DB media rows
-```
+| Class | Package | When it's thrown |
+|---|---|---|
+| `ValidationError` | `better-media` | File fails a plugin validation rule (size, type, dimensions, etc.) |
+| `PipelineError` | `better-media` | Unhandled failure inside the plugin pipeline |
+| `AdapterError` | `better-media` | Storage or database adapter operation fails |
+| `RateLimitError` | `@better-media/plugin-rate-limit` | Upload rate limit exceeded — see [Rate Limiting](/docs/architecture/rate-limit) |
 
-## Background jobs: `runBackgroundJob`
+Map known errors to status codes in your HTTP layer; rethrow or log the rest:
 
-If plugins enqueue background work, your **worker** (or the default in-process driver, depending on `jobs` configuration) must execute payloads by calling:
+```ts
+import { ValidationError, AdapterError } from "better-media";
 
-```ts title="worker/media-jobs.ts"
-import { media } from "../lib/media";
-import type { BackgroundJobPayload } from "better-media";
-
-// Called from your queue / worker with the same payload the framework enqueued
-export async function runJob(payload: BackgroundJobPayload) {
-  await media.runBackgroundJob(payload);
+try {
+  const result = await media.upload.ingest({ ... });
+} catch (e) {
+  if (e instanceof ValidationError) return res.status(400).json({ error: e.message });
+  if (e instanceof AdapterError) return res.status(502).json({ error: "Storage error" });
+  throw e;
 }
 ```
 
-`payload` matches the **`BackgroundJobPayload`** type exported from the package. This keeps a single place—your constructed `media` instance—that knows the plugin registry, storage, database, and file-handling limits.
+## Type exports
 
-## Error handling
+All types are importable from `better-media`:
 
-- Validation and pipeline failures are surfaced in a way you can catch with normal `try/catch` in async handlers.
-- The package exports **`ValidationError`** (from the pipeline/executor) for cases where you want a typed check.
-
-The **`app/api/upload/route.ts`** example above already shows **`ValidationError` → 400**; use the same pattern in Express, Nest, or other frameworks—map known errors to status codes, rethrow or log the rest.
-
-In your HTTP layer, keep domain errors distinct from transport concerns: validation and plugin rejections are usually `4xx`, unexpected failures are `5xx` or rethrown to your error middleware.
-
-## Types and re-exports
-
-The framework re-exports the main runtime types (e.g. **`BetterMediaRuntime`**, **`IngestInput`**, **`MediaResult`**, **`MediaMetadata`**) and selected **core** pieces (schema/migrations helpers, presign-related types) so that a typical app imports from `better-media` and adapter packages only.
-
-For a minimal first integration, start with **Overview → Basic usage**; this page is the **contract** for how that setup maps to a single `media` object and its namespaces.
+| Type | Description |
+|---|---|
+| `BetterMediaRuntime` | The full runtime object returned by `createBetterMedia` |
+| `IngestInput` | Input shape for `upload.ingest` |
+| `MediaResult` | Return value of `ingest`, `complete`, `copy`, and `reprocess` |
+| `MediaRecord` | A media row as stored in the database |
+| `MediaMetadata` | The `metadata` object on `IngestInput` and `MediaResult` |
+| `BackgroundJobPayload` | Payload shape passed to `runBackgroundJob` |
+| `PluginContext` | Context object passed into every plugin hook |
+| `PresignedUploadResult` | Return value of `requestPresignedUpload` |

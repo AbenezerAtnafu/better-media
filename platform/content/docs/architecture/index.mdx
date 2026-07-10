@@ -1,13 +1,62 @@
 ---
 title: Architecture
-description: The high-level system model for Better Media.
+description: "One runtime, pluggable adapters, and a pipeline every file passes through."
 ---
 
-This section explains how Better Media is structured.
+Better Media is a server-side media pipeline framework. You configure it once — wiring storage, a database, and plugins — and get back a single `media` runtime your handlers call into. The framework owns the pipeline; it does not own your HTTP layer, your queue, or your schema beyond what it needs.
 
-It will document the core mental model behind:
+## The three layers
 
-- the public API surface
-- the CLI workflow
-- the plugin lifecycle
-- the database integration layer
+| Layer | What it is |
+|---|---|
+| **Factory** | `createBetterMedia()` — assembles storage, DB, plugins, and jobs into a runtime |
+| **Runtime** | The `media` object — `upload`, `files`, `system`, and `runBackgroundJob` |
+| **Adapters** | Storage and database are swappable; plugins extend the pipeline |
+
+## Server-side ingest
+
+Every file that enters the system through your server follows the same path:
+
+```mermaid
+flowchart LR
+  A([Your handler]) --> B[media.upload.ingest]
+  B --> C[Plugin pipeline]
+  C --> D[(Storage adapter)]
+  C --> E[(Database adapter)]
+  C -.->|optional| F[[Jobs adapter]]
+  D & E --> G([MediaResult])
+```
+
+1. Your handler calls `media.upload.ingest` with a file source (buffer, stream, path, or URL) and metadata
+2. The **plugin pipeline** runs — validation, transformation, and any side effects you've registered
+3. Bytes land in the **storage adapter**; a media record is written to the **database adapter**
+4. Background work (transcoding, post-processing) is enqueued via the **jobs adapter** if configured
+5. A `MediaResult` — id, key, status — comes back to your handler
+
+## Direct uploads
+
+For client-to-storage uploads, your server issues a presigned token and steps out of the data path:
+
+```mermaid
+flowchart LR
+  A([Browser]) -->|"① requestPresignedUpload"| B([Your server])
+  B --> A
+  A -->|"② PUT bytes"| C[(Storage adapter)]
+  A -->|"③ complete"| B
+  B --> D[Plugin pipeline]
+  D --> E[(Database adapter)]
+  D -.->|optional| F[[Jobs adapter]]
+  D --> G([MediaResult])
+```
+
+The browser uploads directly to storage; `media.upload.complete` picks up after and runs the same plugin pipeline as server-side ingest. See [Client](/docs/architecture/client) for the browser-side SDK.
+
+## What's in this section
+
+- [API](/docs/architecture/api) — the `createBetterMedia` factory, runtime namespaces, and all method signatures
+- [CLI](/docs/architecture/cli) — schema bootstrap, migration generation, and applying migrations
+- [Database](/docs/architecture/database) — adapter interface, schema, and migration patterns
+- [Hooks & Webhooks](/docs/architecture/events) — reacting to pipeline events in-process and over HTTP
+- [Plugins](/docs/architecture/plugins) — the plugin lifecycle, context shape, and writing your own
+- [Rate Limiting](/docs/architecture/rate-limit) — per-user and per-tenant upload throttling
+- [Background Jobs](/docs/architecture/jobs) — the jobs adapter interface and worker wiring
