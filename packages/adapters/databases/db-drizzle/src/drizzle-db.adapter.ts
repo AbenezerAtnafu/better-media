@@ -387,7 +387,7 @@ export class DrizzleDbAdapter implements DatabaseAdapter {
   }
 
   async transaction<R>(callback: (trx: DatabaseTransactionAdapter) => Promise<R>): Promise<R> {
-    return this.db.transaction(async (tx: unknown) => {
+    return this.db.transaction(async (tx: DrizzleDb) => {
       const trxAdapter = new DrizzleDbAdapter(tx, {
         config: this.config,
         schema: this.schema,
