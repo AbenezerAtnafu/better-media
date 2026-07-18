@@ -1,6 +1,6 @@
 {
   "name": "@better-media/plugin-video-processing",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Video processing plugin for Better Media — thumbnail extraction, transcoding, and metadata via ffmpeg",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -27,7 +27,7 @@
     "@better-media/core": "workspace:*"
   },
   "peerDependencies": {
-    "@better-media/framework": ">=0.1.0",
+    "@better-media/framework": ">=1.0.0",
     "fluent-ffmpeg": ">=2.1.0"
   },
   "peerDependenciesMeta": {

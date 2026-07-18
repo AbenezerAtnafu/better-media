@@ -1,5 +1,15 @@
 # nestjs
 
+## 0.2.2
+
+### Patch Changes
+
+- @better-media/framework@1.0.0
+- @better-media/plugin-validation@1.0.0
+- @better-media/plugin-media-processing@1.0.0
+- @better-media/adapter-db-memory@1.0.0
+- @better-media/adapter-storage-filesystem@1.0.0
+
 ## 0.2.1
 
 ### Patch Changes

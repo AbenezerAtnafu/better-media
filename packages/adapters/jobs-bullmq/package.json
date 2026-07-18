@@ -1,6 +1,6 @@
 {
   "name": "@better-media/adapter-jobs-bullmq",
-  "version": "0.3.1",
+  "version": "1.0.0",
   "description": "BullMQ (Redis) job adapter for Better Media background processing",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -27,7 +27,7 @@
     "@better-media/core": "workspace:*"
   },
   "peerDependencies": {
-    "@better-media/framework": ">=0.1.0",
+    "@better-media/framework": ">=1.0.0",
     "bullmq": "^5.0.0"
   },
   "devDependencies": {
