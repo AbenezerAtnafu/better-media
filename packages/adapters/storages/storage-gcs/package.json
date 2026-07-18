@@ -1,6 +1,6 @@
 {
   "name": "@better-media/adapter-storage-gcs",
-  "version": "1.0.0",
+  "version": "0.8.0",
   "description": "Google Cloud Storage adapter for Better Media",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
