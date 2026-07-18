@@ -25,7 +25,7 @@
   ],
   "dependencies": {
     "@better-media/core": "workspace:*",
-    "drizzle-orm": "^0.44.7"
+    "drizzle-orm": "^0.45.2"
   },
   "peerDependencies": {
     "@better-media/framework": ">=0.1.0"
