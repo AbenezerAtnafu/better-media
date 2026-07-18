@@ -19,7 +19,7 @@ The S3 adapter is the most commonly used storage backend in Better Media. This g
 ## Install
 
 ```bash
-npm install better-media @better-media/adapter-s3
+npm install @better-media/framework @better-media/adapter-s3
 ```
 
 You'll also need to configure AWS credentials. Better Media uses the AWS SDK v3 under the hood, which picks up credentials from environment variables, `~/.aws/credentials`, or an IAM role automatically.
@@ -27,7 +27,7 @@ You'll also need to configure AWS credentials. Better Media uses the AWS SDK v3 
 ## Configure the adapter
 
 ```ts
-import { createBetterMedia } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
 import { s3Adapter } from "@better-media/adapter-s3";
 
 export const media = createBetterMedia({

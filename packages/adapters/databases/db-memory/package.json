@@ -26,6 +26,9 @@
   "dependencies": {
     "@better-media/core": "workspace:*"
   },
+  "peerDependencies": {
+    "@better-media/framework": ">=0.1.0"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.11",
     "@types/node": "^22.10.0",

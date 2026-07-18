@@ -36,7 +36,7 @@ The pipeline runs left to right. If `validationPlugin` rejects the file, `imageP
 A plugin is a function that returns a `Plugin` object with lifecycle hooks:
 
 ```ts
-import { definePlugin } from "better-media";
+import { definePlugin } from "@better-media/framework";
 
 export const myPlugin = definePlugin(() => ({
   name: "my-plugin",

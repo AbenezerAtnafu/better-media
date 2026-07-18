@@ -10,17 +10,17 @@ description: Step-by-step setup guide for Better Media.
     <Tabs groupId="docs-package-manager" items={['pnpm', 'npm', 'yarn']} persist>
       <Tab value="pnpm">
         ```bash
-        pnpm add better-media
+        pnpm add @better-media/framework
         ```
       </Tab>
       <Tab value="npm">
         ```bash
-        npm install better-media
+        npm install @better-media/framework
         ```
       </Tab>
       <Tab value="yarn">
         ```bash
-        yarn add better-media
+        yarn add @better-media/framework
         ```
       </Tab>
     </Tabs>
@@ -127,7 +127,7 @@ description: Step-by-step setup guide for Better Media.
     Wire your storage, database, and plugins together in one place:
 
     ```ts title="lib/media.ts"
-    import { createBetterMedia } from "better-media";
+    import { createBetterMedia } from "@better-media/framework";
     import { S3StorageAdapter } from "@better-media/adapter-storage-s3";
     import { database } from "./database";
 

@@ -3,7 +3,7 @@ title: Types
 description: Types to import when annotating your own code against the Better Media API.
 ---
 
-All types are exported from `better-media`.
+All types are exported from `@better-media/framework`.
 
 ## Upload
 
@@ -12,7 +12,7 @@ All types are exported from `better-media`.
 The argument to `media.upload.ingest()`.
 
 ```typescript
-import type { IngestInput } from "better-media";
+import type { IngestInput } from "@better-media/framework";
 
 const input: IngestInput = {
   file: { buffer },           // or stream, path, url
@@ -69,7 +69,7 @@ type MediaResult = {
 Use these when typing your `events` callbacks.
 
 ```typescript
-import type { BetterMediaEvents, ProcessingCompleteEvent, ErrorEvent } from "better-media";
+import type { BetterMediaEvents, ProcessingCompleteEvent, ErrorEvent } from "@better-media/framework";
 
 const events: BetterMediaEvents = {
   onUploadComplete: (result: MediaResult) => { /* ... */ },
@@ -88,7 +88,7 @@ type ErrorEvent = { id?: string; key?: string };
 The only type you need when wiring a worker:
 
 ```typescript
-import type { BackgroundJobPayload } from "better-media";
+import type { BackgroundJobPayload } from "@better-media/framework";
 
 const worker = createBullMQWorker(
   (payload) => media.runBackgroundJob(payload as BackgroundJobPayload),

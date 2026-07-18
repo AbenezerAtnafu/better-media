@@ -26,6 +26,9 @@
   "dependencies": {
     "@better-media/core": "workspace:*"
   },
+  "peerDependencies": {
+    "@better-media/framework": ">=0.1.0"
+  },
   "keywords": [
     "better-media",
     "storage",

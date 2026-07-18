@@ -8,7 +8,7 @@ This page walks through the core operations — upload, retrieve, and delete —
 ## Setup
 
 ```ts title="lib/media.ts"
-import { createBetterMedia } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
 import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 import { memoryDatabase } from "@better-media/adapter-db-memory";
 
@@ -82,7 +82,7 @@ await media.files.delete(result.id);
 Wrap upload calls in a `try/catch` to handle validation failures and infrastructure errors:
 
 ```ts
-import { ValidationError } from "better-media";
+import { ValidationError } from "@better-media/framework";
 
 try {
   const result = await media.upload.ingest({

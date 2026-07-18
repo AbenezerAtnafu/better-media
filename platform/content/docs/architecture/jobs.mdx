@@ -66,7 +66,7 @@ Run a dedicated worker in a separate process (or dyno / container). It consumes 
 ```typescript
 // worker.ts
 import { createBullMQWorker } from "@better-media/adapter-jobs-bullmq";
-import type { BackgroundJobPayload } from "better-media";
+import type { BackgroundJobPayload } from "@better-media/framework";
 import { media } from "./media"; // same runtime config as the app
 
 const worker = createBullMQWorker(

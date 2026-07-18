@@ -16,7 +16,7 @@ npm install @better-media/plugin-rate-limit
 Wire it into your runtime:
 
 ```ts title="lib/media.ts"
-import { createBetterMedia } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
 import { rateLimitPlugin } from "@better-media/plugin-rate-limit";
 import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 import { memoryDatabase } from "@better-media/adapter-db-memory";
