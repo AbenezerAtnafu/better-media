@@ -301,11 +301,36 @@ importers:
         specifier: ^8.56.1
         version: 8.57.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
 
+  packages/adapters/databases/db-drizzle:
+    dependencies:
+      '@better-media/core':
+        specifier: workspace:*
+        version: link:../../../core
+      drizzle-orm:
+        specifier: ^0.44.7
+        version: 0.44.7(@types/pg@8.20.0)(kysely@0.29.2)(pg@8.20.0)
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.11
+        version: 29.5.14
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.15
+      jest:
+        specifier: ^30.2.0
+        version: 30.3.0(@types/node@22.19.15)(ts-node@10.9.2(@types/node@22.19.15)(typescript@5.9.3))
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/adapters/databases/db-kysely:
     dependencies:
       '@better-media/core':
         specifier: workspace:*
         version: link:../../../core
+      '@better-media/framework':
+        specifier: '>=0.1.0'
+        version: 0.6.0(@types/node@22.19.15)
       kysely:
         specifier: ^0.29.2
         version: 0.29.2
@@ -331,6 +356,9 @@ importers:
       '@better-media/core':
         specifier: workspace:*
         version: link:../../../core
+      '@better-media/framework':
+        specifier: '>=0.1.0'
+        version: 0.6.0(@types/node@22.19.15)
     devDependencies:
       '@types/jest':
         specifier: ^29.5.11
@@ -350,6 +378,9 @@ importers:
       '@better-media/core':
         specifier: workspace:*
         version: link:../../../core
+      '@better-media/framework':
+        specifier: '>=0.1.0'
+        version: 0.6.0(@types/node@22.19.15)
       mongodb:
         specifier: ^6.8.0
         version: 6.21.0
@@ -381,6 +412,9 @@ importers:
       '@better-media/core':
         specifier: workspace:*
         version: link:../../core
+      '@better-media/framework':
+        specifier: '>=0.1.0'
+        version: 0.6.0(@types/node@22.19.15)
     devDependencies:
       '@types/jest':
         specifier: ^29.5.11
@@ -403,12 +437,18 @@ importers:
       '@better-media/core':
         specifier: workspace:*
         version: link:../../../core
+      '@better-media/framework':
+        specifier: '>=0.1.0'
+        version: 0.6.0(@types/node@22.19.15)
 
   packages/adapters/storages/storage-gcs:
     dependencies:
       '@better-media/core':
         specifier: workspace:*
         version: link:../../../core
+      '@better-media/framework':
+        specifier: '>=0.1.0'
+        version: 0.6.0(@types/node@22.19.15)
       '@google-cloud/storage':
         specifier: ^7.21.0
         version: 7.21.0
@@ -433,6 +473,9 @@ importers:
       '@better-media/core':
         specifier: workspace:*
         version: link:../../../core
+      '@better-media/framework':
+        specifier: '>=0.1.0'
+        version: 0.6.0(@types/node@22.19.15)
 
   packages/better-media:
     dependencies:
@@ -588,6 +631,9 @@ importers:
       '@better-media/core':
         specifier: workspace:*
         version: link:../../core
+      '@better-media/framework':
+        specifier: '>=0.1.0'
+        version: 0.6.0(@types/node@22.19.15)
       fluent-ffmpeg:
         specifier: '>=2.1.0'
         version: 2.1.3
@@ -1189,6 +1235,20 @@ packages:
 
   '@bcoe/v8-coverage@0.2.3':
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
+
+  '@better-media/adapter-jobs@0.6.0':
+    resolution: {integrity: sha512-YW7RvYlT/muCEuiTuCRZKAGYdc/k5edOg+CKn272n3C6W4tEVf8dCig4Tfl5ATnYO5KzhPYmvEuIII5q9xXRBw==}
+
+  '@better-media/cli@0.6.0':
+    resolution: {integrity: sha512-LVWn4ZT1z/fgHeAx05ZKrz9Cjix1AgAoA3z1qESIgkMOwzKDA8e6OXTYq6Vz0CaNKvQtg7Of7FxUesnbQXp4WQ==}
+    hasBin: true
+
+  '@better-media/core@0.6.0':
+    resolution: {integrity: sha512-7H+nvXASsX8lFOVc/eTtpuU++HheyhOzL+O4u2tWwEet4lf1FWFxZ+QpmygzgF51fwFEMn2zKoJhdLj9MeZtOQ==}
+
+  '@better-media/framework@0.6.0':
+    resolution: {integrity: sha512-SSimgv7rOPMuBLKFNpqTR63NEuMQBG0qnkhaycFXOKx+xnBYxQFXCbmvSM1Utvv04JhCoS1kAbZyuywoUly0EQ==}
+    hasBin: true
 
   '@borewit/text-codec@0.2.2':
     resolution: {integrity: sha512-DDaRehssg1aNrH4+2hnj1B7vnUGEjU6OIlyRdkMd0aUdIUvKXrJfXsy8LVtXAy7DRvYVluWbMspsRhz2lcW0mQ==}
@@ -4487,6 +4547,98 @@ packages:
 
   dompurify@3.4.11:
     resolution: {integrity: sha512-zhlUV12GsaRzMsf9q5M254YhA4+VuF0fG+QFqu6aYpoGlKtz+w8//jBcGVYBgQkR5GHjUomejY84AV+/uPbWdw==}
+
+  drizzle-orm@0.44.7:
+    resolution: {integrity: sha512-quIpnYznjU9lHshEOAYLoZ9s3jweleHlZIAWR/jX9gAWNg/JhQ1wj0KGRf7/Zm+obRrYd9GjPVJg790QY9N5AQ==}
+    peerDependencies:
+      '@aws-sdk/client-rds-data': '>=3'
+      '@cloudflare/workers-types': '>=4'
+      '@electric-sql/pglite': '>=0.2.0'
+      '@libsql/client': '>=0.10.0'
+      '@libsql/client-wasm': '>=0.10.0'
+      '@neondatabase/serverless': '>=0.10.0'
+      '@op-engineering/op-sqlite': '>=2'
+      '@opentelemetry/api': ^1.4.1
+      '@planetscale/database': '>=1.13'
+      '@prisma/client': '*'
+      '@tidbcloud/serverless': '*'
+      '@types/better-sqlite3': '*'
+      '@types/pg': '*'
+      '@types/sql.js': '*'
+      '@upstash/redis': '>=1.34.7'
+      '@vercel/postgres': '>=0.8.0'
+      '@xata.io/client': '*'
+      better-sqlite3: '>=7'
+      bun-types: '*'
+      expo-sqlite: '>=14.0.0'
+      gel: '>=2'
+      knex: '*'
+      kysely: '*'
+      mysql2: '>=2'
+      pg: '>=8'
+      postgres: '>=3'
+      prisma: '*'
+      sql.js: '>=1'
+      sqlite3: '>=5'
+    peerDependenciesMeta:
+      '@aws-sdk/client-rds-data':
+        optional: true
+      '@cloudflare/workers-types':
+        optional: true
+      '@electric-sql/pglite':
+        optional: true
+      '@libsql/client':
+        optional: true
+      '@libsql/client-wasm':
+        optional: true
+      '@neondatabase/serverless':
+        optional: true
+      '@op-engineering/op-sqlite':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+      '@planetscale/database':
+        optional: true
+      '@prisma/client':
+        optional: true
+      '@tidbcloud/serverless':
+        optional: true
+      '@types/better-sqlite3':
+        optional: true
+      '@types/pg':
+        optional: true
+      '@types/sql.js':
+        optional: true
+      '@upstash/redis':
+        optional: true
+      '@vercel/postgres':
+        optional: true
+      '@xata.io/client':
+        optional: true
+      better-sqlite3:
+        optional: true
+      bun-types:
+        optional: true
+      expo-sqlite:
+        optional: true
+      gel:
+        optional: true
+      knex:
+        optional: true
+      kysely:
+        optional: true
+      mysql2:
+        optional: true
+      pg:
+        optional: true
+      postgres:
+        optional: true
+      prisma:
+        optional: true
+      sql.js:
+        optional: true
+      sqlite3:
+        optional: true
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -8714,6 +8866,37 @@ snapshots:
 
   '@bcoe/v8-coverage@0.2.3': {}
 
+  '@better-media/adapter-jobs@0.6.0':
+    dependencies:
+      '@better-media/core': 0.6.0
+
+  '@better-media/cli@0.6.0(@types/node@22.19.15)':
+    dependencies:
+      '@better-media/core': 0.6.0
+      chalk: 5.6.2
+      commander: 12.1.0
+      fs-extra: 11.3.4
+      ts-node: 10.9.2(@types/node@22.19.15)(typescript@5.9.3)
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@swc/core'
+      - '@swc/wasm'
+      - '@types/node'
+
+  '@better-media/core@0.6.0':
+    dependencies:
+      zod: 3.25.76
+
+  '@better-media/framework@0.6.0(@types/node@22.19.15)':
+    dependencies:
+      '@better-media/adapter-jobs': 0.6.0
+      '@better-media/cli': 0.6.0(@types/node@22.19.15)
+      '@better-media/core': 0.6.0
+    transitivePeerDependencies:
+      - '@swc/core'
+      - '@swc/wasm'
+      - '@types/node'
+
   '@borewit/text-codec@0.2.2': {}
 
   '@braintree/sanitize-url@7.1.2': {}
@@ -12293,6 +12476,12 @@ snapshots:
   dompurify@3.4.11:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
+
+  drizzle-orm@0.44.7(@types/pg@8.20.0)(kysely@0.29.2)(pg@8.20.0):
+    optionalDependencies:
+      '@types/pg': 8.20.0
+      kysely: 0.29.2
+      pg: 8.20.0
 
   dunder-proto@1.0.1:
     dependencies:

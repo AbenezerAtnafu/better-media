@@ -1,6 +1,6 @@
 {
   "name": "@better-media/mongodb-adapter",
-  "version": "0.6.0",
+  "version": "1.0.0",
   "description": "MongoDB database adapter for Better Media",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -28,7 +28,7 @@
     "mongodb": "^6.8.0"
   },
   "peerDependencies": {
-    "@better-media/framework": ">=0.1.0"
+    "@better-media/framework": ">=1.0.0"
   },
   "devDependencies": {
     "mongodb": "^6.8.0",

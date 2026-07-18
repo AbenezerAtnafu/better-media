@@ -1,5 +1,12 @@
 # @better-media/adapter-storage-gcs
 
+## 1.0.0
+
+### Patch Changes
+
+- @better-media/framework@1.0.0
+- @better-media/core@1.0.0
+
 ## 0.3.1
 
 ### Patch Changes

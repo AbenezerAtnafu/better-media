@@ -1,5 +1,12 @@
 # @better-media/adapter-db-memory
 
+## 1.0.0
+
+### Patch Changes
+
+- @better-media/framework@1.0.0
+- @better-media/core@1.0.0
+
 ## 0.6.0
 
 ### Patch Changes

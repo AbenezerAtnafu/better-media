@@ -15,7 +15,8 @@
       "@better-media/adapter-db-kysely",
       "@better-media/mongodb-adapter",
       "@better-media/adapter-jobs",
-      "@better-media/plugin-video-streaming"
+      "@better-media/plugin-video-streaming",
+      "@better-media/adapter-db-drizzle"
     ]
   ],
   "linked": [],

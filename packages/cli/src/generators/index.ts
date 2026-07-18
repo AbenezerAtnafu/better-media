@@ -12,6 +12,7 @@ import {
   applyOperationsToMetadata,
 } from "@better-media/core";
 import type { DatabaseAdapter } from "@better-media/core";
+import { generateDrizzleSchema, dialectToProvider } from "./drizzle-schema";
 
 type CustomSchemaResult = {
   code: string;
@@ -133,9 +134,21 @@ const builtInGenerators: Record<string, GenerateFn> = {
       '[media] Prisma schema generator is not implemented yet. Run "npx better-media generate" with Kysely, then apply via Prisma migrate/push.'
     );
   },
-  async drizzle() {
-    throw new Error(
-      '[media] Drizzle schema generator is not implemented yet. Run "npx better-media generate" with Kysely, then apply via Drizzle migrate/push.'
+  async drizzle({ cwd, outPath, dialect }) {
+    const provider = dialectToProvider(dialect);
+    const code = generateDrizzleSchema(schema, dialect);
+
+    // Default output: better-media/drizzle-schema.ts (next to where SQL would go)
+    const defaultTs = path.join(path.dirname(outPath), `drizzle-schema.${provider}.ts`);
+    const resolvedOut = outPath.endsWith(".ts") ? outPath : defaultTs;
+
+    await fs.ensureDir(path.dirname(resolvedOut));
+    await fs.writeFile(resolvedOut, code, "utf8");
+    console.log(
+      chalk.green(`[media] Generated Drizzle schema at ${path.relative(cwd, resolvedOut)}`)
+    );
+    console.log(
+      chalk.gray(`[media] Next: run "npx drizzle-kit generate" then "npx drizzle-kit migrate"`)
     );
   },
 };

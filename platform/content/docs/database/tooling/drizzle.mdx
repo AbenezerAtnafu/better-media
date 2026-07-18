@@ -1,6 +1,245 @@
 ---
 title: Drizzle
-description: Using Drizzle alongside Better Media — keeping your app schema in Drizzle while Better Media manages its own tables via the Kysely adapter.
+description: Native Drizzle ORM adapter for Better Media — wire your existing Drizzle schema directly into the media pipeline.
 ---
 
-<Callout type="info">This page is coming soon.</Callout>
+The Drizzle adapter lets you use your existing Drizzle database instance as the Better Media database backend. You define your tables with `pgTable` / `mysqlTable` / `sqliteTable` as usual and point the adapter at them — Better Media stores media records through Drizzle's query builder without any separate connection or migration step.
+
+Because you manage the schema yourself with **drizzle-kit**, `runMigrations()` is not available with this adapter. Use `drizzle-kit push` or `drizzle-kit migrate` to apply schema changes.
+
+## Installation
+
+```bash
+pnpm add @better-media/adapter-db-drizzle drizzle-orm
+```
+
+## Setup
+
+The adapter takes two schema inputs:
+
+- **`schema`** — a map of Better Media model names to your Drizzle table objects
+- **`bmSchema`** — the Better Media field definitions from `@better-media/core`, used for type serialization and hooks
+
+```typescript
+import { drizzleAdapter } from "@better-media/adapter-db-drizzle";
+import { schema as bmSchema } from "@better-media/core";
+import * as tables from "./db/schema"; // your Drizzle table definitions
+
+const adapter = drizzleAdapter(db, {
+  config: { provider: "pg" },
+  schema: {
+    media:                    tables.media,
+    mediaJobs:                tables.mediaJobs,
+    mediaVersions:            tables.mediaVersions,
+    mediaValidationResults:   tables.mediaValidationResults,
+    mediaVirusScanResults:    tables.mediaVirusScanResults,
+  },
+  bmSchema,
+});
+
+const media = createBetterMedia({ storage, database: adapter, plugins });
+```
+
+## PostgreSQL
+
+```bash
+pnpm add drizzle-orm pg
+pnpm add -D drizzle-kit @types/pg
+```
+
+```typescript
+import { drizzle } from "drizzle-orm/node-postgres";
+import { drizzleAdapter } from "@better-media/adapter-db-drizzle";
+import { schema as bmSchema } from "@better-media/core";
+import { Pool } from "pg";
+import * as tables from "./db/schema";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = drizzle(pool);
+
+const database = drizzleAdapter(db, {
+  config: { provider: "pg" },
+  schema: {
+    media:                  tables.media,
+    mediaJobs:              tables.mediaJobs,
+    mediaVersions:          tables.mediaVersions,
+    mediaValidationResults: tables.mediaValidationResults,
+  },
+  bmSchema,
+});
+```
+
+## MySQL
+
+```bash
+pnpm add drizzle-orm mysql2
+pnpm add -D drizzle-kit
+```
+
+```typescript
+import { drizzle } from "drizzle-orm/mysql2";
+import { drizzleAdapter } from "@better-media/adapter-db-drizzle";
+import { schema as bmSchema } from "@better-media/core";
+import mysql from "mysql2/promise";
+import * as tables from "./db/schema";
+
+const pool = mysql.createPool({ uri: process.env.DATABASE_URL });
+const db = drizzle(pool);
+
+const database = drizzleAdapter(db, {
+  config: { provider: "mysql" },
+  schema: { media: tables.media, mediaJobs: tables.mediaJobs },
+  bmSchema,
+});
+```
+
+<Callout type="info">
+MySQL does not support `INSERT ... RETURNING`. The adapter inserts first and then fetches the created row with a follow-up `SELECT`. This adds one extra query per `create` and `update` call.
+</Callout>
+
+## SQLite
+
+```bash
+pnpm add drizzle-orm better-sqlite3
+pnpm add -D drizzle-kit @types/better-sqlite3
+```
+
+```typescript
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzleAdapter } from "@better-media/adapter-db-drizzle";
+import { schema as bmSchema } from "@better-media/core";
+import * as tables from "./db/schema";
+
+const sqlite = new Database("./local.db");
+const db = drizzle(sqlite);
+
+const database = drizzleAdapter(db, {
+  config: { provider: "sqlite" },
+  schema: { media: tables.media, mediaJobs: tables.mediaJobs },
+  bmSchema,
+});
+```
+
+## Column Name Mapping
+
+Better Media field names are camelCase (`mimeType`, `storageKey`, `createdAt`). The adapter looks up columns on your Drizzle table object by that same camelCase property name, so the simplest setup is to keep your table property names in camelCase even if the underlying DB column uses snake_case:
+
+```typescript
+// ✅ property name is camelCase — matches better-media field names
+export const media = pgTable("media", {
+  mimeType:   text("mime_type").notNull(),
+  storageKey: text("storage_key").notNull(),
+  createdAt:  timestamp("created_at").defaultNow().notNull(),
+});
+```
+
+If your project convention uses snake_case property names, pass `camelCase: true` in the config and the adapter will automatically convert field names before looking them up:
+
+```typescript
+// ✅ property names are snake_case — use camelCase: true
+export const media = pgTable("media", {
+  mime_type:   text("mime_type").notNull(),
+  storage_key: text("storage_key").notNull(),
+  created_at:  timestamp("created_at").defaultNow().notNull(),
+});
+
+const database = drizzleAdapter(db, {
+  config: { provider: "pg", camelCase: true },
+  schema: { media: tables.media },
+  bmSchema,
+});
+```
+
+## Schema Generation
+
+The Better Media CLI can generate ready-to-use Drizzle table definitions for all built-in models. Run this once to scaffold your schema file:
+
+```bash
+npx better-media generate --dialect postgres
+# or: --dialect mysql | --dialect sqlite
+```
+
+This writes a TypeScript file to `better-media-migrations/drizzle-schema.pg.ts` (adjusts the suffix per dialect) containing all five Better Media tables — `media`, `media_versions`, `media_jobs`, `media_validation_results`, `media_virus_scan_results` — with correct column types, primary keys, foreign keys, and indexes for your provider.
+
+Example output for PostgreSQL:
+
+```typescript
+// Auto-generated by @better-media/cli — do not edit directly.
+import { pgTable, index, integer, jsonb, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+
+export const media = pgTable("media", {
+  id:              text("id").primaryKey(),
+  ownerId:         text("owner_id"),
+  filename:        text("filename"),
+  mimeType:        text("mime_type"),
+  size:            integer("size"),
+  storageKey:      text("storage_key"),
+  metadata:        jsonb("metadata"),
+  status:          text("status"),
+  createdAt:       timestamp("created_at", { mode: "date" }),
+  updatedAt:       timestamp("updated_at", { mode: "date" }),
+  deletedAt:       timestamp("deleted_at", { mode: "date" }),
+  // ...
+}, (t) => [
+  index("idx_media_checksum_sha256_storage_key").on(t.checksumSha256, t.storageKey),
+]);
+
+export const mediaVersions = pgTable("media_versions", {
+  id:      text("id").primaryKey(),
+  mediaId: text("media_id").references(() => media.id, { onDelete: "cascade" }),
+  // ...
+}, (t) => [
+  index("idx_media_versions_media_id").on(t.mediaId),
+  uniqueIndex("idx_media_versions_media_id_version_number").on(t.mediaId, t.versionNumber),
+]);
+```
+
+Copy the generated file into your project's schema directory and import it in your `drizzle.config.ts`.
+
+## Migrations
+
+Once you have the schema file, use drizzle-kit to generate and apply migrations:
+
+```bash
+# 1. Generate Better Media table definitions
+npx better-media generate --dialect postgres
+
+# 2. Create migration files from your schema
+npx drizzle-kit generate
+
+# 3. Apply migrations to the database
+npx drizzle-kit migrate
+
+# Or push directly in development (no migration files)
+npx drizzle-kit push
+```
+
+Better Media's `runMigrations()` is intentionally not supported by this adapter — drizzle-kit is the source of truth for schema changes.
+
+## Transactions
+
+```typescript
+await database.transaction(async (trx) => {
+  await trx.create({ model: "media", data: { id: "...", status: "pending" } });
+  await trx.create({ model: "mediaJobs", data: { id: "...", mediaId: "..." } });
+});
+```
+
+The transaction adapter wraps Drizzle's native `db.transaction()` so all operations in the callback are atomic.
+
+## Pattern Matching
+
+The `contains`, `starts_with`, `ends_with`, and `like` operators are **case-insensitive** and provider-aware:
+
+- **PostgreSQL** — uses native `ILIKE`
+- **MySQL / SQLite** — uses `LOWER(column) LIKE LOWER(pattern)`
+
+Empty arrays passed to `in` / `not_in` are handled safely (`in: []` always returns no rows, `not_in: []` matches all rows) rather than producing invalid SQL.
+
+## Limitations
+
+- **No `runMigrations()`.** Use drizzle-kit instead.
+- **No `populate` (relation loading).** Cross-model joins are not supported in v1. Fetch related records manually.
+- **MySQL extra queries.** `create` and `update` each issue a follow-up `SELECT` because MySQL lacks `RETURNING`.
+- **Property name alignment.** The adapter accesses columns by your Drizzle table's **property names**, not the DB column names. Keep property names in camelCase (default) or pass `camelCase: true` to auto-convert from snake_case. See [Column Name Mapping](#column-name-mapping) above.
