@@ -28,7 +28,7 @@
     "kysely": "^0.29.2"
   },
   "peerDependencies": {
-    "@better-media/framework": ">=1.0.0"
+    "@better-media/framework": ">=0.1.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",
