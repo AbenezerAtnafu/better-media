@@ -67,6 +67,8 @@ put(key: string, value: Buffer, options?: { contentType?: string }): Promise<voi
 
 Writes a buffer to storage. Pass `contentType` to set the `Content-Type` header on the stored object — if omitted, S3 defaults to `application/octet-stream`.
 
+`StoragePutOptions` only exposes `contentType`. S3 headers like `ContentDisposition`, `CacheControl`, and `ContentEncoding` are not passed through — if your previous code set these on `PutObjectCommand`, they will be silently dropped.
+
 #### `get`
 
 ```typescript
@@ -164,7 +166,15 @@ await fetch(url, { method: "PUT", headers, body: fileBlob });
 getUrl(key: string, options?: { expiresIn?: number }): Promise<string>
 ```
 
-Returns a URL for reading the object. If `expiresIn` is provided, the URL is signed and expires after that many seconds. If omitted and the bucket is public, returns the plain public URL.
+Returns a signed URL for reading the object. Always signed — there is no code path that returns a plain public URL. When `expiresIn` is omitted the adapter uses a default of 3600 seconds.
+
+If you need a permanent public URL (e.g. for logos or avatars on a public bucket), construct it directly from the bucket and key rather than calling `getUrl`:
+
+```typescript
+const publicUrl = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+```
+
+Or store the public URL at upload time and read it from your database instead of regenerating it on every request.
 
 ---
 
@@ -179,6 +189,8 @@ copy(source: string, destination: string): Promise<void>
 ```
 
 Issues a server-side `CopyObject` — no data travels through your application. Both `source` and `destination` are raw storage keys; the bucket is resolved internally. Object metadata is preserved by default.
+
+Returns `void`. Unlike `CopyObjectCommand`, the adapter does not surface the `ETag` or `LastModified` of the new object. If you need the ETag after copying, call `exists` or fetch it separately.
 
 #### `move`
 
@@ -234,3 +246,39 @@ For files too large to upload in a single request, the adapter exposes a lower-l
 The adapter can configure S3 bucket settings programmatically — lifecycle rules, CORS, and public access blocks — without needing the AWS CLI or console. See the source for `setBucketLifecycle`, `setBucketCors`, and `disablePublicAccess`.
 
 For the core storage interface contract, see [Storage Architecture](/docs/storage).
+
+---
+
+## Migrating from the AWS SDK
+
+If you are replacing direct `@aws-sdk/client-s3` usage with this adapter, the method mapping is straightforward:
+
+| AWS SDK | Adapter |
+|---|---|
+| `PutObjectCommand` | `storage.put(key, buffer, { contentType })` |
+| `GetObjectCommand` + `getSignedUrl` | `storage.getUrl!(key, { expiresIn })` |
+| `HeadObjectCommand` (throws on 404) | `storage.exists(key)` (returns boolean) |
+| `CopyObjectCommand` | `storage.copy!(source, destination)` |
+| `DeleteObjectCommand` | `storage.delete(key)` |
+| `createPresignedPost` | `storage.createPresignedUpload!(key, { method: "POST", ... })` |
+
+There are four behavioral differences to be aware of:
+
+**ACL removal.** The adapter never sets per-object ACLs. If your previous code used `ACL: "public-read"` on `PutObjectCommand`, objects will be private after migration with no error or warning — your app will silently stop serving those files. Replace per-object ACLs with a bucket policy that grants `s3:GetObject` on the relevant prefix:
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": "*",
+  "Action": "s3:GetObject",
+  "Resource": "arn:aws:s3:::your-bucket/public/*"
+}
+```
+
+**`getUrl` always signs.** The adapter always returns a signed URL with a default expiry of 3600 seconds — it never returns a plain public URL. If your old code served permanent public URLs for assets on a public bucket, those URLs will now expire. Store the public URL at upload time or construct it directly from the bucket and key.
+
+**`put` drops object headers.** `StoragePutOptions` only accepts `contentType`. Headers like `ContentDisposition`, `CacheControl`, and `ContentEncoding` are not forwarded to S3. If your old `PutObjectCommand` calls set any of these, they are silently dropped after migration.
+
+**`copy` returns void.** `CopyObjectCommand` returns the new object's `ETag` and `LastModified`. The adapter's `copy` returns nothing. If your old code read the ETag from the copy response, that logic will need to change.
+
+**404 errors are swallowed.** The adapter catches 404s internally: `get` returns `null`, `exists` returns `false`, `delete` resolves silently. Any `try/catch` blocks that previously caught a `NoSuchKey` error from these operations will no longer fire.
