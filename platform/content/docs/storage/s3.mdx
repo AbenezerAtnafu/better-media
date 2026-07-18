@@ -51,22 +51,186 @@ const storage = new S3StorageAdapter({
 });
 ```
 
-## Advanced Operations
+## API Reference
 
-The adapter implements both standard CRUD storage operations and advanced functionality natively optimized for S3:
+The adapter implements the `StorageAdapter` interface from `@better-media/core`. Some methods are required on every adapter; others are optional and guarded at the call site.
 
-- **Multipart Uploads**: High-performance, chunked uploading for massive files. The adapter provides `createMultiPart`, `putItemMultiPart`, `completeMultipart`, and `abortMultipart` natively.
-- **Bulk Operations**: Perform efficient structural modifications with `deleteMany`, `deleteDir`, `moveItems`, and directory-level enumeration.
-- **Presigned Exfil & Ingest**: Securely upload or download files directly from the browser using temporary signed URLs, completely bypassing backend memory limits:
-  - Supports **POST** (form-based upload enforcing strict size limits and metadata conditions)
-  - Supports **PUT** (simple binary direct upload)
-- **Bucket-Level Controls**: Apply bucket lifecycle rules, CORS configurations, and disable ACLs programmably without external CLI tools.
+### Core operations
 
-## Supported Presigned URL Methods
+These four methods are **required** on every storage adapter.
 
-When utilizing `createPresignedUpload`, the underlying behavior dynamically adjusts based on the chosen method:
+#### `put`
 
-- **POST**: Best for browser-based, HTML-form uploads. The adapter generates AWS policy conditions directly into the signed URL to restrict file sizes and `Content-Type` strictly from S3's edge.
-- **PUT**: Best for server-to-server or programmatic binary uploads. Generates exact metadata and size headers matching the expected request.
+```typescript
+put(key: string, value: Buffer, options?: { contentType?: string }): Promise<void>
+```
 
-For more information on the core contract, refer to the [Storage Architecture](/docs/storage).
+Writes a buffer to storage. Pass `contentType` to set the `Content-Type` header on the stored object — if omitted, S3 defaults to `application/octet-stream`.
+
+#### `get`
+
+```typescript
+get(key: string): Promise<Buffer | null>
+```
+
+Returns the full file buffer, or `null` if the key does not exist. For large files consider `getStream` to avoid loading the entire object into memory.
+
+#### `delete`
+
+```typescript
+delete(key: string): Promise<void>
+```
+
+Deletes a single object. Resolves without error if the key does not exist.
+
+#### `exists`
+
+```typescript
+exists(key: string): Promise<boolean>
+```
+
+Issues a `HeadObject` request and returns `true` if the object exists, `false` on a 404. Does not load the file body. Use this to verify a temp upload is present before copying it to its final location.
+
+---
+
+### Presigned uploads
+
+#### `createPresignedUpload`
+
+```typescript
+createPresignedUpload(
+  key: string,
+  options: PresignedUploadOptions
+): Promise<PresignedUploadResult>
+```
+
+Generates a time-limited URL the client uses to upload directly to S3, bypassing your server entirely.
+
+**`PresignedUploadOptions`**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `method` | `"POST" \| "PUT"` | `"PUT"` | Upload method. See below. |
+| `contentType` | `string` | — | Required. Enforced by S3 — mismatches are rejected with 403. |
+| `expiresIn` | `number` | `3600` | URL lifetime in seconds. |
+| `maxSizeBytes` | `number` | — | Upper bound on file size. Enforced server-side by S3. |
+| `minSizeBytes` | `number` | `1` | Lower bound on file size (POST only). |
+| `metadata` | `Record<string, string>` | — | Stored as `x-amz-meta-*`. Signed into the policy — mismatches are rejected. |
+
+**`PresignedUploadResult`**
+
+```typescript
+type PresignedUploadResult =
+  | { method: "POST"; url: string; fields: Record<string, string> }
+  | { method: "PUT";  url: string; headers: Record<string, string> }
+```
+
+**POST** — for browser form uploads. Returns a `url` and a `fields` map. All `fields` entries must be appended to the `FormData` body **before** the file field:
+
+```typescript
+const { url, fields } = await storage.createPresignedUpload(key, {
+  method: "POST",
+  contentType: "image/jpeg",
+  maxSizeBytes: 5 * 1024 * 1024,
+});
+
+const form = new FormData();
+for (const [k, v] of Object.entries(fields)) form.append(k, v);
+form.append("file", fileBlob); // must be last
+await fetch(url, { method: "POST", body: form });
+```
+
+S3 enforces the `Content-Type` equality condition and `content-length-range` server-side. Uploads that violate either are rejected at the edge — your server is never involved.
+
+**PUT** — for programmatic or mobile uploads. Returns a single signed `url` and required `headers`:
+
+```typescript
+const { url, headers } = await storage.createPresignedUpload(key, {
+  method: "PUT",
+  contentType: "video/mp4",
+  maxSizeBytes: 500 * 1024 * 1024,
+});
+
+await fetch(url, { method: "PUT", headers, body: fileBlob });
+```
+
+---
+
+### Presigned GET
+
+#### `getUrl`
+
+```typescript
+getUrl(key: string, options?: { expiresIn?: number }): Promise<string>
+```
+
+Returns a URL for reading the object. If `expiresIn` is provided, the URL is signed and expires after that many seconds. If omitted and the bucket is public, returns the plain public URL.
+
+---
+
+### Object operations
+
+These methods are **optional** on the `StorageAdapter` interface. The S3 adapter implements all of them; check `typeof storage.method === "function"` before calling them against an unknown adapter.
+
+#### `copy`
+
+```typescript
+copy(source: string, destination: string): Promise<void>
+```
+
+Issues a server-side `CopyObject` — no data travels through your application. Both `source` and `destination` are raw storage keys; the bucket is resolved internally. Object metadata is preserved by default.
+
+#### `move`
+
+```typescript
+move(source: string, destination: string): Promise<void>
+```
+
+`copy` followed by `delete` on the source. Atomic at the object level but not transactional — if `delete` fails after a successful `copy`, the source remains.
+
+#### `deleteMany`
+
+```typescript
+deleteMany(keys: string[]): Promise<void>
+```
+
+Batches deletions using S3's native `DeleteObjects` API (up to 1,000 keys per request). Prefer this over looping `delete` for bulk removals.
+
+---
+
+### Confirm-upload pattern
+
+A common pattern for client-side uploads is staging the file under a temp key, verifying it arrived, then moving it to its permanent location:
+
+```typescript
+// 1. Generate presigned POST for a temp key
+const upload = await storage.createPresignedUpload(`temp/${id}`, {
+  method: "POST",
+  contentType,
+  maxSizeBytes,
+});
+
+// 2. Client uploads directly to S3 using upload.url + upload.fields
+
+// 3. Server confirms the file is present
+const arrived = await storage.exists(`temp/${id}`);
+if (!arrived) throw new Error("Upload not found");
+
+// 4. Move to permanent location
+await storage.copy(`temp/${id}`, `media/${id}`);
+await storage.delete(`temp/${id}`);
+```
+
+---
+
+## Multipart uploads
+
+For files too large to upload in a single request, the adapter exposes a lower-level multipart API: `createMultiPart`, `putItemMultiPart`, `completeMultipart`, and `abortMultipart`. These map directly to the S3 multipart upload lifecycle.
+
+---
+
+## Bucket configuration
+
+The adapter can configure S3 bucket settings programmatically — lifecycle rules, CORS, and public access blocks — without needing the AWS CLI or console. See the source for `setBucketLifecycle`, `setBucketCors`, and `disablePublicAccess`.
+
+For the core storage interface contract, see [Storage Architecture](/docs/storage).
