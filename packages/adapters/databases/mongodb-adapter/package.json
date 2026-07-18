@@ -27,6 +27,9 @@
     "@better-media/core": "workspace:*",
     "mongodb": "^6.8.0"
   },
+  "peerDependencies": {
+    "@better-media/framework": ">=0.1.0"
+  },
   "devDependencies": {
     "mongodb": "^6.8.0",
     "@types/node": "^22.10.0",

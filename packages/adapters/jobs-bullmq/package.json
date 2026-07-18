@@ -27,6 +27,7 @@
     "@better-media/core": "workspace:*"
   },
   "peerDependencies": {
+    "@better-media/framework": ">=0.1.0",
     "bullmq": "^5.0.0"
   },
   "devDependencies": {

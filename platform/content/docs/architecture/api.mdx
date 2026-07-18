@@ -7,10 +7,10 @@ When you call `createBetterMedia`, you get a **runtime** object. That object is 
 
 ## `createBetterMedia`
 
-Import the factory from `better-media` and pass a single config object. It wires storage, database, plugins, and jobs together and returns the runtime.
+Import the factory from `@better-media/framework` and pass a single config object. It wires storage, database, plugins, and jobs together and returns the runtime.
 
 ```ts title="lib/media.ts"
-import { createBetterMedia } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
 import { FileSystemStorageAdapter } from "@better-media/adapter-storage-filesystem";
 import { memoryDatabase } from "@better-media/adapter-db-memory";
 import { validationPlugin } from "@better-media/plugin-validation";
@@ -151,15 +151,15 @@ If an adapter does not support an optional capability, the runtime throws a clea
 
 | Class | Package | When it's thrown |
 |---|---|---|
-| `ValidationError` | `better-media` | File fails a plugin validation rule (size, type, dimensions, etc.) |
-| `PipelineError` | `better-media` | Unhandled failure inside the plugin pipeline |
-| `AdapterError` | `better-media` | Storage or database adapter operation fails |
+| `ValidationError` | `@better-media/framework` | File fails a plugin validation rule (size, type, dimensions, etc.) |
+| `PipelineError` | `@better-media/framework` | Unhandled failure inside the plugin pipeline |
+| `AdapterError` | `@better-media/framework` | Storage or database adapter operation fails |
 | `RateLimitError` | `@better-media/plugin-rate-limit` | Upload rate limit exceeded — see [Rate Limiting](/docs/architecture/rate-limit) |
 
 Map known errors to status codes in your HTTP layer; rethrow or log the rest:
 
 ```ts
-import { ValidationError, AdapterError } from "better-media";
+import { ValidationError, AdapterError } from "@better-media/framework";
 
 try {
   const result = await media.upload.ingest({ ... });
@@ -172,7 +172,7 @@ try {
 
 ## Type exports
 
-All types are importable from `better-media`:
+All types are importable from `@better-media/framework`:
 
 | Type | Description |
 |---|---|

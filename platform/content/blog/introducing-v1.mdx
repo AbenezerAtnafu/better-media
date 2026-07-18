@@ -15,7 +15,7 @@ After months of internal use and iteration, we're ready to call it stable. Bette
 Better Media is a framework-agnostic library for handling file uploads, storage, and processing in Node.js backends. It handles the boring parts — multipart parsing, presigned URLs, virus scanning, image transformation — so you can focus on your product.
 
 ```ts
-import { createBetterMedia } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
 import { s3Adapter } from "@better-media/adapter-s3";
 
 const media = createBetterMedia({

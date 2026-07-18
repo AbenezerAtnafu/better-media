@@ -8,7 +8,7 @@ description: Errors thrown by Better Media and how to handle them.
 Thrown when a sync plugin rejects a file — validation fails, virus detected, or a custom plugin aborts the pipeline.
 
 ```typescript
-import { ValidationError } from "better-media";
+import { ValidationError } from "@better-media/framework";
 
 try {
   await media.upload.ingest({ file: { buffer }, metadata });

@@ -28,6 +28,9 @@
     "@better-media/core": "workspace:*",
     "@google-cloud/storage": "^7.21.0"
   },
+  "peerDependencies": {
+    "@better-media/framework": ">=0.1.0"
+  },
   "keywords": [
     "better-media",
     "storage",

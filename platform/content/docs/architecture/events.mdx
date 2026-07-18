@@ -10,7 +10,7 @@ Better Media fires lifecycle events at key points in the pipeline. You can handl
 Pass an `events` object to `createBetterMedia`:
 
 ```typescript
-import { createBetterMedia } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
 
 const media = createBetterMedia({
   // ...
@@ -88,8 +88,8 @@ The original error is still thrown to the caller — `onError` is a side-effect 
 `createWebhookEmitter` wraps any event into a POST request to an external URL. It handles serialization, optional HMAC signing, and retries on 5xx responses.
 
 ```typescript
-import { createBetterMedia } from "better-media";
-import { createWebhookEmitter } from "better-media";
+import { createBetterMedia } from "@better-media/framework";
+import { createWebhookEmitter } from "@better-media/framework";
 
 const media = createBetterMedia({
   events: {
