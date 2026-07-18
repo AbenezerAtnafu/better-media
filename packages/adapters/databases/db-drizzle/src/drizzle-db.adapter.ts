@@ -160,6 +160,7 @@ function buildWhereCondition(
 }
 
 export class DrizzleDbAdapter implements DatabaseAdapter {
+  readonly id = "drizzle" as const;
   private readonly db: DrizzleDb;
   private readonly config: DrizzleDbConfig;
   private readonly schema: Record<string, Record<string, unknown>>;
