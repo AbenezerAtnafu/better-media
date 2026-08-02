@@ -1,0 +1,47 @@
+{
+  "name": "@better-media/plugin-cloud",
+  "version": "0.8.0",
+  "description": "Cloud reporter plugin for better-media — streams pipeline events to the better-media dashboard",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "@better-media/core": "workspace:*"
+  },
+  "keywords": [
+    "better-media",
+    "plugin",
+    "cloud",
+    "observability"
+  ],
+  "author": "Abenezer Atnafu",
+  "license": "MIT",
+  "packageManager": "pnpm@10.25.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbenezerAtnafu/better-media.git"
+  },
+  "homepage": "https://better-media.dev/",
+  "bugs": {
+    "url": "https://github.com/AbenezerAtnafu/better-media/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
