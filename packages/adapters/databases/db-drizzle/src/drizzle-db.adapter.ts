@@ -41,7 +41,7 @@ import type { DrizzleDb, DrizzleDbConfig } from "./drizzle-db-config.interface";
 export interface DrizzleDbOptions {
   config: DrizzleDbConfig;
   /** Maps better-media model names to Drizzle table objects, e.g. `{ media: mediaTable }` */
-  schema: Record<string, Record<string, unknown>>;
+  schema: Record<string, object>;
   /** better-media field definitions used for serialization/deserialization and hooks */
   bmSchema: BmSchema;
   hooks?: DbHooks;
@@ -163,14 +163,14 @@ export class DrizzleDbAdapter implements DatabaseAdapter {
   readonly id = "drizzle" as const;
   private readonly db: DrizzleDb;
   private readonly config: DrizzleDbConfig;
-  private readonly schema: Record<string, Record<string, unknown>>;
+  private readonly schema: Record<string, Record<string, unknown>>; // narrowed from object at boundary
   private readonly bmSchema: BmSchema;
   private readonly hooks?: DbHooks;
 
   constructor(db: DrizzleDb, options: DrizzleDbOptions) {
     this.db = db;
     this.config = options.config;
-    this.schema = options.schema;
+    this.schema = options.schema as Record<string, Record<string, unknown>>;
     this.bmSchema = options.bmSchema;
     this.hooks = options.hooks;
   }

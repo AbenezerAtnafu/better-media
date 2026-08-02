@@ -160,6 +160,30 @@ npx better-media generate --dialect postgres
 # or: --dialect mysql | --dialect sqlite
 ```
 
+If your media setup lives in a specific file, point the CLI at it with `--config`:
+
+```bash
+npx better-media generate --dialect postgres --config src/media.config.ts
+```
+
+The CLI loads the config file's **default export** and looks for a `database` or `createDatabase` property. If your file only exports a `createMedia` factory (not a default export), add a `createDatabase` named export alongside it — the CLI picks it up automatically from the module's named exports:
+
+```typescript
+// media.config.ts
+export function createMedia(db: Database, options: Options) {
+  // ... your app setup, unchanged
+}
+
+// CLI-only — discovered automatically by `better-media generate`
+export const createDatabase = () =>
+  drizzleAdapter(
+    drizzle({ client: new Pool({ connectionString: process.env.DATABASE_URL! }) }),
+    { config: { provider: "pg" }, schema: {} as any, bmSchema }
+  );
+```
+
+`schema: {}` is intentional here — the CLI only needs the adapter to resolve the dialect, not live table mappings.
+
 This writes a TypeScript file to `better-media-migrations/drizzle-schema.pg.ts` (adjusts the suffix per dialect) containing all five Better Media tables — `media`, `media_versions`, `media_jobs`, `media_validation_results`, `media_virus_scan_results` — with correct column types, primary keys, foreign keys, and indexes for your provider.
 
 Example output for PostgreSQL:
