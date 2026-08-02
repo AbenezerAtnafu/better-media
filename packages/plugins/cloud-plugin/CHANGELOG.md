@@ -1,4 +1,4 @@
-# @better-media/internal
+# @better-media/plugin-cloud
 
 ## 0.9.0
 
@@ -7,14 +7,6 @@
 - Add @better-media/plugin-cloud — streams pipeline lifecycle events to the better-media dashboard.
 - c968d32: Add @better-media/plugin-cloud — streams pipeline lifecycle events to the better-media dashboard.
 
-## 1.2.0
+### Patch Changes
 
-### Minor Changes
-
-- 7885163: Production Foundation + GCS Storage
-
-## 1.1.0
-
-### Minor Changes
-
-- 2797532: Schema & code fixes
+- @better-media/core@0.9.0

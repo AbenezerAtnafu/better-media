@@ -1,5 +1,11 @@
 # @better-media/plugin-media-processing
 
+## 0.9.0
+
+### Patch Changes
+
+- @better-media/core@0.9.0
+
 ## 0.8.0
 
 ### Patch Changes

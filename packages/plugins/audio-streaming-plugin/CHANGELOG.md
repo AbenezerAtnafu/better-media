@@ -1,5 +1,11 @@
 # @better-media/plugin-audio-streaming
 
+## 0.9.0
+
+### Patch Changes
+
+- @better-media/core@0.9.0
+
 ## 0.5.2
 
 ### Patch Changes

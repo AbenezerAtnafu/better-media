@@ -1,5 +1,14 @@
 # @better-media/framework
 
+## 0.9.0
+
+### Patch Changes
+
+- Updated dependencies [8a96f41]
+  - @better-media/cli@0.9.0
+  - @better-media/core@0.9.0
+  - @better-media/adapter-jobs@0.9.0
+
 ## 0.8.0
 
 ### Patch Changes

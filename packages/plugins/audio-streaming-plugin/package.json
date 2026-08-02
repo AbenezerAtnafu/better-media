@@ -1,6 +1,6 @@
 {
   "name": "@better-media/plugin-audio-streaming",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Audio streaming plugin for Better Media pipeline — HLS/DASH/progressive transcoding",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
