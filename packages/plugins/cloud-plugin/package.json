@@ -1,6 +1,6 @@
 {
   "name": "@better-media/plugin-cloud",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Cloud reporter plugin for better-media — streams pipeline events to the better-media dashboard",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

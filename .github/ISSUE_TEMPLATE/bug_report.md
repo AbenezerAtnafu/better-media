@@ -27,7 +27,7 @@ If applicable, add screenshots or code snippets to help explain your problem.
 
 - OS: [e.g. macOS, Ubuntu]
 - Node Version: [e.g. 20.x]
-- Better Media Version: [e.g. 1.0.0]
+- Better Media Version: [e.g. 0.9.0]
 
 **Additional context**
 Add any other context about the problem here.
