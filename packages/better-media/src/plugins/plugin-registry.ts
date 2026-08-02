@@ -76,7 +76,7 @@ function createPluginRuntime(registry: HookRegistry, plugin: PipelinePlugin): Me
 /** Manifest for the global framework-level runtime */
 const SYSTEM_MANIFEST: PluginManifest = {
   id: "better-media-system",
-  version: "1.0.0",
+  version: "0.8.0",
   trustLevel: "trusted",
   capabilities: ["file.read", "metadata.write.own", "processing.write.own", "trusted.propose"],
   namespace: "system",

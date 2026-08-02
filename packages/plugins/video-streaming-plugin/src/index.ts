@@ -36,7 +36,7 @@ export function videoStreamingPlugin(opts: VideoStreamingPluginOptions = {}): Pi
     name: "video-streaming",
     runtimeManifest: {
       id: "better-media-video-streaming",
-      version: "1.0.0",
+      version: "0.8.0",
       trustLevel: "untrusted",
       capabilities: ["file.read", "metadata.write.own", "processing.write.own"],
       namespace: "video-streaming",

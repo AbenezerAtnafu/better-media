@@ -20,7 +20,7 @@ export function mediaProcessingPlugin(opts: MediaProcessingPluginOptions = {}): 
     name: "media-processing",
     runtimeManifest: {
       id: "better-media-processing",
-      version: "1.0.0",
+      version: "0.8.0",
       trustLevel: "untrusted",
       capabilities: ["file.read", "metadata.write.own", "processing.write.own"],
       namespace: "media-processing",

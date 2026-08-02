@@ -8,7 +8,7 @@ import { createBetterMedia } from "@better-media/framework";
 /** Manifest for test-only spy plugins (required by buildPluginRegistry). */
 const TEST_SPY_MANIFEST: PluginManifest = {
   id: "test-spy-plugin",
-  version: "1.0.0",
+  version: "0.8.0",
   trustLevel: "untrusted",
   capabilities: ["file.read", "metadata.write.own", "processing.write.own"],
   namespace: "spy",

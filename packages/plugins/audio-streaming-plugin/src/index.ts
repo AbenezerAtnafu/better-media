@@ -21,7 +21,7 @@ export function audioStreamingPlugin(opts: AudioStreamingPluginOptions = {}): Pi
     name: "audio-streaming",
     runtimeManifest: {
       id: "better-media-audio-streaming",
-      version: "1.0.0",
+      version: "0.8.0",
       trustLevel: "untrusted",
       capabilities: ["file.read", "metadata.write.own", "processing.write.own"],
       namespace: "audio-streaming",
