@@ -4,15 +4,15 @@
 
 ### Patch Changes
 
-- @better-media/framework@1.0.0
-- @better-media/plugin-validation@1.0.0
-- @better-media/plugin-virus-scan@1.0.0
-- @better-media/plugin-media-processing@1.0.0
-- @better-media/adapter-storage-memory@1.0.0
-- @better-media/plugin-video-streaming@1.0.0
-- @better-media/adapter-jobs-bullmq@1.0.0
-- @better-media/adapter-storage-filesystem@1.0.0
-- @better-media/adapter-storage-s3@1.0.0
+- @better-media/framework@0.8.0
+- @better-media/plugin-validation@0.8.0
+- @better-media/plugin-virus-scan@0.8.0
+- @better-media/plugin-media-processing@0.8.0
+- @better-media/adapter-storage-memory@0.8.0
+- @better-media/plugin-video-streaming@0.8.0
+- @better-media/adapter-jobs-bullmq@0.8.0
+- @better-media/adapter-storage-filesystem@0.8.0
+- @better-media/adapter-storage-s3@0.8.0
 
 ## 1.2.2
 
@@ -34,7 +34,7 @@
 ### Patch Changes
 
 - Updated dependencies [ce82214]
-  - @better-media/plugin-video-streaming@1.0.0
+  - @better-media/plugin-video-streaming@0.8.0
 
 ## 1.2.0
 

@@ -9,7 +9,7 @@ import { registerMigrateCommand } from "./commands/migrate";
 
 const program = new Command();
 
-program.name("media").description("CLI for Better Media framework").version("1.0.0");
+program.name("media").description("CLI for Better Media framework").version("0.8.0");
 
 registerInitCommand(program);
 

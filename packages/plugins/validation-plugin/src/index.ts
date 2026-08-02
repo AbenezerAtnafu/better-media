@@ -17,7 +17,7 @@ export function validationPlugin(opts: ValidationPluginOptions = {}): PipelinePl
     name: "validation",
     runtimeManifest: {
       id: "better-media-validation",
-      version: "1.0.0",
+      version: "0.8.0",
       trustLevel: "trusted", // Authorized for core metadata (size, mime, checksums)
       capabilities: ["file.read", "metadata.write.own", "processing.write.own", "trusted.propose"],
       namespace: "validation",

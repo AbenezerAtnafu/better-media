@@ -21,7 +21,7 @@ export function videoProcessingPlugin(opts: VideoProcessingPluginOptions = {}): 
     name: "video-processing",
     runtimeManifest: {
       id: "better-media-video-processing",
-      version: "1.0.0",
+      version: "0.8.0",
       trustLevel: "untrusted",
       capabilities: ["file.read", "metadata.write.own", "processing.write.own"],
       namespace: "video-processing",

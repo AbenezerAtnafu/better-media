@@ -4,14 +4,14 @@
 
 ### Patch Changes
 
-- @better-media/framework@1.0.0
-- @better-media/plugin-validation@1.0.0
-- @better-media/core@1.0.0
-- @better-media/plugin-virus-scan@1.0.0
-- @better-media/plugin-media-processing@1.0.0
-- @better-media/adapter-storage-memory@1.0.0
-- @better-media/adapter-db-memory@1.0.0
-- @better-media/adapter-jobs@1.0.0
+- @better-media/framework@0.8.0
+- @better-media/plugin-validation@0.8.0
+- @better-media/core@0.8.0
+- @better-media/plugin-virus-scan@0.8.0
+- @better-media/plugin-media-processing@0.8.0
+- @better-media/adapter-storage-memory@0.8.0
+- @better-media/adapter-db-memory@0.8.0
+- @better-media/adapter-jobs@0.8.0
 
 ## 1.1.2
 

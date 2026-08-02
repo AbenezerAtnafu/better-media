@@ -1,10 +1,10 @@
 # @better-media/adapter-storage-memory
 
-## 1.0.0
+## 0.8.0
 
 ### Patch Changes
 
-- @better-media/core@1.0.0
+- @better-media/core@0.8.0
 
 ## 0.6.0
 

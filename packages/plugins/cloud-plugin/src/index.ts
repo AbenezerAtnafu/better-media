@@ -46,7 +46,7 @@ export function cloudReporter(opts: CloudReporterOptions): PipelinePlugin {
     name: "cloud-reporter",
     runtimeManifest: {
       id: "better-media-cloud-reporter",
-      version: "1.0.0",
+      version: "0.8.0",
       trustLevel: "untrusted",
       capabilities: ["file.read", "metadata.write.own"],
       namespace: "cloud",

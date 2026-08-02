@@ -1,11 +1,11 @@
 # @better-media/plugin-video-processing
 
-## 1.0.0
+## 0.8.0
 
 ### Patch Changes
 
-- @better-media/framework@1.0.0
-- @better-media/core@1.0.0
+- @better-media/framework@0.8.0
+- @better-media/core@0.8.0
 
 ## 0.1.1
 
