@@ -31,5 +31,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": ["better-media-example-express", "better-media-example-nextjs", "nestjs"]
 }
