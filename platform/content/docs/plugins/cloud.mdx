@@ -1,0 +1,66 @@
+---
+title: Cloud Reporter
+description: Stream pipeline events to the Better Media dashboard for observability and monitoring.
+---
+
+The cloud reporter plugin hooks into every phase of the pipeline and forwards lifecycle events to the Better Media cloud dashboard. It runs in `"sync"` mode with an internal event buffer, so sending is non-blocking and batched.
+
+## Installation
+
+```bash
+pnpm add @better-media/plugin-cloud
+```
+
+## Basic Setup
+
+```typescript
+import { cloudReporter } from "@better-media/plugin-cloud";
+
+const media = createBetterMedia({
+  // ...
+  plugins: [
+    cloudReporter({
+      apiKey: process.env.BETTER_MEDIA_API_KEY,
+    }),
+  ],
+});
+```
+
+## Events
+
+The plugin automatically emits events at each pipeline phase — no extra configuration required.
+
+| Phase | Event |
+|---|---|
+| `upload:complete` | `file.uploaded` — file metadata, checksum, storage location |
+| `validation:run` | `file.validation.passed` — file ID, plugin, timestamp |
+| `scan:run` | `file.scan.completed` — result (`clean` \| `infected` \| `suspicious`), optional threat name |
+| `process:run` | `file.processing.completed` — file ID, plugin, duration |
+
+## Configuration
+
+```typescript
+cloudReporter({
+  apiKey: "...",              // required — from the Better Media dashboard
+  storageProvider: "s3",     // optional — auto-inferred when omitted
+  endpoint: "https://...",   // optional — override the ingest endpoint
+})
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `apiKey` | `string` | — | API key from the Better Media dashboard (`BETTER_MEDIA_API_KEY`) |
+| `storageProvider` | `"s3" \| "gcs" \| "filesystem" \| "memory"` | auto | Storage adapter type sent with `file.uploaded` events |
+| `endpoint` | `string` | `https://api.better-media.dev/v1/ingest` | Ingest endpoint for the event batch |
+
+## Buffering & Retries
+
+Events are batched internally before being sent — the plugin does not make a network request per event.
+
+- **Batch size**: up to 50 events; flushes early when the buffer is full
+- **Flush interval**: every 5 seconds
+- **Retries**: up to 3 attempts with exponential backoff (1 s → 2 s → 4 s)
+- **Timeout**: 10-second request timeout per batch
+- **Shutdown**: buffer is flushed automatically on `SIGTERM` / `SIGINT`
+
+Events that exhaust all retries are dropped with a console warning so they never block the pipeline.
