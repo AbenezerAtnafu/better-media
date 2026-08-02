@@ -1,0 +1,104 @@
+---
+title: "Why I Built Better Media — The File Upload Problem Nobody Talks About"
+description: "File uploads in Node.js aren't hard. The boilerplate you write around them is. This is the honest story of what kept breaking and the tradeoffs I made when designing the pipeline."
+date: "2026-08-14"
+author: "Abenezer Atnafu"
+tags: ["engineering", "origin-story"]
+readingTime: 7
+image: "/blog/why-i-built-better-media.svg"
+---
+
+File uploads are not a hard problem.
+
+Parsing multipart form data is not hard. Uploading a buffer to S3 is not hard. Checking a MIME type is not hard. Each of these things takes maybe twenty lines of code.
+
+The problem is that every backend project I worked on needed all of them together — and there was no clean place to put the seam. The result was always the same: a 200-line route file with multipart parsing logic tangled up with S3 calls tangled up with validation tangled up with a virus scan bolted on somewhere near the bottom.
+
+That code worked. But it was impossible to test in isolation, painful to change, and had to be rewritten from scratch every time the project switched storage providers or frameworks.
+
+That's the problem nobody talks about. Not "how do I upload a file" but "how do I build a file upload system that doesn't rot."
+
+## What I kept running into
+
+Across different projects, the same four things kept breaking:
+
+**Validation happened too late.** The file would be written to storage, then something downstream would reject it — wrong MIME type, too large, failed a custom check. Now I had a file in S3 that shouldn't be there and cleanup logic to write.
+
+**Storage was hardcoded everywhere.** I'd build something against S3, then need to run it locally without hitting a real bucket, then need to support GCS for a client. Every switch meant touching routes I didn't want to touch.
+
+**Tests were fake.** I'd mock the S3 client in tests, the tests would pass, then something would break in production because the mock didn't behave exactly like the real thing. I'd fix the production bug, forget to update the mock, and the cycle would repeat.
+
+**There was no shared shape for the result.** Every project had a slightly different object representing an uploaded file — different field names, different optional fields, different error shapes. Integrating with a database adapter or a downstream job always meant writing a translation layer.
+
+None of these are exotic problems. Every backend engineer who handles file uploads hits them eventually. I just got tired of solving them the same way on every project.
+
+## Why existing libraries didn't fit
+
+The obvious answer is "use a library." I did. Multer, Formidable, Busboy — I've used all of them. They're good at what they do, which is multipart parsing. But they stop there.
+
+After the parser hands you a buffer, you're on your own. Storage, validation, processing, metadata tracking — none of that is in scope. You wire the pieces together yourself, and the seams between them are where the bugs live.
+
+The other category of solution is "use a service" — Uploadthing, Cloudinary, ImageKit. These are genuinely good products, but they own your files. Your storage, your CDN, your processing pipeline. That's a reasonable tradeoff for some teams and a non-starter for others.
+
+I wanted something in between: a library that handles the full pipeline, but where the infrastructure — storage, database, job queue — stays in your hands.
+
+## The design I landed on
+
+Better Media is built around two ideas: **adapters** for infrastructure and **plugins** for behavior.
+
+Adapters implement a common interface for storage, databases, and background jobs. S3, GCS, local filesystem, and in-memory storage are all adapters. Postgres and MongoDB are adapters. BullMQ is an adapter. You configure which one you want and the framework calls it. Your route code never sees an S3 SDK or a Mongo client — it sees the result of the pipeline.
+
+Plugins are composable behaviors that run in order on every file. A validation plugin rejects files that fail your rules before anything is written to storage. A virus scan plugin runs after upload but before the file is marked clean. An image processing plugin generates thumbnails. A video streaming plugin transcodes to HLS and DASH.
+
+The pipeline runs in declaration order and short-circuits on failure:
+
+```ts
+const media = createBetterMedia({
+  storage: s3StorageAdapter({ bucket: process.env.S3_BUCKET! }),
+  plugins: [
+    validationPlugin({ allowedTypes: ["image/jpeg", "image/png"], maxSizeBytes: 10_000_000 }),
+    virusScanPlugin(),
+    mediaProcessingPlugin({ thumbnails: [{ width: 400, height: 400 }] }),
+  ],
+});
+```
+
+If validation fails, the pipeline stops. Nothing is written to storage. No cleanup needed. If the virus scan fails, same thing. The error is typed and your route gets a structured response it can forward to the client.
+
+This ordering being explicit in config is a decision I feel strongly about. Middleware chains are easy to get wrong — the order depends on how you read the source, not what you see in your config. With Better Media, the pipeline is the config.
+
+## The tradeoff I'm most honest about
+
+Better Media adds a layer of abstraction. For a simple upload form — one file, one bucket, no processing — that abstraction buys you very little. You'd be better off writing 30 lines yourself.
+
+Where it earns its keep is when you have:
+- Multiple upload paths with different validation rules
+- Multiple environments pointing at different storage backends
+- Multiple plugins that need to run in a specific order
+- A need to test the full pipeline without touching real infrastructure
+
+If you're in that situation, the abstraction pays for itself quickly. If you're not, it's overhead.
+
+I've tried to be upfront about this in the docs. Better Media is not the simplest way to handle a single file upload. It's the simplest way to handle file uploads as a system.
+
+## What I'd do differently
+
+Two things.
+
+First, I'd design the plugin result shape earlier. I iterated on it a few times — how plugins report what they did, how the pipeline surface their output — and each change required touching more code than it should have. The shape is stable now, but I could have saved time with more upfront thought.
+
+Second, I'd have shipped the in-memory adapter on day one with more fanfare. It turns out the thing developers care about most isn't "does it support S3" — it's "can I test this without touching a real bucket." The in-memory adapter answers that completely, but I buried it in the adapter docs like it was a footnote. It should be in the getting-started guide.
+
+## Where it's going
+
+The plugin I'm most excited about right now is the video streaming plugin: adaptive-bitrate transcoding (HLS and DASH), parallel ffmpeg passes per quality preset, segment uploads under a structured storage prefix, and database rows for each variant playlist so your frontend can query quality levels directly.
+
+The cloud plugin — `@better-media/plugin-cloud` — is new. It's a passive observer that hooks into the pipeline lifecycle and reports metadata events to the Better Media dashboard. No file bytes leave your infrastructure. It's an observability layer, not a data processor.
+
+Both of these are live. More in the [changelog](/blog).
+
+---
+
+If you've been writing the same file upload boilerplate across projects, Better Media is worth a look. The docs are at [better-media.dev/docs](/docs). The source is on [GitHub](https://github.com/AbenezerAtnafu/better-media), MIT licensed.
+
+And if you think the abstraction is wrong or the tradeoffs are off — I'd genuinely like to hear it. The best feedback I've gotten has come from engineers who disagreed with a decision and said so.
